@@ -300,6 +300,8 @@ def _run_single_nc(
         aux_counts: dict[str, float] = {}
         if full_graph_training:
             optimizer.zero_grad(set_to_none=True)
+            if hasattr(model, "set_hrc_training_nodes"):
+                model.set_hrc_training_nodes(train_idx_all)
             z, _, _, aux_loss, aux_info = model(x_all, edge_index_all)
             labels = y_all[train_idx_all]
             logits = classifier(z[train_idx_all])
@@ -323,6 +325,10 @@ def _run_single_nc(
                     batch = batch.to(device)
                     if hasattr(model, "_batch_n_id"):
                         model._batch_n_id = batch.n_id
+                    if hasattr(model, "set_hrc_training_nodes"):
+                        model.set_hrc_training_nodes(
+                            torch.arange(batch.batch_size, device=device)
+                        )
                     z, _, _, aux_loss, aux_info = model(batch.x, batch.edge_index)
                     logits = classifier(z[: batch.batch_size])
                     labels = batch.y[: batch.batch_size]
@@ -330,6 +336,10 @@ def _run_single_nc(
                     batch_idx = batch.to(device)
                     x_batch = x_all[batch_idx]
                     labels = y_all[batch_idx]
+                    if hasattr(model, "set_hrc_training_nodes"):
+                        model.set_hrc_training_nodes(
+                            torch.arange(batch_idx.numel(), device=device)
+                        )
                     z, _, _, aux_loss, aux_info = model(x_batch, None)
                     logits = classifier(z)
                 loss = criterion(logits, labels) + aux_weight * aux_loss
@@ -637,11 +647,16 @@ def run_nc(
     ]
     val_acc = [item["val_acc"] for item in run_results]
     val_mean, val_std = mean_std(val_acc)
+    val_macro_f1 = [item["val_macro_f1"] for item in run_results]
+    val_f1_mean, val_f1_std = mean_std(val_macro_f1)
     logger.info("============================================================")
     logger.info("Final Results over %d runs", int(cfg.num_runs))
     logger.info("============================================================")
     logger.info("Highest Valid Acc: %.2f ± %.2f", format_pct(val_mean), format_pct(val_std))
-    output = {"val_acc": (val_mean, val_std)}
+    output = {
+        "val_acc": (val_mean, val_std),
+        "val_macro_f1": (val_f1_mean, val_f1_std),
+    }
     if evaluate_test:
         test_acc = [item["test_acc"] for item in run_results]
         test_f1 = [item["test_macro_f1"] for item in run_results]

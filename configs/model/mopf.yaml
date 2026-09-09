@@ -22,6 +22,7 @@ filter_rank: 4
 global_filter_trainable: true
 use_modality_residual: true
 use_node_residual: true
+hrc_weight: 0.0
 
 fusion_mode: concat_residual_mlp
 

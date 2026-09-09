@@ -32,6 +32,7 @@ def _cfg(**overrides) -> _CfgNode:
         global_filter_trainable=True,
         use_modality_residual=True,
         use_node_residual=True,
+        hrc_weight=0.0,
         fusion_mode="concat_residual_mlp",
         export_aux_stats=False,
         export_node_aux=False,
@@ -188,6 +189,76 @@ def test_mopf_empty_edge_graph_and_residual_switches_run() -> None:
         components = model._encode_components(x, empty_edge_index)
     assert torch.equal(components["delta_node_text"], torch.zeros((6, 4)))
     assert torch.equal(components["delta_node_visual"], torch.zeros((6, 4)))
+
+
+def test_mopf_hrc_zero_preserves_embedding_and_has_zero_aux() -> None:
+    x, edge_index = _graph()
+    model_off = _build(_cfg(hrc_weight=0.0))
+    model_on = _build(_cfg(hrc_weight=1.0))
+    model_on.load_state_dict(model_off.state_dict())
+    with torch.no_grad():
+        model_off.node_vector_text.fill_(0.25)
+        model_off.node_vector_visual.fill_(-0.15)
+        model_on.node_vector_text.fill_(0.25)
+        model_on.node_vector_visual.fill_(-0.15)
+    model_off.eval()
+    model_on.eval()
+    with torch.no_grad():
+        z_off, _, _, aux_off, _ = model_off(x, edge_index)
+        z_on, _, _, _, _ = model_on(x, edge_index)
+    assert aux_off.item() == 0.0
+    assert torch.equal(z_off, z_on)
+
+
+def test_mopf_hrc_known_delta_matches_exact_mean_square() -> None:
+    delta_text = torch.tensor([[1.0, 2.0], [3.0, 4.0]])
+    delta_visual = torch.tensor([[0.0, 2.0], [2.0, 0.0]])
+    expected = torch.tensor(3.75)
+    assert torch.equal(mopf.MoPF._hrc_raw_loss(delta_text, delta_visual), expected)
+
+
+def test_mopf_hrc_zero_delta_is_zero() -> None:
+    zeros = torch.zeros(5, 3)
+    assert mopf.MoPF._hrc_raw_loss(zeros, zeros).item() == 0.0
+
+
+def test_mopf_hrc_shared_nonzero_residual_is_penalized() -> None:
+    text = torch.full((4, 3), 0.5)
+    visual = torch.full((4, 3), -0.25)
+    assert mopf.MoPF._hrc_raw_loss(text, visual).item() > 0.0
+
+
+def test_mopf_hrc_zero_mean_variation_is_not_penalized() -> None:
+    text = torch.tensor([[-1.0, 0.0], [1.0, 0.0]])
+    visual = torch.tensor([[0.0, -2.0], [0.0, 2.0]])
+    assert torch.allclose(mopf.MoPF._hrc_raw_loss(text, visual), torch.tensor(0.0))
+
+
+def test_mopf_hrc_uses_current_training_node_index() -> None:
+    text = torch.tensor([[2.0], [0.0]])
+    visual = torch.tensor([[2.0], [0.0]])
+    training_idx = torch.tensor([1])
+    assert mopf.MoPF._hrc_raw_loss(text, visual, training_idx).item() == 0.0
+
+
+def test_mopf_hrc_backward_reaches_node_residual_generator() -> None:
+    x, edge_index = _graph()
+    model = _build(_cfg(hrc_weight=1.0))
+    with torch.no_grad():
+        model.node_vector_text.fill_(0.2)
+        model.node_vector_visual.fill_(-0.1)
+    model.train()
+    _, _, _, aux_loss, _ = model(x, edge_index)
+    aux_loss.backward()
+
+    for parameter in (
+        model.node_vector_text,
+        model.node_vector_visual,
+        model.node_proj_text[0].weight,
+        model.node_proj_visual[0].weight,
+    ):
+        assert parameter.grad is not None
+        assert torch.isfinite(parameter.grad).all()
 
 
 def test_mopf_lp_sampler_expands_default_two_hops_to_propagation_order() -> None:

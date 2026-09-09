@@ -129,6 +129,9 @@ class MoPF(nn.Module):
             cfg.model.get("use_modality_residual", True)
         )
         self.use_node_residual = bool(cfg.model.get("use_node_residual", True))
+        self.hrc_weight = float(cfg.model.get("hrc_weight", 0.0))
+        if self.hrc_weight < 0.0:
+            raise ValueError(f"hrc_weight must be >= 0, got {self.hrc_weight}")
 
         fusion_mode = str(
             cfg.model.get("fusion_mode", "concat_residual_mlp")
@@ -176,6 +179,14 @@ class MoPF(nn.Module):
         # MoPF is compatible with full-graph NC and sampled LP.  NC's task
         # configuration remains the authority for choosing full-graph mode.
         self.requires_full_graph_training = False
+        # NC sets this to the local training-node indices before a training
+        # forward.  Keeping it out of the state dict makes it runtime context,
+        # not a learned model component.
+        self._hrc_training_idx: torch.Tensor | None = None
+
+    def set_hrc_training_nodes(self, node_idx: torch.Tensor | None) -> None:
+        """Set the nodes used by HRC's training-time population mean."""
+        self._hrc_training_idx = None if node_idx is None else node_idx.detach()
 
     def _make_global_prior(self) -> torch.Tensor:
         """Initialize the MAP two-step restart polynomial in a general form."""
@@ -337,6 +348,29 @@ class MoPF(nn.Module):
             )
         return torch.stack(residuals, dim=-1)
 
+    @staticmethod
+    def _hrc_raw_loss(
+        delta_node_text: torch.Tensor,
+        delta_node_visual: torch.Tensor,
+        node_idx: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        """Return the raw hierarchical residual-centering penalty.
+
+        The mean is over the supplied current training nodes.  If no index is
+        supplied, all rows in the current model input are used, which keeps
+        the helper convenient for direct analysis and unit tests.
+        """
+        if node_idx is not None:
+            node_idx = node_idx.to(device=delta_node_text.device, dtype=torch.long)
+            if node_idx.numel() == 0:
+                return delta_node_text.new_zeros(())
+            delta_node_text = delta_node_text.index_select(0, node_idx)
+            delta_node_visual = delta_node_visual.index_select(0, node_idx)
+        means = torch.stack(
+            (delta_node_text.mean(dim=0), delta_node_visual.mean(dim=0)), dim=0
+        )
+        return means.square().mean()
+
     def _effective_coefficients(
         self,
         modality: str,
@@ -476,7 +510,14 @@ class MoPF(nn.Module):
         edge_index = self._edge_index_or_empty(edge_index, x.device)
         components = self._encode_components(x, edge_index)
         z = torch.nan_to_num(components["z"], nan=0.0, posinf=1e4, neginf=-1e4)
-        aux_loss = z.new_zeros(())
+        if self.hrc_weight == 0.0 or not self.use_node_residual:
+            aux_loss = z.new_zeros(())
+        else:
+            aux_loss = self.hrc_weight * self._hrc_raw_loss(
+                components["delta_node_text"],
+                components["delta_node_visual"],
+                self._hrc_training_idx,
+            )
         return z, None, None, aux_loss, {}
 
     @torch.no_grad()

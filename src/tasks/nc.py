@@ -70,6 +70,40 @@ def _evaluate_split(
     }
 
 
+def _checkpoint_path_for_run(path_like: str | Path, cfg, run_id: int) -> Path:
+    path = Path(str(path_like))
+    if int(cfg.num_runs) > 1:
+        path = path.with_name(f"{path.stem}_run{run_id + 1}{path.suffix}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def _save_nc_checkpoint(
+    path: Path,
+    *,
+    seed: int,
+    model: nn.Module,
+    classifier: nn.Module,
+    data_info: dict,
+    selection: str,
+    epoch: int | None,
+    metrics: dict[str, float] | None,
+) -> None:
+    torch.save(
+        {
+            "task": "nc",
+            "seed": seed,
+            "selection": selection,
+            "epoch": epoch,
+            "metrics": dict(metrics or {}),
+            "model_state": clone_state_dict(model),
+            "head_state": clone_state_dict(classifier),
+            "data_info": data_info,
+        },
+        path,
+    )
+
+
 def _evaluate_modality_masks(
     cfg,
     model,
@@ -187,6 +221,11 @@ def _run_single_nc(
     best_test: dict[str, float] = {}
     best_model_state = None
     best_head_state = None
+    best_epoch: int | None = None
+    diagnostic_best_f1 = -1.0
+    diagnostic_best_f1_epoch: int | None = None
+    diagnostic_best_f1_model_state = None
+    diagnostic_best_f1_head_state = None
     patience_total = int(cfg.task.patience)
     patience_left = patience_total
     early_stop_min_epoch = int(cfg.task.get("early_stop_min_epoch", 1))
@@ -196,6 +235,7 @@ def _run_single_nc(
     max_train_batches = cfg.task.get("max_train_batches")
     inference_batch_size = int(cfg.task.inference_batch_size)
     evaluate_test = bool(cfg.task.get("evaluate_test", True))
+    diagnostic_path = cfg.task.get("diagnostic_best_macro_f1_checkpoint_path")
 
     for epoch in range(1, int(cfg.task.epochs) + 1):
         model.train()
@@ -282,6 +322,7 @@ def _run_single_nc(
             }
             best_model_state = clone_state_dict(model)
             best_head_state = clone_state_dict(classifier)
+            best_epoch = epoch
             patience_left = patience_total
         elif epoch >= early_stop_min_epoch:
             patience_left -= 1
@@ -290,6 +331,11 @@ def _run_single_nc(
             if patience_left <= 0:
                 logger.info("Early stopping at epoch %03d", epoch)
                 stop_early = True
+        if diagnostic_path and val_metrics["macro_f1"] > diagnostic_best_f1:
+            diagnostic_best_f1 = val_metrics["macro_f1"]
+            diagnostic_best_f1_epoch = epoch
+            diagnostic_best_f1_model_state = clone_state_dict(model)
+            diagnostic_best_f1_head_state = clone_state_dict(classifier)
         del z
         torch.cuda.empty_cache()
         if stop_early:
@@ -431,21 +477,44 @@ def _run_single_nc(
 
     save_ckpt_path = cfg.task.get("save_ckpt_path")
     if save_ckpt_path:
-        path = Path(str(save_ckpt_path))
-        if int(cfg.num_runs) > 1:
-            path = path.with_name(f"{path.stem}_run{run_id + 1}{path.suffix}")
-        path.parent.mkdir(parents=True, exist_ok=True)
-        torch.save(
-            {
-                "task": "nc",
-                "seed": seed,
-                "model_state": clone_state_dict(model),
-                "head_state": clone_state_dict(classifier),
-                "data_info": data_info,
-            },
+        path = _checkpoint_path_for_run(save_ckpt_path, cfg, run_id)
+        _save_nc_checkpoint(
             path,
+            seed=seed,
+            model=model,
+            classifier=classifier,
+            data_info=data_info,
+            selection="best_val_accuracy",
+            epoch=best_epoch,
+            metrics=best_test,
         )
         logger.info("Saved checkpoint: %s", path)
+
+    if (
+        diagnostic_path
+        and diagnostic_best_f1_model_state is not None
+        and diagnostic_best_f1_head_state is not None
+    ):
+        current_model_state = clone_state_dict(model)
+        current_head_state = clone_state_dict(classifier)
+        load_state_dict_cpu(model, diagnostic_best_f1_model_state)
+        load_state_dict_cpu(classifier, diagnostic_best_f1_head_state)
+        path = _checkpoint_path_for_run(diagnostic_path, cfg, run_id)
+        _save_nc_checkpoint(
+            path,
+            seed=seed,
+            model=model,
+            classifier=classifier,
+            data_info=data_info,
+            selection="diagnostic_best_val_macro_f1",
+            epoch=diagnostic_best_f1_epoch,
+            metrics={
+                "val_macro_f1": diagnostic_best_f1,
+            },
+        )
+        load_state_dict_cpu(model, current_model_state)
+        load_state_dict_cpu(classifier, current_head_state)
+        logger.info("Saved diagnostic Macro-F1 checkpoint: %s", path)
 
     logger.info(
         "[Run %d] Best Val Acc %.2f",

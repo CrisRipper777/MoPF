@@ -359,6 +359,51 @@ class MoPF(nn.Module):
             output = output + eta[:, order : order + 1] * base
         return output
 
+    @staticmethod
+    def _effective_radius(eta: torch.Tensor) -> torch.Tensor:
+        """Return the absolute-coefficient weighted propagation order.
+
+        This is an analysis-only statistic. Using absolute coefficients keeps
+        cancellation between polynomial terms from making a long-range filter
+        look artificially short:
+
+            r_i = sum_k k * |eta_i,k| / sum_k |eta_i,k|.
+        """
+        orders = torch.arange(eta.size(-1), device=eta.device, dtype=eta.dtype)
+        weights = eta.abs()
+        return (weights * orders.unsqueeze(0)).sum(dim=-1) / weights.sum(
+            dim=-1
+        ).clamp_min(torch.finfo(eta.dtype).eps)
+
+    @torch.no_grad()
+    def analysis_stats(
+        self,
+        x: torch.Tensor,
+        edge_index: torch.Tensor | None,
+    ) -> dict[str, torch.Tensor]:
+        """Export learned filter coefficients without changing ``forward``."""
+        was_training = self.training
+        self.eval()
+        edge_index = self._edge_index_or_empty(edge_index, x.device)
+        components = self._encode_components(x, edge_index)
+        if was_training:
+            self.train()
+        return {
+            "gamma_global": self.gamma_global.detach().clone(),
+            "delta_gamma_text": self.delta_gamma_text.detach().clone(),
+            "delta_gamma_visual": self.delta_gamma_visual.detach().clone(),
+            "eta_text": components["eta_text"].detach().clone(),
+            "eta_visual": components["eta_visual"].detach().clone(),
+            "delta_node_text": components["delta_node_text"].detach().clone(),
+            "delta_node_visual": components["delta_node_visual"].detach().clone(),
+            "effective_radius_text": self._effective_radius(
+                components["eta_text"]
+            ).detach().clone(),
+            "effective_radius_visual": self._effective_radius(
+                components["eta_visual"]
+            ).detach().clone(),
+        }
+
     def _encode_components(
         self,
         x: torch.Tensor,

@@ -29,6 +29,7 @@ sys.path.insert(0, str(ROOT))
 from src.data import load_mag_data
 from src.models import build_model
 from src.tasks.inference import infer_all_embeddings
+from src.tasks.nc import _resolve_nc_eval_labels
 
 
 TARGET_ROOT = ROOT / "outputs" / "targeted_diagnosis"
@@ -189,7 +190,7 @@ def export_class_diagnostics(
         batch_size=int(cfg.task.inference_batch_size),
         inference_mode=str(cfg.task.inference_mode),
     )
-    labels = list(range(int(data.num_classes)))
+    labels = _resolve_nc_eval_labels(data)
     all_metrics: dict[str, Any] = {}
     predictions: dict[str, dict[str, torch.Tensor]] = {}
     per_class_rows: list[dict[str, Any]] = []
@@ -210,13 +211,13 @@ def export_class_diagnostics(
             "per_class": [
                 {
                     "class": int(cls),
-                    "precision": float(precision[cls]),
-                    "recall": float(recall[cls]),
-                    "f1": float(f1[cls]),
-                    "support": int(support[cls]),
+                    "precision": float(precision[position]),
+                    "recall": float(recall[position]),
+                    "f1": float(f1[position]),
+                    "support": int(support[position]),
                     "predicted_count": int(counts[cls]),
                 }
-                for cls in labels
+                for position, cls in enumerate(labels)
             ],
             "confusion_matrix": matrix.tolist(),
         }
@@ -225,26 +226,26 @@ def export_class_diagnostics(
             "label": torch.from_numpy(target),
             "prediction": torch.from_numpy(pred),
         }
-        for cls in labels:
+        for position, cls in enumerate(labels):
             per_class_rows.append(
                 {
                     "split": split_name,
                     "class": cls,
-                    "precision": float(precision[cls]),
-                    "recall": float(recall[cls]),
-                    "f1": float(f1[cls]),
-                    "support": int(support[cls]),
+                    "precision": float(precision[position]),
+                    "recall": float(recall[position]),
+                    "f1": float(f1[position]),
+                    "support": int(support[position]),
                     "predicted_count": int(counts[cls]),
                 }
             )
-        for true_cls in labels:
-            for pred_cls in labels:
+        for true_position, true_cls in enumerate(labels):
+            for pred_position, pred_cls in enumerate(labels):
                 confusion_rows.append(
                     {
                         "split": split_name,
                         "true_class": true_cls,
                         "predicted_class": pred_cls,
-                        "count": int(matrix[true_cls, pred_cls]),
+                        "count": int(matrix[true_position, pred_position]),
                     }
                 )
 

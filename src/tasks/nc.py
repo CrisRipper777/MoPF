@@ -45,6 +45,37 @@ def _resolve_training_mode(cfg, model) -> str:
     return mode
 
 
+def _resolve_nc_eval_labels(data: MAGData) -> list[int]:
+    """Resolve one stable Macro-F1 label set for the complete NC task.
+
+    The label set is based on labels observed in the union of the supervised
+    train/validation/test node indices.  This keeps a class that is absent
+    from one split but present elsewhere in the task in the denominator, while
+    excluding negative/missing labels and classifier-only phantom classes.
+    """
+    if data.y is None:
+        raise ValueError("NC data must contain labels to resolve evaluation labels")
+    if data.num_classes is None:
+        raise ValueError("NC data must define num_classes to resolve evaluation labels")
+
+    split_indices = [
+        idx for idx in (data.train_idx, data.val_idx, data.test_idx) if idx is not None
+    ]
+    if not split_indices:
+        raise ValueError("NC data must contain at least one supervised split")
+
+    all_indices = torch.cat([idx.reshape(-1) for idx in split_indices]).to(data.y.device)
+    supervised_labels = data.y[all_indices].detach().cpu()
+    num_classes = int(data.num_classes)
+    valid_labels = supervised_labels[
+        (supervised_labels >= 0) & (supervised_labels < num_classes)
+    ]
+    labels = sorted({int(label) for label in valid_labels.tolist()})
+    if not labels:
+        raise ValueError("NC supervised splits contain no valid class labels")
+    return labels
+
+
 @torch.no_grad()
 def _evaluate_split(
     classifier,
@@ -53,6 +84,7 @@ def _evaluate_split(
     idx: torch.Tensor,
     device: torch.device,
     batch_size: int,
+    eval_labels: list[int] | tuple[int, ...],
 ) -> dict[str, float]:
     classifier.eval()
     preds: list[torch.Tensor] = []
@@ -66,7 +98,15 @@ def _evaluate_split(
     target = torch.cat(targets, dim=0)
     return {
         "acc": float((pred == target).float().mean().item()),
-        "macro_f1": float(f1_score(target.numpy(), pred.numpy(), average="macro", zero_division=0)),
+        "macro_f1": float(
+            f1_score(
+                target.numpy(),
+                pred.numpy(),
+                labels=list(eval_labels),
+                average="macro",
+                zero_division=0,
+            )
+        ),
     }
 
 
@@ -114,6 +154,7 @@ def _evaluate_modality_masks(
     inference_mode: str,
     inference_batch_size: int,
     seed: int,
+    eval_labels: list[int] | tuple[int, ...],
     full_test: dict[str, float],
     logger: logging.Logger,
 ) -> dict[str, float]:
@@ -125,7 +166,15 @@ def _evaluate_modality_masks(
         mask_key = modality_mask_key(mode)
         drop_key = modality_drop_key(mode)
         z = infer_all_embeddings(model, masked_data, device, uses_graph, inference_batch_size, inference_mode)
-        metrics = _evaluate_split(classifier, z, data.y, data.test_idx, device, inference_batch_size)
+        metrics = _evaluate_split(
+            classifier,
+            z,
+            data.y,
+            data.test_idx,
+            device,
+            inference_batch_size,
+            eval_labels,
+        )
         output[f"{mask_key}_test_acc"] = metrics["acc"]
         output[f"{mask_key}_test_macro_f1"] = metrics["macro_f1"]
         output[f"{drop_key}_acc"] = full_test["test_acc"] - metrics["acc"]
@@ -150,6 +199,7 @@ def _run_single_nc(
     logger: logging.Logger,
     run_id: int,
     output_dir: str | Path | None,
+    eval_labels: list[int] | tuple[int, ...],
 ) -> dict[str, float]:
     seed = int(cfg.seed) + run_id
     set_seed(seed)
@@ -208,6 +258,8 @@ def _run_single_nc(
         seed,
         count_parameters(model) + count_parameters(classifier),
     )
+    logger.info("NC valid evaluation labels: %s", list(eval_labels))
+    logger.info("NC number of evaluated classes: %d", len(eval_labels))
     logger.info("Loader: %s", loader_name)
     logger.info("Protocol: %s", str(cfg.task.get("protocol_version", "unified_full_graph_nc_v1")))
     if full_graph_training:
@@ -303,7 +355,15 @@ def _run_single_nc(
             continue
 
         z = infer_all_embeddings(model, data, device, uses_graph, inference_batch_size, inference_mode)
-        val_metrics = _evaluate_split(classifier, z, data.y, data.val_idx, device, inference_batch_size)
+        val_metrics = _evaluate_split(
+            classifier,
+            z,
+            data.y,
+            data.val_idx,
+            device,
+            inference_batch_size,
+            eval_labels,
+        )
         logger.info("Epoch %05d | Train Loss %.4f", epoch, train_loss)
         if aux_stats:
             logger.info("Aux %s", format_aux_info_stats(aux_stats))
@@ -423,7 +483,15 @@ def _run_single_nc(
             )
         if evaluate_test:
             z = infer_all_embeddings(model, data, device, uses_graph, inference_batch_size, inference_mode)
-            test_metrics = _evaluate_split(classifier, z, data.y, data.test_idx, device, inference_batch_size)
+            test_metrics = _evaluate_split(
+                classifier,
+                z,
+                data.y,
+                data.test_idx,
+                device,
+                inference_batch_size,
+                eval_labels,
+            )
             best_test["test_acc"] = test_metrics["acc"]
             best_test["test_macro_f1"] = test_metrics["macro_f1"]
             del z
@@ -438,6 +506,7 @@ def _run_single_nc(
                     inference_mode,
                     inference_batch_size,
                     seed,
+                    eval_labels,
                     best_test,
                     logger,
                 )
@@ -445,13 +514,29 @@ def _run_single_nc(
 
     if not best_test:
         z = infer_all_embeddings(model, data, device, uses_graph, inference_batch_size, inference_mode)
-        val_metrics = _evaluate_split(classifier, z, data.y, data.val_idx, device, inference_batch_size)
+        val_metrics = _evaluate_split(
+            classifier,
+            z,
+            data.y,
+            data.val_idx,
+            device,
+            inference_batch_size,
+            eval_labels,
+        )
         best_test = {
             "val_acc": val_metrics["acc"],
             "val_macro_f1": val_metrics["macro_f1"],
         }
         if evaluate_test:
-            test_metrics = _evaluate_split(classifier, z, data.y, data.test_idx, device, inference_batch_size)
+            test_metrics = _evaluate_split(
+                classifier,
+                z,
+                data.y,
+                data.test_idx,
+                device,
+                inference_batch_size,
+                eval_labels,
+            )
             best_test["test_acc"] = test_metrics["acc"]
             best_test["test_macro_f1"] = test_metrics["macro_f1"]
         del z
@@ -467,6 +552,7 @@ def _run_single_nc(
                     inference_mode,
                     inference_batch_size,
                     seed,
+                    eval_labels,
                     best_test,
                     logger,
                 )
@@ -544,8 +630,9 @@ def run_nc(
     if evaluate_test and data.test_idx is None:
         raise ValueError("NC data must contain test_idx when task.evaluate_test=true")
 
+    eval_labels = _resolve_nc_eval_labels(data)
     run_results = [
-        _run_single_nc(cfg, data, device, logger, run_id, output_dir)
+        _run_single_nc(cfg, data, device, logger, run_id, output_dir, eval_labels)
         for run_id in range(int(cfg.num_runs))
     ]
     val_acc = [item["val_acc"] for item in run_results]

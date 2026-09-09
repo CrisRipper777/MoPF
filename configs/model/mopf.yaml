@@ -1,0 +1,33 @@
+name: mopf
+version: mopf
+
+hidden_dim: 256
+dropout: 0.2
+norm: layernorm
+
+max_order: 3
+num_layers: ${model.max_order}
+
+map_prior_restart: 0.15
+map_prior_order: 2
+
+diffusion_add_self_loops: true
+
+edge_weight_mode: separate_cos # separate_cos | shared_avg_cos | raw_uniform
+edge_weight_min: 0.1
+edge_weight_temperature: 2.0
+
+filter_rank: 4
+
+global_filter_trainable: true
+use_modality_residual: true
+use_node_residual: true
+
+fusion_mode: concat_residual_mlp
+
+export_aux_stats: false
+export_node_aux: false
+export_edge_aux: false
+
+# The shared task-provided LP decoder remains unchanged.
+lp_pair_operator: null

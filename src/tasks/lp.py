@@ -23,6 +23,7 @@ from src.tasks.common import (
     clone_state_dict,
     format_aux_info_stats,
     load_state_dict_cpu,
+    resolve_num_neighbors,
     scheduler_step,
     summarize_aux_info_stats,
     update_aux_info_stats,
@@ -334,7 +335,16 @@ def _resolve_lp_num_neighbors(cfg) -> list[int]:
     The unified LP protocol is explicitly two-hop. Some baselines (e.g. DGF)
     use a larger internal filtering iteration count, which must not silently
     turn the link sampler into a ten-hop sampler.
+
+    MoPF is the sole exception: its explicit polynomial bank has one sampled
+    message-passing step per order, so its configured ``num_layers`` must be
+    represented in the sampled subgraph.  ``resolve_num_neighbors`` preserves
+    the existing neighbor values and repeats the final one as needed (e.g.
+    [5, 5] -> [5, 5, 5] for the default third-order MoPF).
     """
+    model_cfg = cfg.get("model", {})
+    if str(model_cfg.get("name", "")).strip().lower() == "mopf":
+        return resolve_num_neighbors(cfg)
     raw = cfg.task.get("num_neighbors", [5, 5])
     if isinstance(raw, str):
         raw = raw.strip()

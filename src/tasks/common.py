@@ -43,6 +43,7 @@ AUX_INFO_KEYS = (
     "edge_reg_loss",
     "gate_loss",
     "modality_balance_loss",
+    "ppc_raw",
 )
 
 

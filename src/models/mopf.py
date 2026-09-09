@@ -132,6 +132,17 @@ class MoPF(nn.Module):
         self.hrc_weight = float(cfg.model.get("hrc_weight", 0.0))
         if self.hrc_weight < 0.0:
             raise ValueError(f"hrc_weight must be >= 0, got {self.hrc_weight}")
+        self.node_conditioner_mode = str(
+            cfg.model.get("node_conditioner_mode", "absolute")
+        ).strip().lower()
+        if self.node_conditioner_mode not in {"absolute", "pdc"}:
+            raise ValueError(
+                "model.node_conditioner_mode must be absolute|pdc, got "
+                f"{self.node_conditioner_mode!r}"
+            )
+        self.ppc_weight = float(cfg.model.get("ppc_weight", 0.0))
+        if self.ppc_weight < 0.0:
+            raise ValueError(f"ppc_weight must be >= 0, got {self.ppc_weight}")
 
         fusion_mode = str(
             cfg.model.get("fusion_mode", "concat_residual_mlp")
@@ -166,6 +177,18 @@ class MoPF(nn.Module):
         self.node_vector_visual = nn.Parameter(
             torch.zeros(self.max_order + 1, self.filter_rank)
         )
+
+        # PDC adds only one scalar per modality/order.  In the default
+        # absolute mode these are non-trainable zero buffers so the baseline
+        # trainable parameter count and forward computation remain unchanged.
+        pdc_theta_text = torch.zeros(self.max_order + 1)
+        pdc_theta_visual = torch.zeros(self.max_order + 1)
+        if self.node_conditioner_mode == "pdc":
+            self.pdc_theta_text = nn.Parameter(pdc_theta_text)
+            self.pdc_theta_visual = nn.Parameter(pdc_theta_visual)
+        else:
+            self.register_buffer("pdc_theta_text", pdc_theta_text)
+            self.register_buffer("pdc_theta_visual", pdc_theta_visual)
 
         self.text_refine_mlp = _make_mlp(hidden_dim, hidden_dim, hidden_dim, dropout)
         self.visual_refine_mlp = _make_mlp(hidden_dim, hidden_dim, hidden_dim, dropout)
@@ -332,16 +355,55 @@ class MoPF(nn.Module):
             bases.append(h)
         return bases
 
+    def pdc_rho(self, modality: str) -> torch.Tensor:
+        """Return PDC's bounded scalar calibration profile.
+
+        Order zero is explicitly fixed to zero even if a checkpoint contains
+        a non-zero value in the unused theta slot.
+        """
+        if modality == "text":
+            theta = self.pdc_theta_text
+        elif modality == "visual":
+            theta = self.pdc_theta_visual
+        else:
+            raise ValueError(f"Unknown modality: {modality!r}")
+        rho = torch.tanh(theta)
+        return torch.cat((rho[:1] * 0.0, rho[1:]), dim=0)
+
+    def _conditioner_bases(
+        self,
+        bases: list[torch.Tensor],
+        modality: str,
+    ) -> list[torch.Tensor]:
+        """Build absolute or PDC-conditioned inputs for node residuals."""
+        if self.node_conditioner_mode == "absolute":
+            return bases
+        rho = self.pdc_rho(modality)
+        conditioned = [bases[0]]
+        for order in range(1, len(bases)):
+            discrepancy = bases[order] - bases[order - 1]
+            discrepancy_norm = F.layer_norm(
+                discrepancy,
+                (discrepancy.size(-1),),
+                weight=None,
+                bias=None,
+                eps=self.eps,
+            )
+            conditioned.append(bases[order] + rho[order] * discrepancy_norm)
+        return conditioned
+
     def _node_residuals(
         self,
         bases: list[torch.Tensor],
         projectors: nn.ModuleList,
         node_vectors: torch.Tensor,
+        modality: str,
     ) -> torch.Tensor:
         if not self.use_node_residual:
             return bases[0].new_zeros((bases[0].size(0), self.max_order + 1))
+        conditioner_bases = self._conditioner_bases(bases, modality)
         residuals = []
-        for order, base in enumerate(bases):
+        for order, base in enumerate(conditioner_bases):
             q = torch.tanh(projectors[order](base))
             residuals.append(
                 (q * node_vectors[order]).sum(dim=-1) / float(self.filter_rank)
@@ -370,6 +432,42 @@ class MoPF(nn.Module):
             (delta_node_text.mean(dim=0), delta_node_visual.mean(dim=0)), dim=0
         )
         return means.square().mean()
+
+    @staticmethod
+    def _ppc_raw_loss(
+        delta_node_text_1: torch.Tensor,
+        delta_node_visual_1: torch.Tensor,
+        delta_node_text_2: torch.Tensor,
+        delta_node_visual_2: torch.Tensor,
+        node_idx: torch.Tensor | None = None,
+    ) -> torch.Tensor:
+        """Compare centered node profiles between two stochastic views."""
+        if node_idx is not None:
+            node_idx = node_idx.to(
+                device=delta_node_text_1.device,
+                dtype=torch.long,
+            )
+            if node_idx.numel() == 0:
+                return delta_node_text_1.new_zeros(())
+            tensors = (
+                delta_node_text_1,
+                delta_node_visual_1,
+                delta_node_text_2,
+                delta_node_visual_2,
+            )
+            delta_node_text_1, delta_node_visual_1, delta_node_text_2, delta_node_visual_2 = (
+                tensor.index_select(0, node_idx) for tensor in tensors
+            )
+
+        centered_profiles = []
+        for first, second in (
+            (delta_node_text_1, delta_node_text_2),
+            (delta_node_visual_1, delta_node_visual_2),
+        ):
+            centered_first = first - first.mean(dim=0, keepdim=True)
+            centered_second = second - second.mean(dim=0, keepdim=True)
+            centered_profiles.append((centered_first - centered_second).square())
+        return torch.stack(centered_profiles, dim=0).mean()
 
     def _effective_coefficients(
         self,
@@ -464,10 +562,10 @@ class MoPF(nn.Module):
         bases_visual = self._propagation_bank(h_visual, norm_v_index, norm_v_weight)
 
         delta_node_text = self._node_residuals(
-            bases_text, self.node_proj_text, self.node_vector_text
+            bases_text, self.node_proj_text, self.node_vector_text, "text"
         )
         delta_node_visual = self._node_residuals(
-            bases_visual, self.node_proj_visual, self.node_vector_visual
+            bases_visual, self.node_proj_visual, self.node_vector_visual, "visual"
         )
         eta_text = self._effective_coefficients("text", delta_node_text)
         eta_visual = self._effective_coefficients("visual", delta_node_visual)
@@ -510,7 +608,26 @@ class MoPF(nn.Module):
         edge_index = self._edge_index_or_empty(edge_index, x.device)
         components = self._encode_components(x, edge_index)
         z = torch.nan_to_num(components["z"], nan=0.0, posinf=1e4, neginf=-1e4)
-        if self.hrc_weight == 0.0 or not self.use_node_residual:
+        aux_info: dict[str, torch.Tensor] = {}
+        ppc_active = (
+            self.training
+            and self.ppc_weight > 0.0
+            and self.use_node_residual
+        )
+        if ppc_active:
+            # View 1 remains the sole task embedding. View 2 exists only for
+            # the auxiliary profile-consistency calculation.
+            components_2 = self._encode_components(x, edge_index)
+            ppc_raw = self._ppc_raw_loss(
+                components["delta_node_text"],
+                components["delta_node_visual"],
+                components_2["delta_node_text"],
+                components_2["delta_node_visual"],
+                self._hrc_training_idx,
+            )
+            aux_loss = self.ppc_weight * ppc_raw
+            aux_info["ppc_raw"] = ppc_raw.detach()
+        elif self.hrc_weight == 0.0 or not self.use_node_residual:
             aux_loss = z.new_zeros(())
         else:
             aux_loss = self.hrc_weight * self._hrc_raw_loss(
@@ -518,7 +635,7 @@ class MoPF(nn.Module):
                 components["delta_node_visual"],
                 self._hrc_training_idx,
             )
-        return z, None, None, aux_loss, {}
+        return z, None, None, aux_loss, aux_info
 
     @torch.no_grad()
     def inference(

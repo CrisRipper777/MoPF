@@ -269,3 +269,155 @@ def test_mopf_lp_sampler_expands_default_two_hops_to_propagation_order() -> None
         }
     )
     assert _resolve_lp_num_neighbors(cfg) == [5, 5, 5]
+
+
+def test_mopf_absolute_mode_is_current_forward_default() -> None:
+    x, edge_index = _graph()
+    default_model = _build(_cfg(dropout=0.0))
+    explicit_model = _build(
+        _cfg(dropout=0.0, node_conditioner_mode="absolute", ppc_weight=0.0)
+    )
+    explicit_model.load_state_dict(default_model.state_dict())
+    default_model.eval()
+    explicit_model.eval()
+    with torch.no_grad():
+        default_z, _, _, default_aux, _ = default_model(x, edge_index)
+        explicit_z, _, _, explicit_aux, _ = explicit_model(x, edge_index)
+    assert torch.equal(default_z, explicit_z)
+    assert default_aux.item() == explicit_aux.item() == 0.0
+
+
+def test_mopf_pdc_zero_theta_matches_absolute_conditioner() -> None:
+    x, edge_index = _graph()
+    absolute = _build(_cfg(dropout=0.0, node_conditioner_mode="absolute"))
+    pdc = _build(_cfg(dropout=0.0, node_conditioner_mode="pdc"))
+    pdc.load_state_dict(absolute.state_dict())
+    absolute.eval()
+    pdc.eval()
+    with torch.no_grad():
+        absolute_components = absolute._encode_components(x, edge_index)
+        pdc_components = pdc._encode_components(x, edge_index)
+    assert torch.equal(pdc.pdc_rho("text"), torch.zeros(4))
+    assert torch.equal(pdc.pdc_rho("visual"), torch.zeros(4))
+    assert torch.allclose(
+        absolute_components["delta_node_text"], pdc_components["delta_node_text"]
+    )
+    assert torch.allclose(
+        absolute_components["delta_node_visual"], pdc_components["delta_node_visual"]
+    )
+    assert torch.allclose(absolute_components["z"], pdc_components["z"])
+
+
+def test_mopf_pdc_rho_has_finite_gradient() -> None:
+    x, edge_index = _graph()
+    model = _build(_cfg(dropout=0.0, node_conditioner_mode="pdc"))
+    model.train()
+    z, _, _, _, _ = model(x, edge_index)
+    z.square().mean().backward()
+    assert model.pdc_theta_text.grad is not None
+    assert model.pdc_theta_visual.grad is not None
+    assert torch.isfinite(model.pdc_theta_text.grad).all()
+    assert torch.isfinite(model.pdc_theta_visual.grad).all()
+
+
+def test_mopf_pdc_order_zero_ignores_discrepancy() -> None:
+    x, edge_index = _graph()
+    baseline = _build(_cfg(dropout=0.0, node_conditioner_mode="pdc"))
+    altered = _build(_cfg(dropout=0.0, node_conditioner_mode="pdc"))
+    altered.load_state_dict(baseline.state_dict())
+    with torch.no_grad():
+        altered.pdc_theta_text[0] = 10.0
+        altered.pdc_theta_visual[0] = -10.0
+    baseline.eval()
+    altered.eval()
+    with torch.no_grad():
+        baseline_components = baseline._encode_components(x, edge_index)
+        altered_components = altered._encode_components(x, edge_index)
+    assert altered.pdc_rho("text")[0].item() == 0.0
+    assert altered.pdc_rho("visual")[0].item() == 0.0
+    assert torch.equal(
+        baseline_components["delta_node_text"][:, 0],
+        altered_components["delta_node_text"][:, 0],
+    )
+    assert torch.equal(
+        baseline_components["delta_node_visual"][:, 0],
+        altered_components["delta_node_visual"][:, 0],
+    )
+
+
+def test_mopf_ppc_zero_is_current_forward_and_aux_equivalent() -> None:
+    x, edge_index = _graph()
+    default_model = _build(_cfg(dropout=0.0, ppc_weight=0.0))
+    explicit_model = _build(
+        _cfg(dropout=0.0, node_conditioner_mode="absolute", ppc_weight=0.0)
+    )
+    explicit_model.load_state_dict(default_model.state_dict())
+    default_model.train()
+    explicit_model.train()
+    with torch.no_grad():
+        default_z, _, _, default_aux, default_info = default_model(x, edge_index)
+        explicit_z, _, _, explicit_aux, explicit_info = explicit_model(x, edge_index)
+    assert torch.equal(default_z, explicit_z)
+    assert default_aux.item() == explicit_aux.item() == 0.0
+    assert default_info == explicit_info == {}
+
+
+def test_mopf_ppc_identical_profiles_are_zero() -> None:
+    profile = torch.randn(5, 4)
+    assert mopf.MoPF._ppc_raw_loss(profile, profile, profile, profile).item() == 0.0
+
+
+def test_mopf_ppc_is_invariant_to_centered_shared_shift() -> None:
+    torch.manual_seed(7)
+    text_1 = torch.randn(5, 4)
+    visual_1 = torch.randn(5, 4)
+    text_2 = torch.randn(5, 4)
+    visual_2 = torch.randn(5, 4)
+    base = mopf.MoPF._ppc_raw_loss(text_1, visual_1, text_2, visual_2)
+    shift_text = torch.tensor([2.0, -1.0, 0.5, 3.0])
+    shift_visual = torch.tensor([-2.0, 1.0, 0.25, -0.5])
+    shifted = mopf.MoPF._ppc_raw_loss(
+        text_1 + shift_text,
+        visual_1 + shift_visual,
+        text_2 + shift_text,
+        visual_2 + shift_visual,
+    )
+    assert torch.allclose(base, shifted, atol=1e-7)
+
+
+def test_mopf_ppc_different_centered_profiles_are_positive() -> None:
+    first = torch.tensor([[-1.0, 0.0], [1.0, 0.0]])
+    second = torch.zeros_like(first)
+    assert mopf.MoPF._ppc_raw_loss(first, first, second, second).item() > 0.0
+
+
+def test_mopf_ppc_backward_is_finite() -> None:
+    x, edge_index = _graph()
+    model = _build(_cfg(dropout=0.1, ppc_weight=1.0))
+    model.train()
+    _, _, _, aux_loss, aux_info = model(x, edge_index)
+    assert aux_loss.item() >= 0.0
+    assert "ppc_raw" in aux_info
+    aux_loss.backward()
+    gradients = [parameter.grad for parameter in model.parameters() if parameter.grad is not None]
+    assert gradients
+    assert all(torch.isfinite(gradient).all() for gradient in gradients)
+
+
+def test_mopf_ppc_eval_mode_uses_one_stochastic_view() -> None:
+    x, edge_index = _graph()
+    model = _build(_cfg(dropout=0.1, ppc_weight=1.0))
+    model.eval()
+    original = model._encode_components
+    calls = {"count": 0}
+
+    def counted_encode(input_x, input_edge_index):
+        calls["count"] += 1
+        return original(input_x, input_edge_index)
+
+    model._encode_components = counted_encode
+    with torch.no_grad():
+        _, _, _, aux_loss, aux_info = model(x, edge_index)
+    assert calls["count"] == 1
+    assert aux_loss.item() == 0.0
+    assert aux_info == {}

@@ -236,3 +236,61 @@ No U2 response-bank modification should begin until this relation-level operator
 ## 4. Next update
 
 The next journal update should append the U1-R design, code audit, three-seed NC results, frozen metric-utilization diagnostics, specialization diagnostics, efficiency comparison, and the final relation-level structuralization decision. Only after that decision should the selected operator be frozen and U2 begin.
+
+---
+
+## 5. U1-R — Semantic Metric Resolution and Frozen Functional Audit
+
+U1-R completed the required symmetry-resolution and causal-utilization study
+before any U2 work. The scope remained NC only; LP, sports-copurchase, the
+decoder, sampler, and LP protocol were not run or modified.
+
+### 5.1 Controls and implementation
+
+- R0 reused the 15 U1 S0 checkpoints after a strict frozen-tag equivalence
+  audit. The current R0 path matched `mopf-v0-frozen` exactly on a deterministic
+  six-node audit (`max_abs_difference = 0.0`) and registered no metric
+  parameters.
+- R1 uses one learned positive diagonal metric per modality, normalized by its
+  mean plus epsilon.
+- R2 uses four positive mean-normalized perspectives with deterministic
+  zero-mean RMS-0.01 symmetry-breaking initialization and no diversity loss.
+- All five dataset initialization audits passed: R1 retained ordinary-cosine
+  initialization equivalence, while R2 preserved aggregate alignment and made
+  perspectives and scores non-identical.
+
+### 5.2 Formal results
+
+- 30 new runs were completed: R1/R2 × five datasets × seeds 42/43/44.
+- R0 reused the 15 U1 checkpoints, giving 45 per-run records in the U1-R
+  summary.
+- The unified full-graph NC protocol used AdamW, hidden dimension 256, a
+  300-epoch cap, patience 30, and best validation accuracy checkpoint
+  selection. Test metrics were not used for selection.
+- Same-checkpoint frozen interventions covered identity metrics, stream-specific
+  identity, R2 collapse-to-mean, edge scores, conductance, normalized
+  operators, propagation banks, modality and fused representations, logits,
+  probabilities, predictions, and downstream metrics.
+- Conductance pathology checks were finite and within configured bounds for all
+  completed R1/R2 runs.
+
+### 5.3 Decision
+
+- R1 passed the relation-level screening criteria on all five datasets:
+  validation same-band, normalized metric non-identity, and repeated frozen
+  functional change.
+- R2 showed repeated perspective specialization, but the predefined
+  collapse-to-mean functional-change criterion was not met on any dataset.
+- Decision: **Select R1 — Modality-Adaptive Semantic Conductance**.
+
+This is a relation-level structuralization decision only. It is not a final
+MoPF claim or a statistical-significance claim. U2 must use R1 as the selected
+relation-level candidate, and all U1-R artifacts remain immutable.
+
+Authoritative U1-R artifacts:
+
+- `outputs/u1r_semantic_metric_resolution/u1r_master_summary.json`
+- `outputs/u1r_semantic_metric_resolution/u1r_master_table.csv`
+- `outputs/u1r_semantic_metric_resolution/initialization_audit.json`
+- `outputs/u1r_semantic_metric_resolution/r0_equivalence_audit.json`
+- `docs/mopf_u1r_semantic_metric_resolution.md`

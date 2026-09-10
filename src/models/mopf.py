@@ -135,9 +135,15 @@ class MoPF(nn.Module):
         self.node_conditioner_mode = str(
             cfg.model.get("node_conditioner_mode", "absolute")
         ).strip().lower()
-        if self.node_conditioner_mode not in {"absolute", "pdc"}:
+        valid_conditioner_modes = {
+            "absolute",
+            "pdc",
+            "pdc_v2_sep",
+            "pdc_v2_full",
+        }
+        if self.node_conditioner_mode not in valid_conditioner_modes:
             raise ValueError(
-                "model.node_conditioner_mode must be absolute|pdc, got "
+                "model.node_conditioner_mode must be absolute|pdc|pdc_v2_sep|pdc_v2_full, got "
                 f"{self.node_conditioner_mode!r}"
             )
         self.ppc_weight = float(cfg.model.get("ppc_weight", 0.0))
@@ -178,17 +184,35 @@ class MoPF(nn.Module):
             torch.zeros(self.max_order + 1, self.filter_rank)
         )
 
-        # PDC adds only one scalar per modality/order.  In the default
-        # absolute mode these are non-trainable zero buffers so the baseline
-        # trainable parameter count and forward computation remain unchanged.
-        pdc_theta_text = torch.zeros(self.max_order + 1)
-        pdc_theta_visual = torch.zeros(self.max_order + 1)
-        if self.node_conditioner_mode == "pdc":
+        # PDC-v1 keeps an explicit unused theta_0 slot for checkpoint
+        # compatibility.  PDC-v2-Sep fixes rho_0=0 and therefore stores only
+        # orders 1..K; PDC-v2-Full stores a trainable theta_0 initialized to 0.
+        theta_size = (
+            self.max_order
+            if self.node_conditioner_mode == "pdc_v2_sep"
+            else self.max_order + 1
+        )
+        pdc_theta_text = torch.zeros(theta_size)
+        pdc_theta_visual = torch.zeros(theta_size)
+        if self.node_conditioner_mode in {"pdc", "pdc_v2_sep", "pdc_v2_full"}:
             self.pdc_theta_text = nn.Parameter(pdc_theta_text)
             self.pdc_theta_visual = nn.Parameter(pdc_theta_visual)
         else:
             self.register_buffer("pdc_theta_text", pdc_theta_text)
             self.register_buffer("pdc_theta_visual", pdc_theta_visual)
+
+        if self.node_conditioner_mode in {"pdc_v2_sep", "pdc_v2_full"}:
+            discrepancy_orders = (
+                self.max_order if self.node_conditioner_mode == "pdc_v2_sep" else self.max_order + 1
+            )
+            self.node_disc_proj_text = nn.ModuleList(
+                nn.Linear(hidden_dim, self.filter_rank)
+                for _ in range(discrepancy_orders)
+            )
+            self.node_disc_proj_visual = nn.ModuleList(
+                nn.Linear(hidden_dim, self.filter_rank)
+                for _ in range(discrepancy_orders)
+            )
 
         self.text_refine_mlp = _make_mlp(hidden_dim, hidden_dim, hidden_dim, dropout)
         self.visual_refine_mlp = _make_mlp(hidden_dim, hidden_dim, hidden_dim, dropout)
@@ -358,8 +382,8 @@ class MoPF(nn.Module):
     def pdc_rho(self, modality: str) -> torch.Tensor:
         """Return PDC's bounded scalar calibration profile.
 
-        Order zero is explicitly fixed to zero even if a checkpoint contains
-        a non-zero value in the unused theta slot.
+        PDC-v1 and PDC-v2-Sep keep rho_0 fixed at zero.  PDC-v2-Full exposes
+        rho_0 as a trainable value initialized at zero.
         """
         if modality == "text":
             theta = self.pdc_theta_text
@@ -368,17 +392,22 @@ class MoPF(nn.Module):
         else:
             raise ValueError(f"Unknown modality: {modality!r}")
         rho = torch.tanh(theta)
+        if self.node_conditioner_mode == "pdc_v2_sep":
+            return torch.cat((rho[:1] * 0.0, rho), dim=0)
+        if self.node_conditioner_mode == "pdc_v2_full":
+            return rho
         return torch.cat((rho[:1] * 0.0, rho[1:]), dim=0)
 
     def _conditioner_bases(
         self,
         bases: list[torch.Tensor],
         modality: str,
+        rho_override: torch.Tensor | None = None,
     ) -> list[torch.Tensor]:
         """Build absolute or PDC-conditioned inputs for node residuals."""
         if self.node_conditioner_mode == "absolute":
             return bases
-        rho = self.pdc_rho(modality)
+        rho = self.pdc_rho(modality) if rho_override is None else rho_override
         conditioned = [bases[0]]
         for order in range(1, len(bases)):
             discrepancy = bases[order] - bases[order - 1]
@@ -398,17 +427,130 @@ class MoPF(nn.Module):
         projectors: nn.ModuleList,
         node_vectors: torch.Tensor,
         modality: str,
-    ) -> torch.Tensor:
+        rho_override: torch.Tensor | None = None,
+    ) -> tuple[torch.Tensor, list[torch.Tensor], dict[str, list[torch.Tensor]]]:
         if not self.use_node_residual:
-            return bases[0].new_zeros((bases[0].size(0), self.max_order + 1))
-        conditioner_bases = self._conditioner_bases(bases, modality)
+            conditioned_bases = (
+                bases
+                if self.node_conditioner_mode in {"pdc_v2_sep", "pdc_v2_full"}
+                else self._conditioner_bases(bases, modality, rho_override)
+            )
+            return (
+                bases[0].new_zeros((bases[0].size(0), self.max_order + 1)),
+                conditioned_bases,
+                {
+                    "discrepancy": [torch.zeros_like(base) for base in bases],
+                    "discrepancy_norm": [torch.zeros_like(base) for base in bases],
+                    "branch": [
+                        bases[0].new_zeros((bases[0].size(0), self.filter_rank))
+                        for _ in bases
+                    ],
+                    "state_projection": [
+                        bases[0].new_zeros((bases[0].size(0), self.filter_rank))
+                        for _ in bases
+                    ],
+                },
+            )
+
+        if self.node_conditioner_mode in {"pdc_v2_sep", "pdc_v2_full"}:
+            if modality == "text":
+                discrepancy_projectors = self.node_disc_proj_text
+            elif modality == "visual":
+                discrepancy_projectors = self.node_disc_proj_visual
+            else:
+                raise ValueError(f"Unknown modality: {modality!r}")
+            rho = self.pdc_rho(modality) if rho_override is None else rho_override
+            residuals = []
+            discrepancies: list[torch.Tensor] = []
+            discrepancy_norms: list[torch.Tensor] = []
+            branches: list[torch.Tensor] = []
+            state_projections: list[torch.Tensor] = []
+            for order, base in enumerate(bases):
+                state_projection = projectors[order](base)
+                if self.node_conditioner_mode == "pdc_v2_full":
+                    discrepancy = (
+                        bases[1] - bases[0] if order == 0 else bases[order] - bases[order - 1]
+                    )
+                    discrepancy_norm = F.layer_norm(
+                        discrepancy,
+                        (discrepancy.size(-1),),
+                        weight=None,
+                        bias=None,
+                        eps=self.eps,
+                    )
+                    disc_projection = discrepancy_projectors[order](discrepancy_norm)
+                elif order == 0:
+                    discrepancy = torch.zeros_like(base)
+                    discrepancy_norm = torch.zeros_like(base)
+                    disc_projection = base.new_zeros(
+                        (base.size(0), self.filter_rank)
+                    )
+                else:
+                    discrepancy = bases[order] - bases[order - 1]
+                    discrepancy_norm = F.layer_norm(
+                        discrepancy,
+                        (discrepancy.size(-1),),
+                        weight=None,
+                        bias=None,
+                        eps=self.eps,
+                    )
+                    disc_projection = discrepancy_projectors[order - 1](discrepancy_norm)
+                branch = rho[order] * disc_projection
+                q = torch.tanh(state_projection + branch)
+                residuals.append(
+                    (q * node_vectors[order]).sum(dim=-1) / float(self.filter_rank)
+                )
+                discrepancies.append(discrepancy)
+                discrepancy_norms.append(discrepancy_norm)
+                branches.append(branch)
+                state_projections.append(state_projection)
+            return (
+                torch.stack(residuals, dim=-1),
+                bases,
+                {
+                    "discrepancy": discrepancies,
+                    "discrepancy_norm": discrepancy_norms,
+                    "branch": branches,
+                    "state_projection": state_projections,
+                },
+            )
+
+        conditioner_bases = self._conditioner_bases(
+            bases, modality, rho_override
+        )
         residuals = []
+        rho = self.pdc_rho(modality) if rho_override is None else rho_override
+        discrepancies = [torch.zeros_like(base) for base in bases]
+        discrepancy_norms = [torch.zeros_like(base) for base in bases]
+        branches = [torch.zeros_like(base) for base in bases]
+        state_projections = []
         for order, base in enumerate(conditioner_bases):
-            q = torch.tanh(projectors[order](base))
+            state_projection = projectors[order](base)
+            q = torch.tanh(state_projection)
             residuals.append(
                 (q * node_vectors[order]).sum(dim=-1) / float(self.filter_rank)
             )
-        return torch.stack(residuals, dim=-1)
+            state_projections.append(state_projection)
+            if self.node_conditioner_mode == "pdc" and order >= 1:
+                discrepancies[order] = bases[order] - bases[order - 1]
+                discrepancy_norms[order] = F.layer_norm(
+                    discrepancies[order],
+                    (discrepancies[order].size(-1),),
+                    weight=None,
+                    bias=None,
+                    eps=self.eps,
+                )
+                branches[order] = rho[order] * discrepancy_norms[order]
+        return (
+            torch.stack(residuals, dim=-1),
+            conditioner_bases,
+            {
+                "discrepancy": discrepancies,
+                "discrepancy_norm": discrepancy_norms,
+                "branch": branches,
+                "state_projection": state_projections,
+            },
+        )
 
     @staticmethod
     def _hrc_raw_loss(
@@ -540,6 +682,9 @@ class MoPF(nn.Module):
         self,
         x: torch.Tensor,
         edge_index: torch.Tensor,
+        *,
+        pdc_rho_text: torch.Tensor | None = None,
+        pdc_rho_visual: torch.Tensor | None = None,
     ) -> dict[str, torch.Tensor | list[torch.Tensor] | dict[str, torch.Tensor]]:
         x_text, x_visual = self._split_features(x)
         h_text = self.text_proj(x_text)
@@ -561,11 +706,19 @@ class MoPF(nn.Module):
         bases_text = self._propagation_bank(h_text, norm_t_index, norm_t_weight)
         bases_visual = self._propagation_bank(h_visual, norm_v_index, norm_v_weight)
 
-        delta_node_text = self._node_residuals(
-            bases_text, self.node_proj_text, self.node_vector_text, "text"
+        delta_node_text, conditioned_bases_text, pdc_aux_text = self._node_residuals(
+            bases_text,
+            self.node_proj_text,
+            self.node_vector_text,
+            "text",
+            pdc_rho_text,
         )
-        delta_node_visual = self._node_residuals(
-            bases_visual, self.node_proj_visual, self.node_vector_visual, "visual"
+        delta_node_visual, conditioned_bases_visual, pdc_aux_visual = self._node_residuals(
+            bases_visual,
+            self.node_proj_visual,
+            self.node_vector_visual,
+            "visual",
+            pdc_rho_visual,
         )
         eta_text = self._effective_coefficients("text", delta_node_text)
         eta_visual = self._effective_coefficients("visual", delta_node_visual)
@@ -593,6 +746,10 @@ class MoPF(nn.Module):
             "norm_v_weight": norm_v_weight,
             "bases_text": bases_text,
             "bases_visual": bases_visual,
+            "conditioned_bases_text": conditioned_bases_text,
+            "conditioned_bases_visual": conditioned_bases_visual,
+            "pdc_aux_text": pdc_aux_text,
+            "pdc_aux_visual": pdc_aux_visual,
             "delta_node_text": delta_node_text,
             "delta_node_visual": delta_node_visual,
             "eta_text": eta_text,
@@ -603,6 +760,81 @@ class MoPF(nn.Module):
             "z_visual_refined": z_visual_refined,
             "z": z,
         }
+
+    def _analysis_rho_from_mask(
+        self,
+        modality: str,
+        mask: torch.Tensor | list[float] | tuple[float, ...] | None,
+        device: torch.device,
+    ) -> torch.Tensor | None:
+        """Resolve an analysis-only PDC mask without mutating parameters."""
+        if mask is None:
+            return None
+        if self.node_conditioner_mode not in {
+            "pdc",
+            "pdc_v2_sep",
+            "pdc_v2_full",
+        }:
+            raise ValueError(
+                "PDC analysis masks require model.node_conditioner_mode='pdc'"
+            )
+        mask_tensor = torch.as_tensor(mask, device=device)
+        if mask_tensor.numel() != self.max_order + 1:
+            raise ValueError(
+                f"PDC mask for {modality} must have {self.max_order + 1} values, "
+                f"got {mask_tensor.numel()}"
+            )
+        mask_tensor = mask_tensor.reshape(self.max_order + 1).to(dtype=self.pdc_theta_text.dtype)
+        if not bool(torch.isfinite(mask_tensor).all()):
+            raise ValueError(f"PDC mask for {modality} contains non-finite values")
+        if bool(((mask_tensor < 0.0) | (mask_tensor > 1.0)).any()):
+            raise ValueError(f"PDC mask for {modality} must be in [0, 1]")
+        # Preserve bitwise equivalence with the formal path for the common
+        # all-ones intervention.  Multiplying by one is mathematically
+        # identical but can introduce a small GPU rounding difference.
+        if bool(torch.equal(mask_tensor, torch.ones_like(mask_tensor))):
+            return None
+        # rho_0 is always zero by definition.  Ignore any caller value at k=0
+        # so the diagnostic cannot accidentally alter the zero-order path.
+        mask_tensor = mask_tensor.clone()
+        mask_tensor[0] = 0.0
+        rho = self.pdc_rho(modality).to(device=device)
+        return rho * mask_tensor
+
+    @torch.no_grad()
+    def analysis_encode_with_pdc_mask(
+        self,
+        x: torch.Tensor,
+        edge_index: torch.Tensor | None,
+        *,
+        text_mask: torch.Tensor | list[float] | tuple[float, ...] | None = None,
+        visual_mask: torch.Tensor | list[float] | tuple[float, ...] | None = None,
+    ) -> dict[str, torch.Tensor | list[torch.Tensor] | dict[str, torch.Tensor]]:
+        """Encode with frozen PDC masks for mechanism diagnostics only.
+
+        The learned checkpoint parameters are never changed.  ``None`` means
+        use the normal learned rho profile; a mask value of zero removes only
+        that order's discrepancy correction.  This helper is intentionally
+        separate from ``forward``/``inference`` so formal training and default
+        inference cannot silently inherit an analysis intervention.
+        """
+        if self.node_conditioner_mode not in {
+            "pdc",
+            "pdc_v2_sep",
+            "pdc_v2_full",
+        }:
+            raise ValueError(
+                "analysis_encode_with_pdc_mask is only defined for PDC models"
+            )
+        edge_index = self._edge_index_or_empty(edge_index, x.device)
+        rho_text = self._analysis_rho_from_mask("text", text_mask, x.device)
+        rho_visual = self._analysis_rho_from_mask("visual", visual_mask, x.device)
+        return self._encode_components(
+            x,
+            edge_index,
+            pdc_rho_text=rho_text,
+            pdc_rho_visual=rho_visual,
+        )
 
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor | None):
         edge_index = self._edge_index_or_empty(edge_index, x.device)

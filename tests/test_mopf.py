@@ -38,6 +38,7 @@ def _cfg(**overrides) -> _CfgNode:
         export_node_aux=False,
         export_edge_aux=False,
         lp_pair_operator=None,
+        node_conditioner_mode="absolute",
     )
     model.update(overrides)
     return _CfgNode(model=model, task=_CfgNode(num_neighbors=[5, 5]))
@@ -167,6 +168,306 @@ def test_mopf_inference_matches_eval_forward_and_uses_max_order_layers() -> None
 
     assert model.num_layers == 3
     assert torch.allclose(forward.cpu(), inferred, atol=1e-6)
+
+
+def _pdc_model() -> mopf.MoPF:
+    model = _build(_cfg(node_conditioner_mode="pdc"))
+    model.eval()
+    with torch.no_grad():
+        model.pdc_theta_text.copy_(torch.tensor([0.0, 0.35, -0.55, 0.8]))
+        model.pdc_theta_visual.copy_(torch.tensor([0.0, -0.25, 0.65, -0.45]))
+        model.node_vector_text.copy_(torch.linspace(-0.7, 0.8, 16).view(4, 4))
+        model.node_vector_visual.copy_(torch.linspace(0.9, -0.6, 16).view(4, 4))
+    return model
+
+
+def test_pdc_analysis_all_ones_matches_formal_forward() -> None:
+    x, edge_index = _graph()
+    model = _pdc_model()
+    ones = [1.0] * 4
+    with torch.no_grad():
+        formal, _, _, _, _ = model(x, edge_index)
+        conditioned = model.analysis_encode_with_pdc_mask(
+            x, edge_index, text_mask=ones, visual_mask=ones
+        )
+
+    assert torch.equal(formal, conditioned["z"])
+    assert torch.equal(
+        conditioned["delta_node_text"],
+        model._encode_components(x, edge_index)["delta_node_text"],
+    )
+    assert torch.equal(
+        conditioned["delta_node_visual"],
+        model._encode_components(x, edge_index)["delta_node_visual"],
+    )
+
+
+def test_pdc_analysis_all_zero_is_rho_zero_conditioner() -> None:
+    x, edge_index = _graph()
+    model = _pdc_model()
+    zeros = [0.0] * 4
+    with torch.no_grad():
+        masked = model.analysis_encode_with_pdc_mask(
+            x, edge_index, text_mask=zeros, visual_mask=zeros
+        )
+        rho_zero = model._encode_components(
+            x,
+            edge_index,
+            pdc_rho_text=torch.zeros(4),
+            pdc_rho_visual=torch.zeros(4),
+        )
+
+    for modality in ("text", "visual"):
+        for left, right in zip(
+            masked[f"conditioned_bases_{modality}"],
+            rho_zero[f"conditioned_bases_{modality}"],
+            strict=True,
+        ):
+            assert torch.equal(left, right)
+    for key in (
+        "delta_node_text",
+        "delta_node_visual",
+        "eta_text",
+        "eta_visual",
+        "z_text",
+        "z_visual",
+        "z",
+    ):
+        assert torch.equal(masked[key], rho_zero[key])
+
+
+def test_pdc_analysis_modality_masks_do_not_cross_streams() -> None:
+    x, edge_index = _graph()
+    model = _pdc_model()
+    ones = [1.0] * 4
+    zeros = [0.0] * 4
+    with torch.no_grad():
+        on = model.analysis_encode_with_pdc_mask(
+            x, edge_index, text_mask=ones, visual_mask=ones
+        )
+        text_off = model.analysis_encode_with_pdc_mask(
+            x, edge_index, text_mask=zeros, visual_mask=ones
+        )
+        visual_off = model.analysis_encode_with_pdc_mask(
+            x, edge_index, text_mask=ones, visual_mask=zeros
+        )
+
+    for left, right in zip(
+        on["conditioned_bases_visual"],
+        text_off["conditioned_bases_visual"],
+        strict=True,
+    ):
+        assert torch.equal(left, right)
+    for left, right in zip(
+        on["conditioned_bases_text"],
+        visual_off["conditioned_bases_text"],
+        strict=True,
+    ):
+        assert torch.equal(left, right)
+
+
+def test_pdc_analysis_order_mask_only_changes_that_conditioner_order_and_k0() -> None:
+    x, edge_index = _graph()
+    model = _pdc_model()
+    ones = [1.0] * 4
+    order = 2
+    order_off = [1.0] * 4
+    order_off[order] = 0.0
+    with torch.no_grad():
+        on = model.analysis_encode_with_pdc_mask(
+            x, edge_index, text_mask=ones, visual_mask=ones
+        )
+        off = model.analysis_encode_with_pdc_mask(
+            x, edge_index, text_mask=order_off, visual_mask=ones
+        )
+
+    assert torch.equal(
+        on["conditioned_bases_text"][0], off["conditioned_bases_text"][0]
+    )
+    for current in range(1, 4):
+        if current != order:
+            assert torch.equal(
+                on["conditioned_bases_text"][current],
+                off["conditioned_bases_text"][current],
+            )
+    assert not torch.equal(
+        on["conditioned_bases_text"][order],
+        off["conditioned_bases_text"][order],
+    )
+
+
+def test_pdc_analysis_does_not_modify_formal_forward_or_parameters() -> None:
+    x, edge_index = _graph()
+    model = _pdc_model()
+    before = {name: value.detach().clone() for name, value in model.state_dict().items()}
+    with torch.no_grad():
+        formal_before, _, _, _, _ = model(x, edge_index)
+        model.analysis_encode_with_pdc_mask(
+            x,
+            edge_index,
+            text_mask=[0.0, 0.0, 1.0, 1.0],
+            visual_mask=[1.0, 0.0, 1.0, 0.0],
+        )
+        formal_after, _, _, _, _ = model(x, edge_index)
+
+    assert torch.equal(formal_before, formal_after)
+    for name, value in model.state_dict().items():
+        assert torch.equal(before[name], value)
+
+
+def _v2_model(mode: str) -> mopf.MoPF:
+    return _build(_cfg(node_conditioner_mode=mode))
+
+
+def test_pdc_v2_sep_zero_theta_has_zero_discrepancy_branch_and_current_state_equivalence() -> None:
+    x, edge_index = _graph()
+    current = _build(_cfg(node_conditioner_mode="absolute"))
+    v2 = _v2_model("pdc_v2_sep")
+    with torch.no_grad():
+        for model in (current, v2):
+            model.node_vector_text.fill_(0.2)
+            model.node_vector_visual.fill_(-0.15)
+        current_components = current._encode_components(x, edge_index)
+        v2_components = v2._encode_components(x, edge_index)
+
+    assert torch.equal(v2.pdc_rho("text")[0], torch.tensor(0.0))
+    assert torch.equal(v2.pdc_rho("visual")[0], torch.tensor(0.0))
+    for modality in ("text", "visual"):
+        for branch in v2_components[f"pdc_aux_{modality}"]["branch"]:
+            assert torch.equal(branch, torch.zeros_like(branch))
+    assert torch.allclose(
+        current_components["delta_node_text"],
+        v2_components["delta_node_text"],
+        atol=1e-7,
+    )
+    assert torch.allclose(
+        current_components["delta_node_visual"],
+        v2_components["delta_node_visual"],
+        atol=1e-7,
+    )
+    for modality in ("text", "visual"):
+        for current_projected, v2_projected in zip(
+            [
+                current.node_proj_text[order](current_components["bases_text"][order])
+                for order in range(4)
+            ]
+            if modality == "text"
+            else [
+                current.node_proj_visual[order](current_components["bases_visual"][order])
+                for order in range(4)
+            ],
+            v2_components[f"pdc_aux_{modality}"]["state_projection"],
+            strict=True,
+        ):
+            assert torch.allclose(current_projected, v2_projected, atol=1e-7)
+
+
+def test_pdc_v2_discrepancy_and_rho_gradients_are_finite() -> None:
+    x, edge_index = _graph()
+    model = _v2_model("pdc_v2_sep")
+    with torch.no_grad():
+        model.pdc_theta_text.fill_(0.4)
+        model.pdc_theta_visual.fill_(-0.3)
+        model.node_vector_text.fill_(0.2)
+        model.node_vector_visual.fill_(-0.15)
+    model.train()
+    z, _, _, _, _ = model(x, edge_index)
+    z.square().mean().backward()
+
+    for module in (model.node_disc_proj_text, model.node_disc_proj_visual):
+        for parameter in module.parameters():
+            assert parameter.grad is not None
+            assert torch.isfinite(parameter.grad).all()
+    for parameter in (model.pdc_theta_text, model.pdc_theta_visual):
+        assert parameter.grad is not None
+        assert torch.isfinite(parameter.grad).all()
+
+
+def test_pdc_v2_full_has_trainable_rho0_and_uses_d0_h1_minus_h0() -> None:
+    x, edge_index = _graph()
+    model = _v2_model("pdc_v2_full")
+    assert model.pdc_theta_text.requires_grad
+    assert model.pdc_theta_visual.requires_grad
+    assert torch.equal(model.pdc_rho("text")[0], torch.tensor(0.0))
+    assert torch.equal(model.pdc_rho("visual")[0], torch.tensor(0.0))
+    model.eval()
+    with torch.no_grad():
+        components = model._encode_components(x, edge_index)
+    for modality in ("text", "visual"):
+        d0 = components[f"pdc_aux_{modality}"]["discrepancy"][0]
+        expected = components[f"bases_{modality}"][1] - components[f"bases_{modality}"][0]
+        assert torch.equal(d0, expected)
+
+
+def test_pdc_v2_full_all_off_matches_explicit_zero_rho_frozen_path() -> None:
+    x, edge_index = _graph()
+    model = _v2_model("pdc_v2_full")
+    with torch.no_grad():
+        model.pdc_theta_text.copy_(torch.tensor([0.35, -0.2, 0.5, -0.4]))
+        model.pdc_theta_visual.copy_(torch.tensor([-0.25, 0.3, -0.45, 0.2]))
+        model.node_vector_text.fill_(0.2)
+        model.node_vector_visual.fill_(-0.15)
+        masked = model.analysis_encode_with_pdc_mask(
+            x, edge_index, text_mask=[0.0] * 4, visual_mask=[0.0] * 4
+        )
+        explicit = model._encode_components(
+            x,
+            edge_index,
+            pdc_rho_text=torch.zeros(4),
+            pdc_rho_visual=torch.zeros(4),
+        )
+    for key in ("delta_node_text", "delta_node_visual", "eta_text", "eta_visual", "z"):
+        assert torch.equal(masked[key], explicit[key])
+
+
+def test_pdc_v2_full_order0_off_only_changes_order0_path() -> None:
+    x, edge_index = _graph()
+    model = _v2_model("pdc_v2_full")
+    with torch.no_grad():
+        model.pdc_theta_text.copy_(torch.tensor([0.6, -0.2, 0.5, -0.4]))
+        model.pdc_theta_visual.copy_(torch.tensor([-0.5, 0.3, -0.45, 0.2]))
+        model.node_vector_text.fill_(0.2)
+        model.node_vector_visual.fill_(-0.15)
+        on = model.analysis_encode_with_pdc_mask(
+            x, edge_index, text_mask=[1.0] * 4, visual_mask=[1.0] * 4
+        )
+        off = model.analysis_encode_with_pdc_mask(
+            x, edge_index, text_mask=[0.0, 1.0, 1.0, 1.0], visual_mask=[1.0] * 4
+        )
+    assert not torch.equal(on["delta_node_text"][:, 0], off["delta_node_text"][:, 0])
+    assert torch.equal(on["delta_node_text"][:, 1:], off["delta_node_text"][:, 1:])
+    assert torch.equal(on["delta_node_visual"], off["delta_node_visual"])
+
+
+def test_mopf_pdc_v2_lp_forward_is_finite_and_uses_three_hop_sampler() -> None:
+    x, edge_index = _graph()
+    for mode in ("pdc_v2_sep", "pdc_v2_full"):
+        model = _v2_model(mode)
+        z, _, _, aux_loss, _ = model(x, edge_index)
+        assert z.shape == (6, 8)
+        assert torch.isfinite(z).all()
+        assert torch.isfinite(aux_loss)
+
+    cfg = OmegaConf.create(
+        {"model": {"name": "mopf", "num_layers": 3}, "task": {"num_neighbors": [5, 5, 5]}}
+    )
+    assert _resolve_lp_num_neighbors(cfg) == [5, 5, 5]
+
+
+def test_pdc_v2_frozen_masks_do_not_modify_checkpoint_state() -> None:
+    x, edge_index = _graph()
+    for mode in ("pdc_v2_sep", "pdc_v2_full"):
+        model = _v2_model(mode)
+        before = {name: value.detach().clone() for name, value in model.state_dict().items()}
+        with torch.no_grad():
+            model.analysis_encode_with_pdc_mask(
+                x,
+                edge_index,
+                text_mask=[0.0, 0.0, 1.0, 1.0],
+                visual_mask=[1.0, 0.0, 1.0, 0.0],
+            )
+        for name, value in model.state_dict().items():
+            assert torch.equal(before[name], value)
 
 
 def test_mopf_empty_edge_graph_and_residual_switches_run() -> None:

@@ -569,8 +569,8 @@ def _causal_intervention(
                 for order, (on_base, alt_base) in enumerate(zip(on_bases, alt_bases, strict=True))
             ],
             "filtered_modality_representation": {
-                "relative_l2": _relative_l2(on[z_key], alt[z_key]),
-                "mean_cosine_distance": _mean_cosine_distance(on[z_key], alt[z_key]),
+                "relative_l2": _relative_l2(on[z_key], alternative[z_key]),
+                "mean_cosine_distance": _mean_cosine_distance(on[z_key], alternative[z_key]),
             },
         }
     prob_delta = torch.abs(on_prob - alt_prob)

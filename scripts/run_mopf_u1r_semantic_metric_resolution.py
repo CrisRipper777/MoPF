@@ -554,10 +554,10 @@ def _causal_intervention(
                 on_edges[weight_key], alt_edges[weight_key]
             ),
             "normalized_operator_relative_l2_on_denominator": _operator_relative_change(
-                on_edges[index_key],
-                on_edges[weight_key_norm],
-                alt_edges[index_key],
-                alt_edges[weight_key_norm],
+                on[index_key],
+                on[weight_key_norm],
+                alternative[index_key],
+                alternative[weight_key_norm],
                 int(data.num_nodes),
             ),
             "propagation_response_bank": [

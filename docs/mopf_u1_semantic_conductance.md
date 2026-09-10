@@ -4,8 +4,8 @@ This report covers NC only: S0 Frozen Separate Cosine and S1 Multi-Perspective S
 LP, sports-copurchase, the decoder, sampler, and LP protocol are intentionally excluded.
 
 - Frozen reference behavior commit: `9b03e6fbeb73d888050833391d9859964335b9ea`
-- vNext commit at analysis time: `0a24a0cec95a83a8e578fd05d1a7734e17e03ddb`
-- Test status: `?? docs/mopf_u1_semantic_conductance.md`
+- vNext commit at analysis time: `4fe97ce6d726f2243d8ae58667348a0d0508966a`
+- Test status: `clean`
 - Candidate decision: **Conditional candidate**
 
 ## Downstream comparison

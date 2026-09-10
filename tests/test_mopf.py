@@ -31,6 +31,7 @@ def _cfg(**overrides) -> _CfgNode:
         map_prior_order=2,
         diffusion_add_self_loops=True,
         edge_weight_mode="separate_cos",
+        num_metric_perspectives=4,
         edge_weight_min=0.1,
         edge_weight_temperature=2.0,
         filter_rank=4,
@@ -142,6 +143,102 @@ def test_mopf_semantic_graph_modes_and_sparse_weight_shapes() -> None:
             assert torch.equal(mode_edges["w_v"], torch.ones(edge_index.size(1)))
         else:
             assert torch.equal(mode_edges["w_t"], mode_edges["w_v"])
+
+
+def _pearson(first: torch.Tensor, second: torch.Tensor) -> float:
+    first = first.float().flatten()
+    second = second.float().flatten()
+    first = first - first.mean()
+    second = second - second.mean()
+    return float(
+        (first * second).sum()
+        / (first.square().sum().sqrt() * second.square().sum().sqrt())
+    )
+
+
+def _rank(values: torch.Tensor) -> torch.Tensor:
+    order = torch.argsort(values)
+    ranks = torch.empty_like(order, dtype=torch.float32)
+    ranks[order] = torch.arange(order.numel(), dtype=torch.float32)
+    return ranks
+
+
+def test_mopf_s0_is_numerically_equivalent_with_explicit_formal_config() -> None:
+    x, edge_index = _graph()
+    implicit = _build(_cfg())
+    explicit = _build(_cfg(num_metric_perspectives=4, node_conditioner_mode="absolute"))
+    explicit.load_state_dict(implicit.state_dict())
+    implicit.eval()
+    explicit.eval()
+    with torch.no_grad():
+        left = implicit(x, edge_index)
+        right = explicit(x, edge_index)
+    assert torch.equal(left[0], right[0])
+    assert torch.equal(left[3], right[3])
+    assert left[4] == right[4] == {}
+
+
+def test_mopf_s1_initialization_is_cosine_equivalent_and_finite() -> None:
+    x, edge_index = _graph()
+    s0 = _build(_cfg(edge_weight_mode="separate_cos"))
+    s1 = _build(_cfg(edge_weight_mode="multi_perspective_cos"))
+    s1.load_state_dict(s0.state_dict(), strict=False)
+    s0.eval()
+    s1.eval()
+    with torch.no_grad():
+        base = s0._encode_components(x, edge_index)["edges"]
+        multi = s1._encode_components(x, edge_index)["edges"]
+        z, _, _, aux_loss, _ = s1(x, edge_index)
+    for modality in ("t", "v"):
+        ordinary = base[f"cos_{modality}"]
+        aggregate = multi[f"perspective_cos_{modality}"]
+        assert aggregate.shape == (4, edge_index.size(1))
+        assert _pearson(ordinary, aggregate.mean(dim=0)) > 0.99
+        assert _pearson(_rank(ordinary), _rank(aggregate.mean(dim=0))) > 0.99
+        assert torch.allclose(ordinary, aggregate.mean(dim=0), atol=1e-6)
+    assert torch.isfinite(z).all()
+    assert aux_loss.item() == 0.0
+
+
+def test_mopf_s1_preserves_original_support_and_gcn_norm_edge_cardinality() -> None:
+    x, edge_index = _graph()
+    model = _build(_cfg(edge_weight_mode="multi_perspective_cos"))
+    model.eval()
+    with torch.no_grad():
+        stats = model.conductance_stats(x, edge_index)
+    assert torch.equal(stats["src"], edge_index[0])
+    assert torch.equal(stats["dst"], edge_index[1])
+    assert stats["perspective_cos_text"].shape == (4, edge_index.size(1))
+    assert stats["perspective_cos_visual"].shape == (4, edge_index.size(1))
+    for key in ("norm_text_index", "norm_visual_index"):
+        # gcn_norm may add self-loops, but U1 cannot add any pre-normalization
+        # edge: the raw conductance support is exactly the input support.
+        assert stats[key].size(1) >= edge_index.size(1)
+    assert stats["conductance_text"].numel() == edge_index.size(1)
+    assert stats["conductance_visual"].numel() == edge_index.size(1)
+
+
+def test_mopf_s1_text_visual_perspectives_are_independent() -> None:
+    model = _build(_cfg(edge_weight_mode="multi_perspective_cos"))
+    assert model.metric_theta_text.data_ptr() != model.metric_theta_visual.data_ptr()
+    before = model.metric_theta_visual.detach().clone()
+    with torch.no_grad():
+        model.metric_theta_text.add_(0.25)
+    assert torch.equal(model.metric_theta_visual, before)
+    assert model.metric_perspective_weights("text").shape == (4, 8)
+    assert model.metric_perspective_weights("visual").shape == (4, 8)
+
+
+def test_mopf_s1_perspective_gradients_are_finite() -> None:
+    x, edge_index = _graph()
+    model = _build(_cfg(edge_weight_mode="multi_perspective_cos"))
+    model.train()
+    z, _, _, _, _ = model(x, edge_index)
+    z.square().mean().backward()
+    assert model.metric_theta_text.grad is not None
+    assert model.metric_theta_visual.grad is not None
+    assert torch.isfinite(model.metric_theta_text.grad).all()
+    assert torch.isfinite(model.metric_theta_visual.grad).all()
 
 
 def test_mopf_filter_parameters_receive_finite_gradients() -> None:

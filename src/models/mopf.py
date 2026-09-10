@@ -44,7 +44,12 @@ class MoPF(nn.Module):
     modality residual, and a low-rank node-conditioned residual.
     """
 
-    EDGE_WEIGHT_MODES = {"separate_cos", "shared_avg_cos", "raw_uniform"}
+    EDGE_WEIGHT_MODES = {
+        "separate_cos",
+        "multi_perspective_cos",
+        "shared_avg_cos",
+        "raw_uniform",
+    }
 
     def __init__(self, cfg, data_info: dict):
         super().__init__()
@@ -119,6 +124,15 @@ class MoPF(nn.Module):
         if self.eps <= 0.0:
             raise ValueError(f"eps must be positive, got {self.eps}")
 
+        self.num_metric_perspectives = int(
+            cfg.model.get("num_metric_perspectives", 4)
+        )
+        if self.num_metric_perspectives != 4:
+            raise ValueError(
+                "MoPF U1 fixes num_metric_perspectives=4, got "
+                f"{self.num_metric_perspectives}"
+            )
+
         self.filter_rank = int(cfg.model.get("filter_rank", 4))
         if self.filter_rank < 1:
             raise ValueError(f"filter_rank must be >= 1, got {self.filter_rank}")
@@ -162,6 +176,27 @@ class MoPF(nn.Module):
 
         self.text_proj = ProjectionMLP(self.text_dim, hidden_dim, dropout, norm)
         self.visual_proj = ProjectionMLP(self.visual_dim, hidden_dim, dropout, norm)
+
+        # U1 is deliberately opt-in.  S0 therefore has exactly the Frozen
+        # MoPF-v0 parameter/state path, while S1 gets independent metric
+        # parameters for text and visual perspectives.  The inverse-softplus
+        # initialization makes softplus(theta) equal to one at initialization,
+        # so S1 starts as ordinary cosine rather than as a tuned metric.
+        if self.edge_weight_mode == "multi_perspective_cos":
+            theta_one = torch.tensor(1.0, dtype=torch.float32)
+            theta_init = torch.log(torch.expm1(theta_one))
+            self.metric_theta_text = nn.Parameter(
+                torch.full(
+                    (self.num_metric_perspectives, hidden_dim),
+                    float(theta_init.item()),
+                )
+            )
+            self.metric_theta_visual = nn.Parameter(
+                torch.full(
+                    (self.num_metric_perspectives, hidden_dim),
+                    float(theta_init.item()),
+                )
+            )
 
         gamma_init = self._make_global_prior()
         self.gamma_global = nn.Parameter(
@@ -280,6 +315,22 @@ class MoPF(nn.Module):
             -1.0, 1.0
         )
 
+    def _multi_perspective_cosine_values(
+        self,
+        h: torch.Tensor,
+        theta: torch.Tensor,
+        edge_index: torch.Tensor,
+    ) -> torch.Tensor:
+        """Return one sparse edge-score row per learned metric perspective."""
+        if edge_index.numel() == 0:
+            return h.new_empty((self.num_metric_perspectives, 0))
+        metric_weights = F.softplus(theta)
+        scores = [
+            self._edge_cosine_values(h * metric_weights[p].unsqueeze(0), edge_index)
+            for p in range(self.num_metric_perspectives)
+        ]
+        return torch.stack(scores, dim=0)
+
     def _edge_weight_from_cosine(self, cosine: torch.Tensor) -> torch.Tensor:
         weight = self.edge_weight_min + (1.0 - self.edge_weight_min) * torch.sigmoid(
             cosine / self.edge_weight_temperature
@@ -300,6 +351,8 @@ class MoPF(nn.Module):
         """Build two sparse semantic graphs only on the supplied edges."""
         cos_t = self._edge_cosine_values(h_text, edge_index)
         cos_v = self._edge_cosine_values(h_visual, edge_index)
+        perspective_cos_t = cos_t.unsqueeze(0)
+        perspective_cos_v = cos_v.unsqueeze(0)
         if self.edge_weight_mode == "raw_uniform":
             w_t = torch.ones_like(cos_t)
             w_v = torch.ones_like(cos_v)
@@ -310,11 +363,24 @@ class MoPF(nn.Module):
         elif self.edge_weight_mode == "separate_cos":
             w_t = self._edge_weight_from_cosine(cos_t)
             w_v = self._edge_weight_from_cosine(cos_v)
+        elif self.edge_weight_mode == "multi_perspective_cos":
+            perspective_cos_t = self._multi_perspective_cosine_values(
+                h_text, self.metric_theta_text, edge_index
+            )
+            perspective_cos_v = self._multi_perspective_cosine_values(
+                h_visual, self.metric_theta_visual, edge_index
+            )
+            cos_t = perspective_cos_t.mean(dim=0)
+            cos_v = perspective_cos_v.mean(dim=0)
+            w_t = self._edge_weight_from_cosine(cos_t)
+            w_v = self._edge_weight_from_cosine(cos_v)
         else:  # guarded in __init__, retained for type-checker exhaustiveness.
             raise RuntimeError(f"Unhandled edge_weight_mode: {self.edge_weight_mode}")
         return {
             "cos_t": cos_t,
             "cos_v": cos_v,
+            "perspective_cos_t": perspective_cos_t,
+            "perspective_cos_v": perspective_cos_v,
             "w_t": w_t,
             "w_v": w_v,
             "w_shared": 0.5 * (w_t + w_v),
@@ -347,6 +413,67 @@ class MoPF(nn.Module):
             posinf=0.0,
             neginf=0.0,
         )
+
+    @torch.no_grad()
+    def conductance_stats(
+        self,
+        x: torch.Tensor,
+        edge_index: torch.Tensor | None,
+    ) -> dict[str, torch.Tensor]:
+        """Return sparse conductance/operator diagnostics without propagation.
+
+        This is an analysis-only path. It uses the same projections, edge
+        support, conductance transform, and ``gcn_norm`` calls as ``forward``
+        but deliberately does not construct the propagation bank or alter any
+        training state. The returned perspective score rows are ``[P, E]``;
+        S0 is represented by one ordinary-cosine row for uniform diagnostics.
+        """
+        was_training = self.training
+        self.eval()
+        edge_index = self._edge_index_or_empty(edge_index, x.device)
+        x_text, x_visual = self._split_features(x)
+        h_text = self.text_proj(x_text)
+        h_visual = self.visual_proj(x_visual)
+        edges = self._semantic_edge_weights(h_text, h_visual, edge_index)
+        norm_t_index, norm_t_weight = self._normalized_operator(
+            edge_index, edges["w_t"], int(x.size(0)), h_text.dtype
+        )
+        norm_v_index, norm_v_weight = self._normalized_operator(
+            edge_index, edges["w_v"], int(x.size(0)), h_visual.dtype
+        )
+        if was_training:
+            self.train()
+        return {
+            "src": edge_index[0].detach().clone(),
+            "dst": edge_index[1].detach().clone(),
+            "cos_text": edges["cos_t"].detach().clone(),
+            "cos_visual": edges["cos_v"].detach().clone(),
+            "conductance_text": edges["w_t"].detach().clone(),
+            "conductance_visual": edges["w_v"].detach().clone(),
+            "perspective_cos_text": edges["perspective_cos_t"].detach().clone(),
+            "perspective_cos_visual": edges["perspective_cos_v"].detach().clone(),
+            "norm_text_index": norm_t_index.detach().clone(),
+            "norm_text_weight": norm_t_weight.detach().clone(),
+            "norm_visual_index": norm_v_index.detach().clone(),
+            "norm_visual_weight": norm_v_weight.detach().clone(),
+        }
+
+    @torch.no_grad()
+    def metric_perspective_weights(self, modality: str) -> torch.Tensor:
+        """Return positive learned metric weights for U1 diagnostics."""
+        if self.edge_weight_mode != "multi_perspective_cos":
+            return torch.ones(
+                (1, self.hidden_dim),
+                device=next(self.parameters()).device,
+                dtype=next(self.parameters()).dtype,
+            )
+        if modality == "text":
+            theta = self.metric_theta_text
+        elif modality == "visual":
+            theta = self.metric_theta_visual
+        else:
+            raise ValueError(f"Unknown modality: {modality!r}")
+        return F.softplus(theta).detach().clone()
 
     @staticmethod
     def _propagate_once(

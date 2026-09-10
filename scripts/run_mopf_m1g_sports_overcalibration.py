@@ -85,6 +85,9 @@ SAMPLED_AUDIT_BATCHES = 100
 OUTPUT_ROOT = ROOT / "outputs" / "m1g_sports_overcalibration"
 M1F_ROOT = ROOT / "outputs" / "m1f_sports_seed42"
 NC_SUMMARY = ROOT / "outputs" / "m1e_pdc_v2" / "m1e_master_summary.json"
+# The code was clean at this commit before seed43/44 training started.  Later
+# report-only commits are recorded separately in metadata.git_commit.
+TRAINING_FREEZE_COMMIT = "4ed47eec03121a9f0ad87f82c8a83e39bd370193"
 
 
 def _git_status() -> list[str]:
@@ -1015,7 +1018,15 @@ def _diagnosis(training: dict[str, Any], global_sweep: dict[str, Any], intervent
         for row in all_off_per_seed
         if row["metrics"]["val_mrr"] > current_by_seed[row["seed"]]["metrics"]["val_mrr"]
     ]
-    all_off_best_seeds = [row["seed"] for row in all_off_per_seed if row["metrics"]["val_mrr"] >= max(item["metrics"]["val_mrr"] for item in interventions["F1_all_pdc_off"]["per_seed"])]
+    all_off_best_seeds = []
+    for seed in (42, 43, 44):
+        seed_rows = []
+        for row in global_sweep["rows"]:
+            seed_row = next(item for item in row["per_seed"] if item["seed"] == seed)
+            seed_rows.append({"parameters": row["parameters"], "metrics": seed_row["metrics"]})
+        alpha0_seed = next(row for row in seed_rows if row["parameters"]["alpha"] == 0.0)
+        if alpha0_seed["metrics"]["val_mrr"] >= max(row["metrics"]["val_mrr"] for row in seed_rows):
+            all_off_best_seeds.append(seed)
     alignment = _aggregate_node_shuffle(audits)["active_path_alignment_gain"]["val_mrr"]
     functional_evidence = bool(alignment["positive_seed_count"] >= 2 and any(
         row["pathway_utilization"]["modalities"]["visual"]["orders"][2]["branch_to_state_ratio"]["mean"] > 0
@@ -1025,7 +1036,7 @@ def _diagnosis(training: dict[str, Any], global_sweep: dict[str, Any], intervent
         category = "B"
     elif alpha_star == 0.0 and len(c3_off_beats_current) == 3:
         category = "C"
-    elif alpha_star == 1.0 and abs(training["C3_minus_Current"]["mean"]["metrics"]["val_mrr"]["mean"]) <= 0.01 and interventions["F1_all_pdc_off"]["condition_minus_pdc_on_gain"]["val_mrr"]["positive_seed_count"] <= 1:
+    elif alpha_star == 1.0 and abs(training["C3_minus_Current"]["mean"]["val_mrr"]["mean"]) <= 0.01 and interventions["F1_all_pdc_off"]["condition_minus_pdc_on_gain"]["val_mrr"]["positive_seed_count"] <= 1:
         category = "A"
     else:
         category = "D"
@@ -1106,7 +1117,7 @@ def _write_report(path: Path, summary: dict[str, Any]) -> None:
     lines.extend(["", "C3 − Current per-seed Val/Test MRR:"])
     for row in training["C3_minus_Current"]["per_seed"]:
         lines.append(f"- seed{row['seed']}: {row['metrics']['val_mrr']:+.6f} / {row['metrics']['test_mrr']:+.6f}")
-    lines.append(f"- mean: {training['C3_minus_Current']['mean']['metrics']['val_mrr']['mean']:+.6f} / {training['C3_minus_Current']['mean']['metrics']['test_mrr']['mean']:+.6f}")
+    lines.append(f"- mean: {training['C3_minus_Current']['mean']['val_mrr']['mean']:+.6f} / {training['C3_minus_Current']['mean']['test_mrr']['mean']:+.6f}")
     lines.extend(["", "## Frozen C3 interventions", "", "| Condition | Val MRR gain over PDC-On | Test MRR gain over PDC-On | Positive Val seeds |", "|---|---:|---:|---:|"])
     for name in summary["frozen_interventions"]:
         item = summary["frozen_interventions"][name]["condition_minus_pdc_on_gain"]
@@ -1159,6 +1170,7 @@ def _build_summary(records: list[dict[str, Any]], audits: list[dict[str, Any]], 
             "git_log": _git_log(),
             "git_dirty": bool(_git_status()),
             "git_status_short": _git_status(),
+            "training_freeze_commit": TRAINING_FREEZE_COMMIT,
             "environment": {"python": sys.version, "torch": torch.__version__, "cuda_available": torch.cuda.is_available()},
             "dataset": DATASET,
             "seeds": list(ALL_SEEDS),

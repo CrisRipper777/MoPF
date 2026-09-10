@@ -1,6 +1,6 @@
 # MoPF M1-G — PDC Cross-Task Over-Calibration Diagnosis
 
-Frozen commit: `4ed47eec03121a9f0ad87f82c8a83e39bd370193`. Only Current/C3 seeds 43/44 were newly trained; seed42 was reused from M1-F.
+Frozen commit: `c90a7f716ed85417109d662d02f6dafea41d536b`. Only Current/C3 seeds 43/44 were newly trained; seed42 was reused from M1-F.
 
 ## Three-seed training
 

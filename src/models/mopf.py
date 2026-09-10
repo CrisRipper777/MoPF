@@ -3,6 +3,7 @@ from __future__ import annotations
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.utils.checkpoint import checkpoint
 from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_geometric.utils import scatter
 
@@ -325,10 +326,49 @@ class MoPF(nn.Module):
         if edge_index.numel() == 0:
             return h.new_empty((self.num_metric_perspectives, 0))
         metric_weights = F.softplus(theta)
-        scores = [
-            self._edge_cosine_values(h * metric_weights[p].unsqueeze(0), edge_index)
-            for p in range(self.num_metric_perspectives)
-        ]
+        src, dst = edge_index
+        # Four perspectives over large graphs can otherwise retain several
+        # full edge gathers in the training autograd graph. Chunking keeps the
+        # original edge support and formula intact; checkpointing recomputes
+        # each small cosine block during backward instead of retaining its
+        # gathered [E, d] intermediates.
+        chunk_size = 65536
+        scores = []
+        for perspective in range(self.num_metric_perspectives):
+            weight = metric_weights[perspective]
+            chunks = []
+            for start in range(0, edge_index.size(1), chunk_size):
+                stop = min(start + chunk_size, edge_index.size(1))
+                chunk_src = src[start:stop]
+                chunk_dst = dst[start:stop]
+
+                def _score_chunk(
+                    hidden: torch.Tensor,
+                    metric_weight: torch.Tensor,
+                    *,
+                    chunk_src: torch.Tensor = chunk_src,
+                    chunk_dst: torch.Tensor = chunk_dst,
+                ) -> torch.Tensor:
+                    weighted = hidden * metric_weight.unsqueeze(0)
+                    return F.cosine_similarity(
+                        weighted[chunk_src], weighted[chunk_dst], dim=-1, eps=self.eps
+                    )
+
+                if torch.is_grad_enabled() and (h.requires_grad or weight.requires_grad):
+                    score = checkpoint(
+                        _score_chunk,
+                        h,
+                        weight,
+                        use_reentrant=False,
+                    )
+                else:
+                    score = _score_chunk(h, weight)
+                chunks.append(
+                    torch.nan_to_num(score, nan=0.0, posinf=1.0, neginf=-1.0).clamp(
+                        -1.0, 1.0
+                    )
+                )
+            scores.append(torch.cat(chunks, dim=0))
         return torch.stack(scores, dim=0)
 
     def _edge_weight_from_cosine(self, cosine: torch.Tensor) -> torch.Tensor:

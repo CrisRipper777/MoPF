@@ -38,7 +38,7 @@ Functional evidence is reported continuously and in three levels: Numerically Ac
 
 ## Exact provenance
 
-- Exact reproducible implementation commit: recorded in `u1t_master_summary.json` and this file after the final repository commit.
+- Exact reproducible implementation commit: `329216e` (`freeze U1-T calibrated semantic conductance`).
 - U1-R source: `outputs/u1r_semantic_metric_resolution/u1r_master_summary.json`.
 - Frozen reference tag: `mopf-v0-frozen`.
 

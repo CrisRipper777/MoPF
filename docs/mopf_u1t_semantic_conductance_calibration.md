@@ -2,8 +2,8 @@
 
 NC-only controlled temperature calibration. The R1 metric form is frozen; only the global fixed conductance temperature was varied.
 
-- Experiment commit: `26fe1c79e2d0260b43cb09d9c20ebe56f21f40c3`
-- Public reproducible commit: `26fe1c79e2d0260b43cb09d9c20ebe56f21f40c3`
+- Experiment commit: `329216e` (`freeze U1-T calibrated semantic conductance`)
+- Public reproducible commit: `329216e`
 - U1-R source: `/hdd1/DataInHere/YHF/MoPF/outputs/u1r_semantic_metric_resolution/u1r_master_summary.json`
 - Phase A passing temperatures: `[0.75, 0.5, 0.35, 0.25]`
 - Final decision: **Select Calibrated R1 with tau = 0.35**

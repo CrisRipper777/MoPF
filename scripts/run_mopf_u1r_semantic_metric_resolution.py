@@ -647,10 +647,10 @@ def _conductance_diagnostics(components: dict[str, Any], data) -> dict[str, Any]
     }
     output["normalized_operator_difference"] = float(
         _operator_relative_change(
-            edges["norm_t_index"],
-            edges["norm_t_weight"],
-            edges["norm_v_index"],
-            edges["norm_v_weight"],
+            components["norm_t_index"],
+            components["norm_t_weight"],
+            components["norm_v_index"],
+            components["norm_v_weight"],
             int(data.num_nodes),
         )
     )

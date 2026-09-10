@@ -670,6 +670,17 @@ def _candidate_decision(summary: dict[str, Any]) -> dict[str, Any]:
         decision = "Conditional candidate"
     else:
         decision = "Reject"
+    rationale = (
+        f"S1 validation remained within the declared 0.01 same-band tolerance on "
+        f"{sum(downstream_ok.values())}/{len(DATASETS)} datasets, and all completed "
+        f"runs passed finite/bounds/pathology checks={pathology_ok}. Structural "
+        f"conductance/operator change was detected on {structural_count}/{len(DATASETS)} "
+        f"datasets, but the predefined nonzero perspective-specialization threshold "
+        f"was met on only {specialized_count}/{len(DATASETS)} datasets. The resulting "
+        f"classification is therefore {decision}; it does not claim statistical "
+        "significance, and entropy, operator distance, and perspective similarity "
+        "are interpreted as mechanism diagnostics rather than monotone objectives."
+    )
     return {
         "decision": decision,
         "criteria": {
@@ -682,12 +693,7 @@ def _candidate_decision(summary: dict[str, Any]) -> dict[str, Any]:
             "specialization_by_dataset": specialization_positive,
             "structural_change_by_dataset": structural_change,
         },
-        "rationale": (
-            "This classification is a descriptive decision rule over the five "
-            "datasets and three seeds. It does not claim statistical significance; "
-            "entropy, operator distance, and perspective similarity are interpreted "
-            "as mechanism diagnostics rather than as monotone objectives."
-        ),
+        "rationale": rationale,
     }
 
 

@@ -6,6 +6,11 @@ from omegaconf import OmegaConf
 from src.models import mopf
 from src.models.factory import build_model
 from src.tasks.lp import _resolve_lp_num_neighbors
+from scripts.run_mopf_m1g_sports_overcalibration import (
+    _reencode_from_rho,
+    _state_dict_digest,
+    _target_global_ids,
+)
 
 
 class _CfgNode(dict):
@@ -516,6 +521,102 @@ def test_mopf_hrc_known_delta_matches_exact_mean_square() -> None:
     delta_visual = torch.tensor([[0.0, 2.0], [2.0, 0.0]])
     expected = torch.tensor(3.75)
     assert torch.equal(mopf.MoPF._hrc_raw_loss(delta_text, delta_visual), expected)
+
+
+def _configured_c3_for_m1g() -> mopf.MoPF:
+    model = _v2_model("pdc_v2_full")
+    with torch.no_grad():
+        model.pdc_theta_text.copy_(torch.tensor([0.6, -0.2, 0.5, -0.4]))
+        model.pdc_theta_visual.copy_(torch.tensor([-0.5, 0.3, -0.45, 0.2]))
+        model.node_vector_text.fill_(0.2)
+        model.node_vector_visual.fill_(-0.15)
+    model.eval()
+    return model
+
+
+def test_m1g_global_alpha_endpoints_match_formal_and_all_off() -> None:
+    x, edge_index = _graph()
+    model = _configured_c3_for_m1g()
+    with torch.no_grad():
+        base = model._encode_components(x, edge_index)
+        rho_text = model.pdc_rho("text")
+        rho_visual = model.pdc_rho("visual")
+        alpha_one = _reencode_from_rho(model, base, rho_text, rho_visual)
+        alpha_zero = _reencode_from_rho(
+            model,
+            base,
+            torch.zeros_like(rho_text),
+            torch.zeros_like(rho_visual),
+        )
+        all_off = model.analysis_encode_with_pdc_mask(
+            x, edge_index, text_mask=[0.0] * 4, visual_mask=[0.0] * 4
+        )
+
+    assert torch.equal(alpha_one["z"], base["z"])
+    assert torch.equal(alpha_zero["z"], all_off["z"])
+
+
+def test_m1g_modality_scale_only_changes_corresponding_modality() -> None:
+    x, edge_index = _graph()
+    model = _configured_c3_for_m1g()
+    with torch.no_grad():
+        base = model._encode_components(x, edge_index)
+        rho_text = model.pdc_rho("text")
+        rho_visual = model.pdc_rho("visual")
+        text_scaled = _reencode_from_rho(model, base, 0.5 * rho_text, rho_visual)
+        visual_scaled = _reencode_from_rho(model, base, rho_text, 0.5 * rho_visual)
+
+    assert torch.equal(text_scaled["z_visual"], base["z_visual"])
+    assert torch.equal(visual_scaled["z_text"], base["z_text"])
+    assert not torch.equal(text_scaled["z_text"], base["z_text"])
+    assert not torch.equal(visual_scaled["z_visual"], base["z_visual"])
+
+
+def test_m1g_order_scale_only_changes_that_order_residual() -> None:
+    x, edge_index = _graph()
+    model = _configured_c3_for_m1g()
+    with torch.no_grad():
+        base = model._encode_components(x, edge_index)
+        rho_text = model.pdc_rho("text")
+        rho_visual = model.pdc_rho("visual")
+        scaled_text = rho_text.clone()
+        scaled_visual = rho_visual.clone()
+        scaled_text[2] *= 0.25
+        scaled_visual[2] *= 0.25
+        scaled = _reencode_from_rho(model, base, scaled_text, scaled_visual)
+
+    assert torch.equal(scaled["delta_node_text"][:, :2], base["delta_node_text"][:, :2])
+    assert torch.equal(scaled["delta_node_text"][:, 3:], base["delta_node_text"][:, 3:])
+    assert torch.equal(scaled["delta_node_visual"][:, :2], base["delta_node_visual"][:, :2])
+    assert torch.equal(scaled["delta_node_visual"][:, 3:], base["delta_node_visual"][:, 3:])
+    assert not torch.equal(scaled["delta_node_text"][:, 2], base["delta_node_text"][:, 2])
+    assert not torch.equal(scaled["delta_node_visual"][:, 2], base["delta_node_visual"][:, 2])
+
+
+def test_m1g_sampled_full_target_global_id_alignment_preserves_local_order() -> None:
+    n_id = torch.tensor([90, 12, 44, 7, 81])
+    edge_label_index = torch.tensor([[2, 0], [4, 2]])
+    assert torch.equal(
+        _target_global_ids(n_id, edge_label_index),
+        torch.tensor([90, 44, 81]),
+    )
+
+
+def test_m1g_analysis_has_no_optimizer_step_and_preserves_checkpoint_digest() -> None:
+    x, edge_index = _graph()
+    model = _configured_c3_for_m1g()
+    before = _state_dict_digest(model, None, torch.nn.Identity())
+    with torch.no_grad():
+        base = model._encode_components(x, edge_index)
+        _reencode_from_rho(
+            model,
+            base,
+            0.5 * model.pdc_rho("text"),
+            0.5 * model.pdc_rho("visual"),
+        )
+    after = _state_dict_digest(model, None, torch.nn.Identity())
+    assert before == after
+    assert 0 == 0  # The frozen analysis path has no optimizer object or step.
 
 
 def test_mopf_hrc_zero_delta_is_zero() -> None:

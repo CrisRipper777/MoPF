@@ -192,16 +192,26 @@ def _run_formal_job(
         command.append(f"dataset.nc_split_path={split_override}")
 
     started = time.monotonic()
-    process = subprocess.Popen(command, cwd=ROOT, env={**os.environ, "PYTHONPATH": str(ROOT)})
-    peak = None
-    while process.poll() is None:
+    process_log = (run_dir / "process.log").open("w", encoding="utf-8")
+    try:
+        process = subprocess.Popen(
+            command,
+            cwd=ROOT,
+            env={**os.environ, "PYTHONPATH": str(ROOT)},
+            stdout=process_log,
+            stderr=subprocess.STDOUT,
+        )
+        peak = None
+        while process.poll() is None:
+            current = _peak_gpu_memory_mib(process.pid, device)
+            if current is not None:
+                peak = current if peak is None else max(peak, current)
+            time.sleep(2.0)
         current = _peak_gpu_memory_mib(process.pid, device)
         if current is not None:
             peak = current if peak is None else max(peak, current)
-        time.sleep(2.0)
-    current = _peak_gpu_memory_mib(process.pid, device)
-    if current is not None:
-        peak = current if peak is None else max(peak, current)
+    finally:
+        process_log.close()
     elapsed = time.monotonic() - started
     if process.returncode != 0:
         raise RuntimeError(

@@ -445,6 +445,14 @@ def _mechanism_diagnostics(
     cos_text = stats["cos_text"].cpu().numpy().astype(np.float64)
     cos_visual = stats["cos_visual"].cpu().numpy().astype(np.float64)
     labels = data.y.cpu().numpy().astype(np.int64) if data.y is not None else np.full(data.num_nodes, -1)
+    conductance_bounds_ok = bool(
+        conductance_text.size
+        and conductance_visual.size
+        and np.min(conductance_text) >= 0.1 - 1e-6
+        and np.min(conductance_visual) >= 0.1 - 1e-6
+        and np.max(conductance_text) <= 1.0 + 1e-6
+        and np.max(conductance_visual) <= 1.0 + 1e-6
+    )
     mechanism = {
         "conductance_distributions": {
             "text": _distribution(conductance_text),
@@ -479,12 +487,7 @@ def _mechanism_diagnostics(
                 and np.isfinite(cos_text).all()
                 and np.isfinite(cos_visual).all()
             ),
-            "within_conductance_bounds": bool(
-                conductance_text.min(initial=0.0) >= 0.1 - 1e-6
-                and conductance_visual.min(initial=0.0) >= 0.1 - 1e-6
-                and conductance_text.max(initial=1.0) <= 1.0 + 1e-6
-                and conductance_visual.max(initial=1.0) <= 1.0 + 1e-6
-            ),
+            "within_conductance_bounds": conductance_bounds_ok,
             "text_conductance_collapsed": bool(np.std(conductance_text) < 1e-8),
             "visual_conductance_collapsed": bool(np.std(conductance_visual) < 1e-8),
             "original_edge_count": int(src.size),

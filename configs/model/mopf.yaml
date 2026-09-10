@@ -13,12 +13,12 @@ map_prior_order: 2
 
 diffusion_add_self_loops: true
 
-edge_weight_mode: separate_cos # separate_cos | learned_diag_cos | multi_perspective_cos_broken | multi_perspective_cos | shared_avg_cos | raw_uniform
+edge_weight_mode: learned_diag_cos # separate_cos | learned_diag_cos | multi_perspective_cos_broken | multi_perspective_cos | shared_avg_cos | raw_uniform
 num_metric_perspectives: 4
 metric_init_seed: 20260910
 metric_init_noise_std: 0.01
 edge_weight_min: 0.1
-edge_weight_temperature: 2.0
+edge_weight_temperature: 0.35
 
 filter_rank: 4
 

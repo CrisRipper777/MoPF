@@ -294,3 +294,51 @@ Authoritative U1-R artifacts:
 - `outputs/u1r_semantic_metric_resolution/initialization_audit.json`
 - `outputs/u1r_semantic_metric_resolution/r0_equivalence_audit.json`
 - `docs/mopf_u1r_semantic_metric_resolution.md`
+
+## U1-R Independent Post-Audit
+
+The independent post-audit preserves the U1-R historical decision while tightening the interpretation of frozen functional evidence:
+
+- R2 is rejected: perspective specialization did not produce a sufficient functional effect under the collapse-to-mean frozen intervention on all five datasets.
+- R1 is preferred: the single Modality-Adaptive Semantic Metric is non-identity, performance-safe, and is the only relation-level candidate carried into U1-T.
+- The previous `functional=true` threshold was too permissive for a scientific materiality claim.
+- R1 frozen learned-vs-identity effects are mainly in the `1e-5`–`1e-4` scale.
+- The conductance transform was therefore treated as the suspected attenuation bottleneck.
+- U1-T was introduced to test one global fixed conductance temperature without changing the frozen R1 metric form or any downstream module.
+
+## U1-T — Semantic Conductance Calibration
+
+U1-T kept the R1 metric frozen:
+
+`s_ij^m = cos(w^m ⊙ h_i^m, w^m ⊙ h_j^m)`, with `w^m = softplus(theta^m) / mean(softplus(theta^m))`.
+
+Only the global fixed scalar `edge_weight_temperature=tau` was varied, shared by both modalities and all datasets. Frozen temperature overrides were routed through an explicit analysis-only `temperature_override` argument; model state and checkpoint bytes were verified unchanged.
+
+### Phase A — Frozen Temperature Diagnosis
+
+- Source: all 15 U1-R R1 best-validation checkpoints.
+- Grid: `2.0, 1.5, 1.0, 0.75, 0.5, 0.35, 0.25`.
+- Raw learned and identity semantic scores were invariant across tau within `<1e-7`.
+- All runs were finite, retained edge support and the GCN-normalization support family, and showed no prediction or conductance collapse.
+- `tau=1.5` and `1.0` did not reach 2x mechanism amplification.
+- `tau=0.75, 0.5, 0.35, 0.25` passed the Phase-A validation/mechanism gate.
+- Candidate-Mild: `tau=0.75`.
+- Candidate-Strong: `tau=0.35`.
+
+### Phase B — Selected Temperature Retraining
+
+Both candidates were retrained under the unchanged full-graph NC protocol, 5 datasets × 3 seeds each. Each new best checkpoint received a learned-vs-identity audit at its selected tau and a learned tau-vs-2.0 temperature-off audit.
+
+The final candidate comparison was validation-first. `tau=0.35` had an unweighted five-dataset validation-accuracy delta of `+0.0137 pp` versus T0; its largest dataset mean drop was `-0.1700 pp` on Movies. It reached Functionally Amplified on 5/5 datasets, Functionally Material on 4/5, and the temperature-off audit remained active on all 5 datasets.
+
+### U1-T relation-level decision
+
+**Select Calibrated R1 with tau = 0.35.**
+
+The frozen relation module is now:
+
+`edge_weight_mode=learned_diag_cos`
+
+`c_ij^m = c_min + (1-c_min) sigmoid(s_ij^m / 0.35)`
+
+R0 and R2 code paths remain available for ablations. `mopf-v0-frozen` was not modified. U2 and all propagation-bank, personalized-filter, fusion, auxiliary-loss, and LP changes remain prohibited until a separately authorized stage.

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import math
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -469,9 +471,31 @@ class MoPF(nn.Module):
             raise ValueError(f"{modality} metric override must be finite and positive")
         return weights / (weights.mean(dim=-1, keepdim=True) + self.eps)
 
-    def _edge_weight_from_cosine(self, cosine: torch.Tensor) -> torch.Tensor:
+    def _resolve_edge_weight_temperature(
+        self, temperature_override: float | None = None
+    ) -> float:
+        """Resolve a fixed analysis-time temperature without mutating state."""
+        temperature = (
+            self.edge_weight_temperature
+            if temperature_override is None
+            else float(temperature_override)
+        )
+        if not math.isfinite(temperature) or temperature <= 0.0:
+            raise ValueError(
+                "temperature_override must be a finite positive scalar, got "
+                f"{temperature_override!r}"
+            )
+        return temperature
+
+    def _edge_weight_from_cosine(
+        self,
+        cosine: torch.Tensor,
+        *,
+        temperature_override: float | None = None,
+    ) -> torch.Tensor:
+        temperature = self._resolve_edge_weight_temperature(temperature_override)
         weight = self.edge_weight_min + (1.0 - self.edge_weight_min) * torch.sigmoid(
-            cosine / self.edge_weight_temperature
+            cosine / temperature
         )
         return torch.nan_to_num(
             weight,
@@ -488,6 +512,7 @@ class MoPF(nn.Module):
         *,
         metric_weights_text: torch.Tensor | None = None,
         metric_weights_visual: torch.Tensor | None = None,
+        temperature_override: float | None = None,
     ) -> dict[str, torch.Tensor]:
         """Build two sparse semantic graphs only on the supplied edges."""
         cos_t = self._edge_cosine_values(h_text, edge_index)
@@ -498,12 +523,19 @@ class MoPF(nn.Module):
             w_t = torch.ones_like(cos_t)
             w_v = torch.ones_like(cos_v)
         elif self.edge_weight_mode == "shared_avg_cos":
-            shared = self._edge_weight_from_cosine(0.5 * (cos_t + cos_v))
+            shared = self._edge_weight_from_cosine(
+                0.5 * (cos_t + cos_v),
+                temperature_override=temperature_override,
+            )
             w_t = shared
             w_v = shared
         elif self.edge_weight_mode == "separate_cos":
-            w_t = self._edge_weight_from_cosine(cos_t)
-            w_v = self._edge_weight_from_cosine(cos_v)
+            w_t = self._edge_weight_from_cosine(
+                cos_t, temperature_override=temperature_override
+            )
+            w_v = self._edge_weight_from_cosine(
+                cos_v, temperature_override=temperature_override
+            )
         elif self.edge_weight_mode == "multi_perspective_cos":
             perspective_cos_t = self._multi_perspective_cosine_values(
                 h_text, self.metric_theta_text, edge_index
@@ -513,8 +545,12 @@ class MoPF(nn.Module):
             )
             cos_t = perspective_cos_t.mean(dim=0)
             cos_v = perspective_cos_v.mean(dim=0)
-            w_t = self._edge_weight_from_cosine(cos_t)
-            w_v = self._edge_weight_from_cosine(cos_v)
+            w_t = self._edge_weight_from_cosine(
+                cos_t, temperature_override=temperature_override
+            )
+            w_v = self._edge_weight_from_cosine(
+                cos_v, temperature_override=temperature_override
+            )
         elif self.edge_weight_mode in {
             "learned_diag_cos",
             "multi_perspective_cos_broken",
@@ -533,8 +569,12 @@ class MoPF(nn.Module):
             )
             cos_t = perspective_cos_t.mean(dim=0)
             cos_v = perspective_cos_v.mean(dim=0)
-            w_t = self._edge_weight_from_cosine(cos_t)
-            w_v = self._edge_weight_from_cosine(cos_v)
+            w_t = self._edge_weight_from_cosine(
+                cos_t, temperature_override=temperature_override
+            )
+            w_v = self._edge_weight_from_cosine(
+                cos_v, temperature_override=temperature_override
+            )
         else:  # guarded in __init__, retained for type-checker exhaustiveness.
             raise RuntimeError(f"Unhandled edge_weight_mode: {self.edge_weight_mode}")
         return {
@@ -596,6 +636,8 @@ class MoPF(nn.Module):
         self,
         x: torch.Tensor,
         edge_index: torch.Tensor | None,
+        *,
+        temperature_override: float | None = None,
     ) -> dict[str, torch.Tensor]:
         """Return sparse conductance/operator diagnostics without propagation.
 
@@ -611,7 +653,12 @@ class MoPF(nn.Module):
         x_text, x_visual = self._split_features(x)
         h_text = self.text_proj(x_text)
         h_visual = self.visual_proj(x_visual)
-        edges = self._semantic_edge_weights(h_text, h_visual, edge_index)
+        edges = self._semantic_edge_weights(
+            h_text,
+            h_visual,
+            edge_index,
+            temperature_override=temperature_override,
+        )
         norm_t_index, norm_t_weight = self._normalized_operator(
             edge_index, edges["w_t"], int(x.size(0)), h_text.dtype
         )
@@ -680,6 +727,7 @@ class MoPF(nn.Module):
         *,
         text_weights: torch.Tensor | None = None,
         visual_weights: torch.Tensor | None = None,
+        temperature_override: float | None = None,
     ) -> dict[str, torch.Tensor | list[torch.Tensor] | dict[str, torch.Tensor]]:
         """Frozen functional audit path for R1/R2 metric interventions."""
         if self.edge_weight_mode not in {
@@ -695,6 +743,7 @@ class MoPF(nn.Module):
             edge_index,
             metric_weights_text=text_weights,
             metric_weights_visual=visual_weights,
+            temperature_override=temperature_override,
         )
         if was_training:
             self.train()
@@ -1039,6 +1088,7 @@ class MoPF(nn.Module):
         pdc_rho_visual: torch.Tensor | None = None,
         metric_weights_text: torch.Tensor | None = None,
         metric_weights_visual: torch.Tensor | None = None,
+        temperature_override: float | None = None,
     ) -> dict[str, torch.Tensor | list[torch.Tensor] | dict[str, torch.Tensor]]:
         x_text, x_visual = self._split_features(x)
         h_text = self.text_proj(x_text)
@@ -1050,6 +1100,7 @@ class MoPF(nn.Module):
             edge_index,
             metric_weights_text=metric_weights_text,
             metric_weights_visual=metric_weights_visual,
+            temperature_override=temperature_override,
         )
         norm_t_index, norm_t_weight = self._normalized_operator(
             edge_index,

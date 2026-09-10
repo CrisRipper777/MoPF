@@ -359,6 +359,10 @@ def _metric_shape(weights: torch.Tensor) -> dict[str, Any]:
     mean_by_dim = values.mean(axis=0)
     std_by_dim = values.std(axis=0, ddof=0)
     cv_by_dim = std_by_dim / np.maximum(np.abs(mean_by_dim), 1e-12)
+    within_metric_std = values.std(axis=1, ddof=0)
+    within_metric_cv = within_metric_std / np.maximum(
+        np.abs(values.mean(axis=1)), 1e-12
+    )
     anisotropy = np.sqrt(np.mean(np.square(values - 1.0), axis=1))
     max_min = values.max(axis=1) / np.maximum(values.min(axis=1), 1e-12)
     cosine_identity = np.asarray(
@@ -368,10 +372,14 @@ def _metric_shape(weights: torch.Tensor) -> dict[str, Any]:
         "perspective_count": int(values.shape[0]),
         "anisotropy_rms": anisotropy.tolist(),
         "anisotropy_rms_mean": float(anisotropy.mean()),
-        "std_across_dimensions": std_by_dim.tolist(),
-        "std_across_dimensions_mean": float(std_by_dim.mean()),
-        "coefficient_of_variation_across_dimensions": cv_by_dim.tolist(),
-        "coefficient_of_variation_mean": float(cv_by_dim.mean()),
+        "std_across_perspectives_by_dimension": std_by_dim.tolist(),
+        "std_across_perspectives_by_dimension_mean": float(std_by_dim.mean()),
+        "cv_across_perspectives_by_dimension": cv_by_dim.tolist(),
+        "cv_across_perspectives_by_dimension_mean": float(cv_by_dim.mean()),
+        "within_metric_std_across_dimensions": within_metric_std.tolist(),
+        "within_metric_std_across_dimensions_mean": float(within_metric_std.mean()),
+        "within_metric_cv_across_dimensions": within_metric_cv.tolist(),
+        "within_metric_cv_across_dimensions_mean": float(within_metric_cv.mean()),
         "max_to_min_ratio": max_min.tolist(),
         "cosine_to_identity_ones": cosine_identity.tolist(),
         "q10": np.quantile(values, 0.10, axis=1).tolist(),
@@ -448,6 +456,30 @@ def _metric_shape_comparison(model: MoPF) -> dict[str, Any]:
     return {
         "text_visual_metric_shape_cosine": float(np.dot(text, visual) / (np.linalg.norm(text) * np.linalg.norm(visual) + 1e-12)),
         "text_visual_metric_shape_rms_difference": float(np.sqrt(np.mean(np.square(text - visual)))),
+    }
+
+
+def _functional_activity_level(fused_effect: float, logit_effect: float) -> dict[str, Any]:
+    """Report continuous frozen effect sizes with conservative activity levels."""
+    max_effect = max(float(fused_effect), float(logit_effect))
+    if max_effect >= 1e-4:
+        level = "Functionally Material"
+    elif max_effect >= 2e-5:
+        level = "Functionally Amplified"
+    elif max_effect > 1e-10:
+        level = "Numerically Active"
+    else:
+        level = "Numerically Inactive"
+    return {
+        "level": level,
+        "fused_relative_l2": float(fused_effect),
+        "logit_relative_l2": float(logit_effect),
+        "max_effect_size": max_effect,
+        "thresholds": {
+            "numerically_active_gt": 1e-10,
+            "functionally_amplified_gte": 2e-5,
+            "functionally_material_gte": 1e-4,
+        },
     }
 
 
@@ -786,6 +818,13 @@ def _checkpoint_analysis(
             eval_labels=eval_labels,
         )
     mechanism["frozen_interventions"] = intervention_results
+    identity_effect = intervention_results["F1_identity_metric"]
+    mechanism["functional_activity_levels"] = {
+        "identity_metric": _functional_activity_level(
+            identity_effect["fused_representation"]["relative_l2"],
+            identity_effect["logits"]["relative_l2"],
+        )
+    }
     on_with_floor = {
         **on,
         "_edge_weight_min": float(model.edge_weight_min),
@@ -860,6 +899,8 @@ def _candidate_decision(summary: dict[str, Any]) -> dict[str, Any]:
     r2_same_band = {}
     r1_nonidentity = {}
     r1_active = {}
+    r1_effect_sizes = {}
+    r1_activity_levels = {}
     r2_specialized = {}
     r2_collapse_active = {}
     pathology_ok = True
@@ -881,6 +922,14 @@ def _candidate_decision(summary: dict[str, Any]) -> dict[str, Any]:
                 for row in r1_rows
             )
         )
+        r1_effect_sizes[dataset] = [
+            row["mechanism"]["functional_activity_levels"]["identity_metric"]["max_effect_size"]
+            for row in r1_rows
+        ]
+        r1_activity_levels[dataset] = [
+            row["mechanism"]["functional_activity_levels"]["identity_metric"]["level"]
+            for row in r1_rows
+        ]
         r1_active[dataset] = bool(
             sum(
                 row["mechanism"]["frozen_interventions"]["F1_identity_metric"]["fused_representation"]["relative_l2"]
@@ -936,6 +985,8 @@ def _candidate_decision(summary: dict[str, Any]) -> dict[str, Any]:
             "r2_same_band_by_dataset": r2_same_band,
             "r1_normalized_metric_nonidentity_by_dataset": r1_nonidentity,
             "r1_frozen_identity_functional_change_by_dataset": r1_active,
+            "r1_frozen_identity_effect_sizes_by_dataset": r1_effect_sizes,
+            "r1_frozen_identity_activity_levels_by_dataset": r1_activity_levels,
             "r2_repeated_specialization_by_dataset": r2_specialized,
             "r2_collapse_mean_functional_change_by_dataset": r2_collapse_active,
             "pathology_ok": pathology_ok,

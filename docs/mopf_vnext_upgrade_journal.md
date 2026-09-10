@@ -94,77 +94,125 @@ The metric vectors are initialized with `softplus(theta)=1`, so S1 begins numeri
 - 30 formal training runs
 - LP excluded
 
-Initialization equivalence passed on all five datasets. All 30 runs passed finite/bounds/pathology checks. The current test suite after U1 reports `148 passed`.
+Initialization equivalence passed exactly on all five datasets: the aggregate S1 metric score equals S0 ordinary cosine at initialization (reported mean and maximum absolute differences are zero). All 30 runs passed finite/bounds/pathology checks. The test suite after U1 reports `148 passed`.
 
 ### 2.4 Downstream result
 
-Mean Validation Accuracy difference, S1 minus S0:
+Mean S1-minus-S0 changes across three seeds:
 
-| Dataset | S1-S0 Val Acc |
-|---|---:|
-| Movies | +0.040 pp |
-| Toys | +0.081 pp |
-| Grocery | +0.010 pp |
-| ele-fashion | -0.085 pp |
-| Reddit-S | +0.031 pp |
+| Dataset | Val Acc | Val Macro-F1 | Test Acc | Test Macro-F1 |
+|---|---:|---:|---:|---:|
+| Movies | +0.040 pp | -0.262 pp | +0.180 pp | +0.340 pp |
+| Toys | +0.081 pp | +0.381 pp | -0.105 pp | +0.122 pp |
+| Grocery | +0.010 pp | +0.294 pp | -0.088 pp | -0.066 pp |
+| ele-fashion | -0.085 pp | -0.119 pp | -0.052 pp | -0.088 pp |
+| Reddit-S | +0.031 pp | +0.079 pp | -0.073 pp | -0.166 pp |
 
-The effect is therefore performance-neutral at the scale relevant to this screening stage. The U1 report also records mixed, very small Test changes rather than a consistent gain.
+The unweighted mean across dataset means is approximately `+0.015 pp` Validation Accuracy, `+0.075 pp` Validation Macro-F1, `-0.028 pp` Test Accuracy, and `+0.028 pp` Test Macro-F1. U1 is therefore performance-neutral at the screening scale; it does not provide evidence of a robust downstream gain or loss.
 
 ### 2.5 Mechanism result reported by the experiment
+
+The automatic U1 summary reports:
 
 - structural conductance/operator change detected: 5/5 datasets;
 - conductance collapse/pathology: none;
 - perspective specialization threshold met: 0/5 datasets;
 - automatic screening decision: `Conditional candidate`.
 
-### 2.6 Code-audit diagnosis: exact permutation-symmetry lock
+The scalar text-vs-visual conductance/operator summaries change only modestly from S0 to S1. For example, the mean absolute text-visual conductance gap changes by roughly -4.4% on Movies and within about +/-1.4% on the other four datasets; the within-model normalized text-vs-visual operator-distance scalar changes by roughly -2.35% on Movies and within about +/-1.16% elsewhere.
 
-The current S1 implementation initializes all four perspective metric vectors **exactly identically** and combines them through a uniform mean. Each perspective has the same architecture and the loss is permutation-symmetric in the perspective index.
+### 2.6 Code-and-data audit: exact permutation-symmetry lock
 
-Consequently, at initialization:
+The current S1 implementation initializes all four perspective metric vectors **exactly identically** and combines them through a uniform mean. Each perspective has the same architecture and the task loss is permutation-symmetric in the perspective index.
+
+At initialization:
 
 `w_1 = w_2 = w_3 = w_4`
 
-and therefore every perspective receives the same gradient. With the same optimizer state, the equality is preserved throughout training (up to irrelevant numerical noise). The four perspectives are thus structurally unable to spontaneously specialize under the current parameterization.
+and every perspective receives the same gradient. With identical optimizer state, equality is preserved throughout training.
 
-This changes the interpretation of the U1 result:
+The authoritative U1 master JSON confirms this prediction rather than merely suggesting it. Across all S1 checkpoints inspected:
 
-**0/5 perspective specialization is expected from the implementation and cannot be used as evidence that the datasets do not need multiple semantic perspectives.**
+- perspective-score mean absolute deviation from the four-perspective aggregate is exactly zero;
+- across-perspective weight standard deviation is exactly zero;
+- pairwise perspective score correlations are numerically one (up to floating-point roundoff).
 
-The current S1 is functionally equivalent, at inference, to repeatedly evaluating one learned modality-specific diagonal cosine metric and averaging four identical copies. The useful signal observed in U1 is therefore better interpreted as evidence for a **learned modality-adaptive anisotropic semantic metric**, not yet for a genuine multi-perspective metric.
+Therefore:
 
-### 2.7 Additional code-audit findings
+**0/5 perspective specialization is a consequence of the present parameterization and cannot be interpreted as evidence that the datasets intrinsically do not require multiple semantic perspectives.**
 
-1. The diagnostic field named `weight_pairwise_cosine_similarity` is currently computed with a Pearson-correlation helper rather than an actual cosine-similarity formula. This is a reporting bug and should be corrected before using weight-similarity evidence in a paper.
-2. `_multi_perspective_cosine_values` recomputes `hidden * metric_weight` for the full node matrix inside every edge chunk. This is mathematically correct but unnecessarily expensive. A chunk-local weighted gather, or one weighted node matrix per perspective, would avoid repeated full-node multiplication.
-3. Neighborhood-entropy aggregation currently includes zero-degree nodes as entropy zero through `np.bincount(..., minlength=num_nodes)`. For a selectivity interpretation, non-isolated-node statistics should be reported separately or used as the primary value.
-4. The conductance-bound diagnostic hard-codes `0.1`; it should read `model.edge_weight_min` if the diagnostic is to remain valid for later variants.
+The current S1 is functionally equivalent at inference to evaluating one learned modality-specific diagonal cosine metric four times and averaging identical copies.
 
-None of these issues invalidates the reported downstream S0/S1 numbers. The first issue above, however, invalidates the intended claim that U1 has already tested learnable multi-perspective specialization.
+### 2.7 What U1 has actually tested
 
-### 2.8 U1 revised decision
+The scientifically defensible interpretation of S1 is currently:
 
-**Status: U1 mechanism not yet resolved. Do not promote the current S1 as the vNext structuralization module.**
+**learned modality-adaptive anisotropic semantic metric**
 
-The automatic `Conditional candidate` label is acceptable as an experiment bookkeeping label, but the scientific interpretation is more specific:
+rather than:
 
-- performance preservation: supported;
-- learned modality-specific conductance change: supported;
-- genuine multi-perspective specialization: **not tested successfully because of symmetry lock**.
+**genuine multi-perspective semantic conductance**.
 
-### 2.9 Required next step before U2
+The learned diagonal metrics do move away from the identity, but only mildly. Across S1 runs the representative per-dimension metric weights typically deviate from one by roughly 1–2% on average, with observed extrema in the approximate range 0.95–1.07. Thus the model learns a small anisotropic rescaling instead of leaving the metric exactly at ordinary cosine.
 
-Run a small **U1-R / U1.1 symmetry-resolution study** before moving to the orthogonal response bank.
+This is compatible with the performance-neutral result: relation-level geometry can be refined without destabilizing the existing propagation/filtering pipeline.
 
-Recommended comparison:
+### 2.8 Important limitation of the current `structural_change` criterion
+
+The automatic `structural_change` flag does **not** directly compute the operator difference between S0 and S1 on a common hidden representation. It checks whether scalar summaries such as the S1 text-vs-visual conductance gap or the S1 text-vs-visual normalized-operator distance differ from their S0 counterparts by more than `1e-5`.
+
+Because S0 and S1 are separately trained models, this criterion mixes metric effects with ordinary co-adaptation of the projection/filter/fusion parameters. It is useful as a screening indicator, but it is not a frozen causal test of semantic-metric utilization.
+
+A stronger structuralization audit must hold the trained S1 checkpoint and hidden representations fixed, then replace the learned metric with identity weights and measure:
+
+- edge-score change;
+- conductance change;
+- normalized-operator change;
+- representation/logit change;
+- Validation/Test change under the same checkpoint.
+
+This frozen intervention should be added to U1-R.
+
+### 2.9 Additional implementation-audit findings
+
+1. The diagnostic field named `weight_pairwise_cosine_similarity` is computed with the generic Pearson-correlation helper, not a cosine-similarity formula. This is a reporting bug. It does not affect the symmetry-lock conclusion because identical perspectives produce 1 under either measure, but it must be fixed before future specialization analysis.
+2. `_multi_perspective_cosine_values` recomputes `hidden * metric_weight` for the full node matrix inside every edge chunk. This is mathematically correct but unnecessarily expensive. The U1 data reflect the cost: S1 adds only 2,048 parameters (about 0.2% of the ~1M-parameter NC model) yet the unweighted mean training time across dataset means rises from about 41.2 s to 67.2 s. This overhead is especially difficult to justify while all four perspectives are identical.
+3. Neighborhood-entropy aggregation includes zero-degree nodes as entropy zero through `np.bincount(..., minlength=num_nodes)`. Future selectivity analysis should report non-isolated-node entropy separately or use it as the primary statistic.
+4. The conductance-bound diagnostic hard-codes `0.1`; it should read `model.edge_weight_min` so later hyperparameter variants remain valid.
+
+### 2.10 U1 revised decision
+
+**Status: performance-safe structuralization candidate, but current four-perspective formulation is not acceptable as the final vNext module.**
+
+The automatic `Conditional candidate` label remains valid as bookkeeping, but the scientific decision is split:
+
+- performance preservation: **supported**;
+- learned modality-specific anisotropic metric: **plausible and worth retaining for direct testing**;
+- causal utilization of the learned metric: **not yet established by the current S0/S1 comparison**;
+- genuine multi-perspective specialization: **not tested because of exact symmetry lock**.
+
+Do not promote current S1 directly into U2.
+
+### 2.11 Required next step before U2: U1-R / U1.1
+
+Run a compact symmetry-resolution and causal-utilization study:
 
 - `R0`: Frozen S0 ordinary separate cosine;
 - `R1`: one learned modality-specific diagonal semantic metric;
-- `R2`: four symmetry-broken perspectives initialized as small zero-mean perturbations around the all-ones metric, with no diversity/orthogonality loss.
+- `R2`: four genuinely symmetry-broken perspectives initialized as small zero-mean perturbations around the all-ones metric, with no diversity/orthogonality loss.
 
-The R2 initialization must remain close to ordinary cosine at the aggregate-score level, but individual perspective vectors must be non-identical from step 0. If R2 still converges back to one metric across datasets, then multi-perspective structure is empirically redundant and U1 should intentionally collapse to the simpler R1 formulation. If R2 shows stable specialization without hurting validation performance, retain the genuine multi-perspective version.
+R2 must satisfy two conditions simultaneously: individual perspectives are non-identical from step 0, while their aggregate initial edge score remains highly aligned with ordinary cosine. The initialization perturbation should be small enough to preserve the frozen model's starting geometry.
 
-No U2/Jacobi-bank modification should begin until this question is resolved.
+Each trained R1/R2 checkpoint should also receive a frozen **identity-metric-off** intervention to isolate the functional contribution of learned semantic geometry from co-adaptation elsewhere in the network.
+
+Decision rule:
+
+- if R1 preserves performance and the frozen identity intervention shows real operator/representation/logit dependence, retain a simple **Modality-Adaptive Semantic Conductance** formulation;
+- if R2 additionally develops reproducible, nontrivial specialization without harming validation performance, retain the multi-perspective form;
+- if R2 re-collapses to one metric after symmetry is genuinely broken, reject the extra perspective capacity and use R1;
+- if neither R1 nor R2 shows frozen functional utilization, revert to S0 and do not carry semantic-metric decoration forward.
+
+No U2 response-bank modification should begin until this relation-level operator is selected.
 
 ---
 
@@ -173,9 +221,10 @@ No U2/Jacobi-bank modification should begin until this question is resolved.
 | Component | Current status |
 |---|---|
 | Frozen MoPF-v0 | Reference, immutable |
-| U1 S1 current four-perspective implementation | Conditional bookkeeping candidate; scientifically unresolved due symmetry lock |
-| Learned modality-adaptive diagonal semantic metric | Supported as a plausible low-risk interpretation of the U1 result |
-| Genuine multi-perspective semantic conductance | Requires U1-R symmetry-broken test |
+| U1 S1 current four-perspective implementation | Performance-safe but structurally symmetry-locked; not final |
+| Learned modality-adaptive diagonal semantic metric | Primary low-risk U1-R candidate |
+| Genuine multi-perspective semantic conductance | Requires symmetry-broken R2 test |
+| Frozen metric-utilization evidence | Missing; required in U1-R |
 | U2 Orthogonal Response Bank | Not started |
 | U3 Hierarchical Transfer Function upgrade | Not started |
 | U4 Complementary Fusion | Not started |
@@ -186,4 +235,4 @@ No U2/Jacobi-bank modification should begin until this question is resolved.
 
 ## 4. Next update
 
-The next journal update should append the U1-R design, implementation audit, three-seed NC results, mechanism diagnostics, and the final structuralization decision. The journal should then freeze the selected relation-level operator before U2 begins.
+The next journal update should append the U1-R design, code audit, three-seed NC results, frozen metric-utilization diagnostics, specialization diagnostics, efficiency comparison, and the final relation-level structuralization decision. Only after that decision should the selected operator be frozen and U2 begin.

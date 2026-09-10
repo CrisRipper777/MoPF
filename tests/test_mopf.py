@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import torch
+import torch.nn.functional as F
 from omegaconf import OmegaConf
 
 from src.models import mopf
@@ -239,6 +240,160 @@ def test_mopf_s1_perspective_gradients_are_finite() -> None:
     assert model.metric_theta_visual.grad is not None
     assert torch.isfinite(model.metric_theta_text.grad).all()
     assert torch.isfinite(model.metric_theta_visual.grad).all()
+
+
+def _r1_model() -> mopf.MoPF:
+    return _build(_cfg(edge_weight_mode="learned_diag_cos"))
+
+
+def _r2_model() -> mopf.MoPF:
+    return _build(
+        _cfg(
+            edge_weight_mode="multi_perspective_cos_broken",
+            metric_init_seed=20260910,
+            metric_init_noise_std=0.01,
+        )
+    )
+
+
+def test_mopf_r1_identity_initialization_and_normalized_metric_mean() -> None:
+    x, edge_index = _graph()
+    r0 = _build(_cfg(edge_weight_mode="separate_cos"))
+    r1 = _r1_model()
+    r1.load_state_dict(r0.state_dict(), strict=False)
+    r0.eval()
+    r1.eval()
+    with torch.no_grad():
+        ordinary = r0._encode_components(x, edge_index)["edges"]
+        learned = r1._encode_components(x, edge_index)["edges"]
+        text_weights = r1.semantic_metric_weights("text")
+        visual_weights = r1.semantic_metric_weights("visual")
+    assert text_weights.shape == visual_weights.shape == (1, 8)
+    assert torch.allclose(text_weights.mean(dim=-1), torch.ones(1), atol=1e-7)
+    assert torch.allclose(visual_weights.mean(dim=-1), torch.ones(1), atol=1e-7)
+    assert torch.allclose(ordinary["cos_t"], learned["cos_t"], atol=1e-6)
+    assert torch.allclose(ordinary["cos_v"], learned["cos_v"], atol=1e-6)
+
+
+def test_mopf_r1_metric_scale_gauge_and_manual_cosine() -> None:
+    x, edge_index = _graph()
+    model = _r1_model()
+    model.eval()
+    with torch.no_grad():
+        text, _ = model._split_features(x)
+        hidden = model.text_proj(text)
+        weights = model.semantic_metric_weights("text")
+        left = model._edge_cosine_values_with_weights(hidden, weights, edge_index)
+        right = model._edge_cosine_values_with_weights(hidden, 7.5 * weights, edge_index)
+        src, dst = edge_index
+        manual = F.cosine_similarity(
+            (hidden * weights[0])[src],
+            (hidden * weights[0])[dst],
+            dim=-1,
+            eps=model.eps,
+        )
+        learned = model._encode_components(x, edge_index)["edges"]["cos_t"]
+    assert torch.allclose(left, right, atol=1e-7)
+    assert torch.allclose(left, manual, atol=1e-7)
+    assert torch.allclose(left, learned, atol=1e-7)
+
+
+def test_mopf_r2_initialization_breaks_symmetry_but_preserves_aggregate_cosine() -> None:
+    x, edge_index = _graph()
+    r0 = _build(_cfg(edge_weight_mode="separate_cos"))
+    r2 = _r2_model()
+    r2.load_state_dict(r0.state_dict(), strict=False)
+    r0.eval()
+    r2.eval()
+    with torch.no_grad():
+        ordinary = r0._encode_components(x, edge_index)["edges"]
+        learned = r2._encode_components(x, edge_index)["edges"]
+        text_weights = r2.semantic_metric_weights("text")
+        visual_weights = r2.semantic_metric_weights("visual")
+    assert text_weights.shape == visual_weights.shape == (4, 8)
+    assert torch.allclose(text_weights.mean(dim=0), torch.ones(8), atol=1e-6)
+    assert torch.allclose(visual_weights.mean(dim=0), torch.ones(8), atol=1e-6)
+    assert torch.pairwise_distance(text_weights[0], text_weights[1]).item() > 0.0
+    assert torch.pairwise_distance(visual_weights[0], visual_weights[1]).item() > 0.0
+    for modality in ("t", "v"):
+        aggregate = learned[f"perspective_cos_{modality}"].mean(dim=0)
+        assert _pearson(ordinary[f"cos_{modality}"], aggregate) > 0.999
+        assert _pearson(_rank(ordinary[f"cos_{modality}"]), _rank(aggregate)) > 0.999
+    assert not torch.equal(
+        learned["perspective_cos_t"][0], learned["perspective_cos_t"][1]
+    )
+
+
+def test_mopf_r2_identity_intervention_is_non_mutating_and_stream_specific() -> None:
+    x, edge_index = _graph()
+    model = _r2_model()
+    before = {key: value.detach().clone() for key, value in model.state_dict().items()}
+    model.eval()
+    with torch.no_grad():
+        learned = model.analysis_encode_with_metric_override(x, edge_index)
+        text_identity = model.analysis_encode_with_metric_override(
+            x,
+            edge_index,
+            text_weights=torch.ones(4, 8),
+        )
+        visual_identity = model.analysis_encode_with_metric_override(
+            x,
+            edge_index,
+            visual_weights=torch.ones(4, 8),
+        )
+    assert torch.equal(
+        learned["edges"]["perspective_cos_v"],
+        text_identity["edges"]["perspective_cos_v"],
+    )
+    assert torch.equal(
+        learned["edges"]["perspective_cos_t"],
+        visual_identity["edges"]["perspective_cos_t"],
+    )
+    assert not torch.equal(
+        learned["edges"]["perspective_cos_t"],
+        text_identity["edges"]["perspective_cos_t"],
+    )
+    for key, value in model.state_dict().items():
+        assert torch.equal(before[key], value)
+
+
+def test_mopf_r2_collapse_to_mean_removes_only_perspective_difference() -> None:
+    x, edge_index = _graph()
+    model = _r2_model()
+    model.eval()
+    with torch.no_grad():
+        learned_weights = model.semantic_metric_weights("text")
+        mean_weights = learned_weights.mean(dim=0)
+        collapsed = model.analysis_encode_with_metric_override(
+            x,
+            edge_index,
+            text_weights=mean_weights.repeat(4, 1),
+            visual_weights=mean_weights.repeat(4, 1),
+        )
+        learned = model.analysis_encode_with_metric_override(x, edge_index)
+        collapsed_scores = collapsed["edges"]["perspective_cos_t"]
+        collapsed_weights = collapsed["edges"]["metric_weights_text"]
+    assert torch.allclose(collapsed_scores, collapsed_scores[0:1].expand_as(collapsed_scores))
+    assert torch.allclose(
+        collapsed_weights,
+        collapsed_weights[0:1].expand_as(collapsed_weights),
+        atol=1e-7,
+    )
+    assert not torch.equal(
+        collapsed_scores[0], learned["edges"]["perspective_cos_t"][0]
+    )
+
+
+def test_mopf_r1_r2_metric_gradients_are_finite() -> None:
+    x, edge_index = _graph()
+    for model in (_r1_model(), _r2_model()):
+        model.train()
+        z, _, _, _, _ = model(x, edge_index)
+        z.square().mean().backward()
+        assert model.metric_theta_text.grad is not None
+        assert model.metric_theta_visual.grad is not None
+        assert torch.isfinite(model.metric_theta_text.grad).all()
+        assert torch.isfinite(model.metric_theta_visual.grad).all()
 
 
 def test_mopf_filter_parameters_receive_finite_gradients() -> None:

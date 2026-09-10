@@ -105,6 +105,35 @@ def _run_formal_job(
     record_path = run_dir / "run_record.json"
     if resume and record_path.is_file() and checkpoint_path.is_file():
         return json.loads(record_path.read_text(encoding="utf-8"))
+    if resume and checkpoint_path.is_file() and (run_dir / "results.json").is_file():
+        checkpoint = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
+        metrics = dict(checkpoint.get("metrics", {}))
+        cfg = _compose_cfg(dataset, seed, variant, device)
+        model = build_model(cfg, checkpoint["data_info"])
+        parameter_count = count_parameters(model) + int(model.out_dim + 1) * int(
+            checkpoint["data_info"]["num_classes"]
+        )
+        recovered = {
+            "dataset": dataset,
+            "variant": variant,
+            "seed": seed,
+            "k": k,
+            "device": device,
+            "run_dir": str(run_dir),
+            "checkpoint": str(checkpoint_path),
+            "downstream": {
+                key: metrics.get(key)
+                for key in ("val_acc", "val_macro_f1", "test_acc", "test_macro_f1")
+            },
+            "best_epoch": checkpoint.get("epoch"),
+            "parameter_count": parameter_count,
+            "training_time_seconds": None,
+            "peak_gpu_memory_mib": None,
+            "peak_gpu_memory_status": "unavailable",
+            "recovered_from_checkpoint": True,
+        }
+        _dump_json(record_path, recovered)
+        return recovered
 
     run_dir.mkdir(parents=True, exist_ok=True)
     command = [

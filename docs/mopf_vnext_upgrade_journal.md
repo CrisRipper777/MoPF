@@ -710,3 +710,36 @@ fixed K policy, quasi-held-out handling, seed policy, and four-figure limit are
 frozen in `docs/mopf_final_evaluation_protocol.md` and
 `docs/mopf_final_experiment_plan.md`; future tests are descriptive and cannot
 reopen U1, U2, or U3 selection.
+
+## F1-A — Benchmark Matrix and Result-Reuse Audit
+
+F1-A completed at method-freeze SHA
+`4ddbd6918ceebadc25eed2694e1b463f9aac87f4`; the formal model config hash
+remains `1e29aa0f7141bbeeb16c695ba294358f59441f75b0d92fc7ffb55f560f7d140a`.
+The branch was `vnext`, `git pull --ff-only origin vnext` was up to date, and
+the worktree was clean at provenance capture. No model behavior, training
+logic, evaluator, or dataset split was modified.
+
+All 16 implemented model configs were inventoried. The formal external list is
+`mlp`, `gcn`, `sage`, `mmgcn`, `mgat`, `dip`, `dgf`, `dmgc`, and `lgmrec`; final
+`mopf` is the frozen model. `map_mag`, `map_mag_v1`, `map_mag_v2`,
+`map_mag_v3`, `map_mag_v3_full`, and `map_mag_v3_lp` are historical/internal
+only. Constructor checks passed for all configs across the formal NC and LP
+feature shapes.
+
+The audit classified all 361 config-backed result files discovered under
+`outputs/`. The 15 U3-B1 formal NC seed runs are `REUSE_EXACT` after strict
+configuration/protocol/checkpoint compatibility verification. Historical LP
+results are `RERUN_REQUIRED` when they target the formal external table but
+lack exact producing SHA/evaluator provenance; the old MoPF LP is also
+pre-U3-B1. Earlier development-stage outputs are superseded or internal-only.
+
+The exact seed-level manifest contains 15 `REUSE_EXACT`, 165
+`RERUN_REQUIRED`, and 108 `NOT_ELIGIBLE` rows. The formal benchmark portion is
+180 jobs; the six internal MAP configs are included only to make exclusion
+explicit. The tag `mopf-vnext-final` is absent; only a recommendation command
+is recorded, with no automatic tag creation or push.
+
+F1-B gate: **PASS**. Formal datasets/K, eligibility, result classification,
+and the exact rerun manifest are resolved. F1-A hard-stopped without training,
+benchmark execution, F2 ablation, tuning, or architecture modification.

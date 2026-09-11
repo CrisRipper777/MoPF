@@ -658,3 +658,20 @@ U2-C completed the formal NC-only 2×2 factorial over state semantics and respon
 - Final U2 choice: **C1**. Test metrics were not used for selection.
 
 U2-C hard stop: no U3, LP, alpha/K tuning, Jacobi/Chebyshev, semantic shortcuts, fusion redesign, or auxiliary loss was started.
+
+## U3 — Node–Modality Adaptive Multi-Hop Composition
+
+U3 asks how much multi-hop structural evidence each node and modality should use. U3-A was analysis-only over the frozen U2-C C1 checkpoints; no training or architecture change was performed.
+
+## U3-A — Node–Modality Multi-Hop Preference Diagnosis
+
+- Source: 15 C1 best-validation checkpoints; checkpoint bytes unchanged before/after analysis: `True`.
+- Attribution uses final effective eta only: `eta = mu + nu + xi`, with global effective preference `mu`, modality effective deviation `nu`, and centered node preference `xi`.
+- Canonical reconstruction max absolute error: `3.725e-09`.
+- Modality functional support: `True` (`5/5` datasets).
+- Node personalization support: `True` (`5/5` datasets).
+- NodeShuffle alignment support: `5/5` datasets.
+- U3-A decision: **A. Both modality and node adaptation are functionally supported**.
+- U3-B recommendation: Proceed to U3-B with the C1 three-level hierarchy retained; test only minimal mechanism-driven composition changes, beginning with contribution/state-conditioned coefficient composition and no new router by default.
+
+U3-A hard stop: no U3-B implementation, retraining, router, attention, MoE, auxiliary loss, LP, alpha/K tuning, or U1/U2 modification was started.

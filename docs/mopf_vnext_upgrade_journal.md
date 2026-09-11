@@ -743,3 +743,41 @@ is recorded, with no automatic tag creation or push.
 F1-B gate: **PASS**. Formal datasets/K, eligibility, result classification,
 and the exact rerun manifest are resolved. F1-A hard-stopped without training,
 benchmark execution, F2 ablation, tuning, or architecture modification.
+
+## F1-B0 — Final Benchmark Execution Preparation
+
+F1-B0 prepared the final execution boundary from the frozen method and F1-A
+audit. The method-freeze SHA remains
+`4ddbd6918ceebadc25eed2694e1b463f9aac87f4`, and the formal MoPF config SHA256
+remains `1e29aa0f7141bbeeb16c695ba294358f59441f75b0d92fc7ffb55f560f7d140a`.
+
+Generated execution interfaces:
+
+- `scripts/f1b/run_mopf_nc.sh`
+- `scripts/f1b/run_mopf_lp.sh`
+- `scripts/f1b/run_cloth_baselines_lp.sh`
+- `scripts/f1b/run_group.py`
+- `scripts/f1b/check_f1b_completion.py`
+- `scripts/f1b/summarize_f1b.py`
+- `scripts/f1b/smoke_f1b.py`
+- `scripts/f1b/README.md`
+- `docs/mopf_f1b_execution_guide.md`
+
+The launcher uses one independent `src.main` process per seed, explicit GPU
+selection, frozen command construction, safe completion markers, per-run
+provenance, and isolated status/log files. It prepares 15 fresh final MoPF NC
+runs, 3 formal MoPF sports-LP runs, 3 quasi-held-out MoPF cloth-LP runs, and
+27 quasi-held-out cloth external-baseline LP runs: **48 new full runs**. With
+the F1-A exact-reuse NC policy, the new full-run count is **33**.
+
+All cloth results are explicitly quasi-held-out and are never aggregated with
+formal sports LP. F1-A's existing external baseline NC/sports-LP results remain
+`RERUN_REQUIRED` because their exact source/evaluator/checkpoint provenance is
+incomplete; F1-B0 does not rerun them. The 15 existing U3-B1 MoPF NC runs
+remain `REUSE_EXACT`, while the fresh rerun option is provided only for final
+execution consistency and is not a selection gate.
+
+No formal full training, benchmark execution, architecture change, evaluator
+change, split change, or final conclusion was performed in F1-B0. Smoke tests
+are isolated under `outputs/f1b_smoke/`; formal outputs are reserved for the
+user's later manual execution.

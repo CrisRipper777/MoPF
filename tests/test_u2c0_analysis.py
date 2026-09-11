@@ -8,7 +8,9 @@ import torch
 from src.analysis.u2c0 import algebra_audit
 from src.models.mopf import (
     MoPF,
+    anchored_cumulative_to_monomial_coefficients,
     anchored_differential_to_monomial_coefficients,
+    monomial_to_anchored_cumulative_coefficients,
     monomial_to_anchored_differential_coefficients,
 )
 
@@ -71,6 +73,39 @@ def test_default_cumulative_mode_delegates_to_historical_bank():
     assert all(torch.equal(first, second) for first, second in zip(old, banks["responses"]))
 
 
+def test_explicit_factorial_modes_build_the_expected_state_and_response_banks():
+    model, x, edge_index = _graph()
+    x_text, _ = model._split_features(x)
+    h0 = model.text_proj(x_text)
+    edge = model._semantic_edge_weights(h0, h0, edge_index)
+    index, weight = model._normalized_operator(edge_index, edge["w_t"], x.size(0), h0.dtype)
+    ordinary = model._build_multihop_banks(h0, index, weight)
+    anchored = MoPF(
+        _cfg(multihop_state_mode="anchored", multihop_response_mode="cumulative"),
+        {"input_dim": 10, "num_nodes": 6, "num_classes": 3, "text_dim": 4, "visual_dim": 6},
+    )
+    anchored.load_state_dict(model.state_dict(), strict=False)
+    anchored.multihop_anchor_alpha = 0.1
+    anchored_banks = anchored._build_multihop_banks(h0, index, weight)
+    assert torch.equal(ordinary["states"][0], anchored_banks["states"][0])
+    assert all(torch.equal(state, response) for state, response in zip(
+        anchored_banks["states"], anchored_banks["responses"]
+    ))
+
+    differential = MoPF(
+        _cfg(multihop_state_mode="ordinary", multihop_response_mode="differential"),
+        {"input_dim": 10, "num_nodes": 6, "num_classes": 3, "text_dim": 4, "visual_dim": 6},
+    )
+    differential.load_state_dict(model.state_dict(), strict=False)
+    diff_banks = differential._build_multihop_banks(h0, index, weight)
+    assert torch.equal(diff_banks["responses"][0], diff_banks["states"][0])
+    for order in range(1, len(diff_banks["states"])):
+        assert torch.equal(
+            diff_banks["responses"][order],
+            diff_banks["states"][order] - diff_banks["states"][order - 1],
+        )
+
+
 def test_anchored_state_response_banks_and_gradient_path():
     model, x, edge_index = _graph()
     anchored = MoPF(
@@ -131,6 +166,44 @@ def test_coefficient_transform_supports_vector_and_batch_exactly():
         monomial_to_anchored_differential_coefficients(eta, 0.0),
         torch.tensor([eta.sum(), eta[1:].sum(), eta[1:].sum() - eta[1], eta[3]], dtype=torch.float64),
     )
+
+
+def test_anchored_cumulative_basis_transform_supports_vector_and_batch_exactly():
+    eta = torch.tensor([0.15, -0.2, 0.4, 0.65], dtype=torch.float64)
+    batch = torch.stack((eta, eta.flip(0)))
+    for value in (eta, batch):
+        anchored = monomial_to_anchored_cumulative_coefficients(value, 0.1)
+        reconstructed = anchored_cumulative_to_monomial_coefficients(anchored, 0.1)
+        assert torch.max(torch.abs(reconstructed - value)) < 1e-12
+    # alpha=0 reduces anchored cumulative states to ordinary monomials.
+    assert torch.allclose(
+        monomial_to_anchored_cumulative_coefficients(eta, 0.0), eta,
+        atol=1e-12,
+    )
+
+
+def test_all_factorial_initial_filter_coordinates_are_equivalent():
+    eta = torch.tensor([0.15, -0.2, 0.4, 0.65], dtype=torch.float64)
+    ordinary_diff = monomial_to_anchored_differential_coefficients(eta, 0.0)
+    anchored_diff = monomial_to_anchored_differential_coefficients(eta, 0.1)
+    anchored_cumulative = monomial_to_anchored_cumulative_coefficients(eta, 0.1)
+    matrix = torch.zeros((4, 4), dtype=torch.float64)
+    q = 0.9
+    matrix[0, 0] = 1.0
+    for order in range(1, 4):
+        matrix[order, order] = q**order
+        matrix[order, :order] = 0.1 * q ** torch.arange(order, dtype=torch.float64)
+    monomial = torch.stack((torch.eye(4, dtype=torch.float64),))
+    # Use arbitrary scalar basis values to test coordinate reconstruction.
+    values = torch.tensor([1.2, -0.4, 0.7, 2.1], dtype=torch.float64)
+    states = [values[:1] * 0 + values[index] for index in range(4)]
+    anchored_states = [sum(matrix[index, r] * states[r] for r in range(4)) for index in range(4)]
+    assert torch.allclose(sum(eta[index] * states[index] for index in range(4)),
+                          sum(ordinary_diff[index] * (states[index] if index == 0 else states[index] - states[index - 1]) for index in range(4)))
+    assert torch.allclose(sum(eta[index] * states[index] for index in range(4)),
+                          sum(anchored_diff[index] * (anchored_states[index] if index == 0 else anchored_states[index] - anchored_states[index - 1]) for index in range(4)))
+    assert torch.allclose(sum(eta[index] * states[index] for index in range(4)),
+                          sum(anchored_cumulative[index] * anchored_states[index] for index in range(4)))
 
 
 def test_pdc_is_explicitly_rejected_for_anchored_differential():

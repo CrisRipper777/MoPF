@@ -93,6 +93,75 @@ def anchored_differential_to_monomial_coefficients(
     return reconstructed
 
 
+def _anchored_cumulative_basis_matrix(
+    order_count: int,
+    alpha: float,
+    *,
+    dtype: torch.dtype,
+    device: torch.device,
+) -> torch.Tensor:
+    """Return ``A`` such that ``S = A M`` for anchored cumulative states."""
+    if order_count < 1:
+        raise ValueError(f"order_count must be positive, got {order_count}")
+    if not 0.0 <= float(alpha) < 1.0:
+        raise ValueError(f"alpha must satisfy 0 <= alpha < 1, got {alpha}")
+    q = 1.0 - float(alpha)
+    matrix = torch.zeros((order_count, order_count), dtype=dtype, device=device)
+    matrix[0, 0] = 1.0
+    for order in range(1, order_count):
+        matrix[order, order] = q**order
+        if order:
+            powers = torch.arange(order, dtype=dtype, device=device)
+            matrix[order, :order] = float(alpha) * q**powers
+    return matrix
+
+
+def monomial_to_anchored_cumulative_coefficients(
+    eta: torch.Tensor,
+    alpha: float,
+) -> torch.Tensor:
+    """Transform monomial coordinates into anchored cumulative coordinates.
+
+    If ``S = A M`` and ``eta_M^T M = beta_S^T S``, then
+    ``A^T beta_S = eta_M``.  The solve is triangular and supports both
+    ``[K+1]`` and ``[N,K+1]`` tensors without forming an inverse.
+    """
+    if eta.ndim not in {1, 2}:
+        raise ValueError(f"eta must have shape [K+1] or [N,K+1], got {tuple(eta.shape)}")
+    matrix = _anchored_cumulative_basis_matrix(
+        int(eta.size(-1)),
+        alpha,
+        dtype=eta.dtype,
+        device=eta.device,
+    )
+    rhs = eta.unsqueeze(-1) if eta.ndim == 1 else eta.transpose(0, 1)
+    solved = torch.linalg.solve_triangular(
+        matrix.transpose(0, 1),
+        rhs,
+        upper=True,
+    )
+    return solved.squeeze(-1) if eta.ndim == 1 else solved.transpose(0, 1)
+
+
+def anchored_cumulative_to_monomial_coefficients(
+    coefficients: torch.Tensor,
+    alpha: float,
+) -> torch.Tensor:
+    """Invert :func:`monomial_to_anchored_cumulative_coefficients`."""
+    if coefficients.ndim not in {1, 2}:
+        raise ValueError(
+            "coefficients must have shape [K+1] or [N,K+1], "
+            f"got {tuple(coefficients.shape)}"
+        )
+    matrix = _anchored_cumulative_basis_matrix(
+        int(coefficients.size(-1)),
+        alpha,
+        dtype=coefficients.dtype,
+        device=coefficients.device,
+    )
+    return coefficients @ matrix
+
+
 class MoPF(nn.Module):
     """Multi-order Personalized Filtering for multimodal attributed graphs.
 
@@ -229,14 +298,52 @@ class MoPF(nn.Module):
                 "model.node_conditioner_mode must be absolute|pdc|pdc_v2_sep|pdc_v2_full, got "
                 f"{self.node_conditioner_mode!r}"
             )
-        self.multihop_mode = str(
-            cfg.model.get("multihop_mode", "cumulative")
-        ).strip().lower()
-        if self.multihop_mode not in {"cumulative", "anchored_differential"}:
+        # U2-C exposes the two scientific factors explicitly.  The legacy
+        # ``multihop_mode`` field remains accepted for old checkpoints and
+        # configs: cumulative -> ordinary+cumulative, and
+        # anchored_differential -> anchored+differential.
+        legacy_multihop_mode = cfg.model.get("multihop_mode", None)
+        state_mode = cfg.model.get("multihop_state_mode", None)
+        response_mode = cfg.model.get("multihop_response_mode", None)
+        if legacy_multihop_mode is not None:
+            # An explicitly supplied legacy field wins so an old Hydra
+            # override is not silently ignored by the new factor fields.
+            legacy = str(legacy_multihop_mode)
+            legacy = legacy.strip().lower()
+            legacy_mapping = {
+                "cumulative": ("ordinary", "cumulative"),
+                "anchored_differential": ("anchored", "differential"),
+            }
+            if legacy not in legacy_mapping:
+                raise ValueError(
+                    "model.multihop_mode must be cumulative|anchored_differential, "
+                    f"got {legacy!r}"
+                )
+            state_mode, response_mode = legacy_mapping[legacy]
+        elif state_mode is None and response_mode is None:
+            state_mode, response_mode = "ordinary", "cumulative"
+        else:
+            state_mode = "ordinary" if state_mode is None else str(state_mode)
+            response_mode = "cumulative" if response_mode is None else str(response_mode)
+        self.multihop_state_mode = str(state_mode).strip().lower()
+        self.multihop_response_mode = str(response_mode).strip().lower()
+        if self.multihop_state_mode not in {"ordinary", "anchored"}:
             raise ValueError(
-                "model.multihop_mode must be cumulative|anchored_differential, "
-                f"got {self.multihop_mode!r}"
+                "model.multihop_state_mode must be ordinary|anchored, "
+                f"got {self.multihop_state_mode!r}"
             )
+        if self.multihop_response_mode not in {"cumulative", "differential"}:
+            raise ValueError(
+                "model.multihop_response_mode must be cumulative|differential, "
+                f"got {self.multihop_response_mode!r}"
+            )
+        # Public compatibility label retained for older analysis/tests.
+        self.multihop_mode = (
+            "anchored_differential"
+            if (self.multihop_state_mode, self.multihop_response_mode)
+            == ("anchored", "differential")
+            else "cumulative"
+        )
         self.multihop_anchor_alpha = float(
             cfg.model.get("multihop_anchor_alpha", 0.1)
         )
@@ -245,9 +352,9 @@ class MoPF(nn.Module):
                 "model.multihop_anchor_alpha must satisfy 0 <= alpha < 1, got "
                 f"{self.multihop_anchor_alpha}"
             )
-        if self.multihop_mode == "anchored_differential" and self.node_conditioner_mode != "absolute":
+        if self.multihop_state_mode == "anchored" and self.node_conditioner_mode != "absolute":
             raise ValueError(
-                "model.multihop_mode='anchored_differential' requires "
+                "anchored multihop states requires "
                 "model.node_conditioner_mode='absolute'; historical PDC paths "
                 "are not supported in U2-C0"
             )
@@ -303,11 +410,18 @@ class MoPF(nn.Module):
             )
 
         gamma_init = self._make_global_prior()
-        if self.multihop_mode == "anchored_differential":
+        if self.multihop_state_mode == "anchored" and self.multihop_response_mode == "differential":
             gamma_init = monomial_to_anchored_differential_coefficients(
                 gamma_init,
                 self.multihop_anchor_alpha,
             )
+        elif self.multihop_state_mode == "anchored" and self.multihop_response_mode == "cumulative":
+            gamma_init = monomial_to_anchored_cumulative_coefficients(
+                gamma_init,
+                self.multihop_anchor_alpha,
+            )
+        elif self.multihop_response_mode == "differential":
+            gamma_init = monomial_to_anchored_differential_coefficients(gamma_init, 0.0)
         self.gamma_global = nn.Parameter(
             gamma_init,
             requires_grad=self.global_filter_trainable,
@@ -870,32 +984,35 @@ class MoPF(nn.Module):
     ) -> dict[str, list[torch.Tensor]]:
         """Build explicit state and filter-response banks.
 
-        The default cumulative branch delegates to the historical
-        ``_propagation_bank`` exactly.  The opt-in prototype keeps anchored
-        cumulative states for conditioning and exposes hop-wise differential
-        responses as filter values.  No normalization, MLP, or learned scale
-        is applied to the differential values.
+        The two explicit U2-C factors independently control the state bank
+        seen by the node conditioner and the response bank consumed by the
+        learned filter.  C0 delegates to the historical propagation bank
+        exactly.  No normalization, MLP, or learned scale is applied to
+        differential values.
         """
-        if self.multihop_mode == "cumulative":
-            bases = self._propagation_bank(h0, norm_edge_index, norm_edge_weight)
-            return {"states": bases, "responses": bases}
+        if self.multihop_state_mode == "ordinary":
+            states = self._propagation_bank(h0, norm_edge_index, norm_edge_weight)
+        else:
+            alpha = self.multihop_anchor_alpha
+            states = [h0]
+            current = h0
+            for _ in range(self.max_order):
+                propagated = self._propagate_once(
+                    current,
+                    norm_edge_index,
+                    norm_edge_weight,
+                )
+                current = (1.0 - alpha) * propagated + alpha * h0
+                states.append(current)
 
-        alpha = self.multihop_anchor_alpha
-        states = [h0]
-        current = h0
-        for _ in range(self.max_order):
-            propagated = self._propagate_once(
-                current,
-                norm_edge_index,
-                norm_edge_weight,
+        if self.multihop_response_mode == "cumulative":
+            responses = states
+        else:
+            responses = [states[0]]
+            responses.extend(
+                states[order] - states[order - 1]
+                for order in range(1, len(states))
             )
-            current = (1.0 - alpha) * propagated + alpha * h0
-            states.append(current)
-        responses = [states[0]]
-        responses.extend(
-            states[order] - states[order - 1]
-            for order in range(1, len(states))
-        )
         return {"states": states, "responses": responses}
 
     def pdc_rho(self, modality: str) -> torch.Tensor:

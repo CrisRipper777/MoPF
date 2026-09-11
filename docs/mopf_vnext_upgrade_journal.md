@@ -633,3 +633,28 @@ Authoritative U2-C0 artifacts:
 - `outputs/u2c0_state_response_integration_audit/u2c0_master_summary.json`
 - `outputs/u2c0_state_response_integration_audit/u2c0_master_table.csv`
 - `docs/mopf_u2c0_state_response_integration_audit.md`
+## U2-C — Formal Factorial Training Verification
+
+U2-C completed the formal NC-only 2×2 factorial over state semantics and response coordinates. C0 reused the 15 U1-T T2 best-validation checkpoints after the explicit/legacy cumulative compatibility audit; C1-C3 were 45 new runs across Movies, Toys, Grocery, ele-fashion, Reddit-S and seeds 42/43/44.
+
+- Frozen upstream: `learned_diag_cos`, `edge_weight_temperature=0.35`; no LP, alpha tuning, K tuning, fusion change, loss change, or evaluator change.
+- Protocol: hidden 256, dropout 0.2, AdamW, lr `1e-3`, weight decay `1e-4`, 300 epochs, patience 30, best Validation Accuracy.
+- Initialization equivalence gate: `True`; baseline tests before implementation: `180 passed`.
+
+### Equal-dataset downstream means
+
+| Variant | Val Acc | Val Macro-F1 | Test Acc | Test Macro-F1 |
+|---|---:|---:|---:|---:|
+| C0 | 0.811962 ± 0.131162 | 0.752452 ± 0.139252 | 0.806942 ± 0.136826 | 0.743735 ± 0.138661 |
+| C1 | 0.811487 ± 0.130841 | 0.749074 ± 0.138923 | 0.807652 ± 0.134258 | 0.744107 ± 0.135487 |
+| C2 | 0.811648 ± 0.131439 | 0.748897 ± 0.140633 | 0.806652 ± 0.135842 | 0.741342 ± 0.140489 |
+| C3 | 0.812203 ± 0.129820 | 0.748282 ± 0.139148 | 0.808160 ± 0.133450 | 0.743083 ± 0.135955 |
+
+- Anchor factorial effect: Val Acc `0.000040`, Val Macro-F1 `-0.001996`.
+- Differential factorial effect: Val Acc `0.000201`, Val Macro-F1 `-0.002173`.
+- Anchor mechanism gate: `True`.
+- Differential mechanism gate: `False`.
+- Eta compensation / multi-hop collapse: `True` / `False`.
+- Final U2 choice: **C1**. Test metrics were not used for selection.
+
+U2-C hard stop: no U3, LP, alpha/K tuning, Jacobi/Chebyshev, semantic shortcuts, fusion redesign, or auxiliary loss was started.

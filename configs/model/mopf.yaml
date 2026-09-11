@@ -22,6 +22,11 @@ edge_weight_temperature: 0.35
 
 filter_rank: 4
 
+# U2-C selection: C1 semantic-anchor-only.
+multihop_state_mode: anchored # ordinary | anchored
+multihop_response_mode: cumulative # cumulative | differential
+multihop_anchor_alpha: 0.1
+
 global_filter_trainable: true
 use_modality_residual: true
 use_node_residual: true

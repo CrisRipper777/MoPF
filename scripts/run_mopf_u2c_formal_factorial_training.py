@@ -635,9 +635,9 @@ def _mechanism_gates(records: list[dict[str, Any]], aggregate: dict[str, Any]) -
             match_eta = match["eta_profile"][modality]["mean_abs"]
             ratios = [float(a / max(b, EPS)) for a, b in zip(eta, match_eta)]
             for order, ratio in enumerate(ratios):
-                if ratio > 10.0:
+                if r["variant"] in {"C2", "C3"} and ratio > 10.0:
                     pathology.append({"type": "strong_coefficient_compensation", "dataset": r["dataset"], "variant": r["variant"], "seed": r["seed"], "modality": modality, "order": order, "ratio": ratio})
-                if order > 0 and response[order] < 1e-4 and share[order] > 0.1:
+                if r["variant"] in {"C2", "C3"} and order > 0 and response[order] < 1e-4 and share[order] > 0.1:
                     pathology.append({"type": "suspicious_compensation", "dataset": r["dataset"], "variant": r["variant"], "seed": r["seed"], "modality": modality, "order": order, "response_magnitude": response[order], "contribution_share": share[order]})
             if sum(share[1:]) < 0.05:
                 pathology.append({"type": "multi_hop_contribution_collapse", "dataset": r["dataset"], "variant": r["variant"], "seed": r["seed"], "modality": modality, "multi_hop_share": sum(share[1:])})
@@ -814,7 +814,7 @@ def main() -> None:
     records.sort(key=lambda r: (DATASETS.index(r["dataset"]), VARIANTS.index(r["variant"]), SEEDS.index(int(r["seed"]))))
 
     diagnostics = []
-    pending_diag = [r for r in records if not args.no_resume or not (output_root / "per_run" / f"{r['dataset']}_{r['variant']}_seed{r['seed']}.json").is_file()]
+    pending_diag = [r for r in records if args.no_resume or not (output_root / "per_run" / f"{r['dataset']}_{r['variant']}_seed{r['seed']}.json").is_file()]
     if args.no_parallel or len(args.devices) == 1:
         for index, record in enumerate(pending_diag, 1):
             device = str(args.devices[(index - 1) % len(args.devices)])

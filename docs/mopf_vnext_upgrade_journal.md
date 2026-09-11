@@ -689,3 +689,24 @@ U3-B tested a single minimal Transport-Conditioned Preference Residual (TCPR) on
 - TransportOff, TransportShuffle, and TransportModalitySwap were measurable on all five datasets; TransportShuffle exceeded TransportOff at every dataset-mean comparison.
 - B1 NoNode, NoModality, and NodeShuffle hierarchy diagnostics were stable on all five datasets; the maximum transport/node residual L2 ratio was `0.1241`.
 - Final U3-B choice: **B. Select C1 + TCPR**. TCPR is validation-safe and passes the predefined functional mechanism gate, including node-context shuffle sensitivity, while the original modality/node hierarchy remains explicitly represented in the canonical and counterfactual diagnostics.
+
+## Final Architecture Freeze
+
+F0 completed at U3-B commit `b4d93160aab9957a3de73a05aa71311ce21e6680` with
+formal config SHA256
+`1e29aa0f7141bbeeb16c695ba294358f59441f75b0d92fc7ffb55f560f7d140a`.
+The `vnext` worktree was clean at provenance capture, the final configuration
+and terminology audits passed, U1/U2-C1/U3-B1 checkpoint compatibility passed
+for all 15 checkpoints in each family, and the repository test suite passed.
+
+The final architecture is Modality-Adaptive Semantic Conductance with
+`learned_diag_cos` and temperature `0.35`, anchored cumulative propagation
+with alpha `0.1`, and TCPR enabled. Historical compatibility fields and
+non-formal paths remain only for checkpoint/provenance purposes. The
+architecture design is officially closed.
+
+F1 formal benchmarking and F2 frozen ablations were not started. Their scope,
+fixed K policy, quasi-held-out handling, seed policy, and four-figure limit are
+frozen in `docs/mopf_final_evaluation_protocol.md` and
+`docs/mopf_final_experiment_plan.md`; future tests are descriptive and cannot
+reopen U1, U2, or U3 selection.

@@ -2,7 +2,7 @@
 
 Analysis-only diagnosis over the frozen U2-C C1 checkpoints. No model was trained, no formal architecture was changed, and Test metrics are descriptive only.
 
-- Runtime commit: `95101aec162769a7c9746298660fd53967e6b3ca`
+- Runtime commit: `ca9fbe85a2a9e12b4363a86483d5783f0d59f452`
 - Source checkpoints: `15` C1 best-validation checkpoints
 - Checkpoint bytes unchanged: `True`
 - Canonical eta reconstruction max abs: `3.725e-09`

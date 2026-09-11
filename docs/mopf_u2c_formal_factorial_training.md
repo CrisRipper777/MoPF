@@ -2,7 +2,7 @@
 
 NC-only formal factorial training under the frozen U1-T relation (`learned_diag_cos`, `tau=0.35`). Test metrics are descriptive and were not used for checkpoint, variant, or hyperparameter selection.
 
-- Runtime commit: `fbd6962125467d7d4276deff420c150af4a84696`
+- Runtime commit: `00d045c40a48190845dada8b62e24ea71785348c`
 - Remote sync: `failed: git fetch/pull could not resolve github.com in this environment`
 - Initialization gate: **True**
 - Formal protocol: hidden 256, dropout 0.2, AdamW, lr 1e-3, weight decay 1e-4, 300 epochs, patience 30, best Validation Accuracy.

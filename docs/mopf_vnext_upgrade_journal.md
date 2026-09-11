@@ -342,3 +342,79 @@ The frozen relation module is now:
 `c_ij^m = c_min + (1-c_min) sigmoid(s_ij^m / 0.35)`
 
 R0 and R2 code paths remain available for ablations. `mopf-v0-frozen` was not modified. U2 and all propagation-bank, personalized-filter, fusion, auxiliary-loss, and LP changes remain prohibited until a separately authorized stage.
+
+## U2 — Structural Response Representation
+
+U1 learns modality-conditioned transport geometry. U2 represents the structural
+responses induced by that geometry. U3 will adaptively combine those responses.
+
+## U2-A — Monomial Response Bank Diagnosis
+
+U2-A diagnosed the frozen monomial response bank without training or changing
+the formal model:
+
+`R_0^m = H_0^m`, `R_k^m = P^m R_{k-1}^m`, for the frozen U1-T Calibrated R1
+module (`edge_weight_mode=learned_diag_cos`, `tau=0.35`). The source was only
+the 15 final U1-T Phase-B T2 best-validation checkpoints (5 datasets × 3
+seeds), with `K={Movies:3, Toys:3, Grocery:2, ele-fashion:3, Reddit-S:3}`.
+
+The analysis extracted the exact raw bank before any response normalization,
+filter, node conditioner, refinement, fusion, or classifier. It measured
+Frobenius cosine, feature-space linear CKA, normalized-response Gram spectrum
+and conditioning, incremental structural response novelty, norm evolution,
+node-feature variance, operator-native structural variation, sparse operator
+symmetry, and conditional Dirichlet energy. For `ele-fashion`, CKA used the
+same deterministic 20,000-node subset for every order; smaller graphs used all
+nodes. No `N×N` kernel matrix was constructed.
+
+The authoritative artifacts are:
+
+- `outputs/u2a_monomial_response_diagnosis/u2a_master_summary.json`
+- `outputs/u2a_monomial_response_diagnosis/u2a_master_table.csv`
+- `docs/mopf_u2a_monomial_response_diagnosis.md`
+
+### U2-A findings
+
+- Strong monomial-redundancy screening evidence was present in all 5/5
+  datasets for both text and visual, with the same classification on 3/3
+  seeds in every dataset/modality cell.
+- High-order Frobenius cosine means were `0.9758–1.0000`; high-order CKA means
+  were `0.8904–1.0000`. Normalized effective rank was `0.288–0.459`, while
+  Gram condition numbers ranged from about `112` to `1.1×10^7`.
+- Final-order novelty means were `0.0012–0.2231`, providing continuous
+  evidence that later orders add little incremental structural response,
+  especially on Reddit-S.
+- Final response norms and node-feature variances generally decayed relative
+  to order 0; final structural-variation ratios were `0.0007–0.2172`. This
+  supports progressive smoothing/collapse as a mechanism, while retaining the
+  dataset- and modality-specific magnitudes in the JSON rather than asserting
+  a universal monotonic law.
+- Text and visual behavior was similar but not identical: for example, text
+  had higher final-order cosine than visual on all five dataset means, while
+  visual had higher final Gram condition number on Reddit-S and text had the
+  higher condition number on the other four datasets.
+
+### Operator and spectral prerequisite
+
+All 30 operator audits (5 datasets × 3 seeds × 2 modalities) were classified
+`near_symmetric`; asymmetry ratios were approximately `2.57×10^-8` to
+`3.33×10^-8`. Sparse eigsh estimates (with deterministic Rayleigh fallback
+where needed) had maximum absolute eigenvalue in
+`[0.9998856, 1.0000003]`, with no spectral-range failure. The report therefore
+marks the clean symmetric spectral prerequisite as resolved for a future
+orthogonal-polynomial study.
+
+The GPU smoke path exposed repeat-call atomic scatter drift up to a few
+`10^-6` on this operator, above the required `<1e-6` equivalence gate. The
+authoritative 15-checkpoint audit consequently ran on CPU using the same
+formal recurrence and obtained `max_abs_difference=0.0` for every checkpoint.
+All checkpoint SHA256 values and model state digests were unchanged.
+
+### U2-A gate
+
+**Proceed to U2-B: monomial response redundancy/conditioning is empirically supported.**
+
+This is the U2-B gate only; U2-A itself is now stopped. The pending final-paper
+2×2 relation-attribution ablation remains registered: A `separate_cos,tau=2`,
+B `learned_diag_cos,tau=2`, C `separate_cos,tau=0.35`, D
+`learned_diag_cos,tau=0.35`. It was not run here and does not block U2.

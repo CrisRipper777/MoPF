@@ -38,6 +38,61 @@ def _make_mlp(in_dim: int, hidden_dim: int, out_dim: int, dropout: float) -> nn.
     )
 
 
+def monomial_to_anchored_differential_coefficients(
+    eta: torch.Tensor,
+    alpha: float,
+) -> torch.Tensor:
+    """Transform monomial coefficients into the anchored-differential basis.
+
+    For ``D_0=M_0`` and ``D_j=q**j * (M_j-M_{j-1})``, where
+    ``q=1-alpha``, this returns the exact coordinate transform for either a
+    ``[K+1]`` or ``[N,K+1]`` coefficient tensor.  The operation is purely
+    algebraic and preserves the input dtype/device.
+    """
+    if eta.ndim not in {1, 2}:
+        raise ValueError(f"eta must have shape [K+1] or [N,K+1], got {tuple(eta.shape)}")
+    if not 0.0 <= float(alpha) < 1.0:
+        raise ValueError(f"alpha must satisfy 0 <= alpha < 1, got {alpha}")
+    order_count = int(eta.size(-1))
+    q = torch.as_tensor(1.0 - float(alpha), dtype=eta.dtype, device=eta.device)
+    transformed = torch.zeros_like(eta)
+    transformed[..., 0] = eta.sum(dim=-1)
+    if order_count > 1:
+        tail_sum = torch.flip(
+            torch.cumsum(torch.flip(eta, dims=(-1,)), dim=-1), dims=(-1,)
+        )
+        orders = torch.arange(order_count, dtype=eta.dtype, device=eta.device)
+        transformed[..., 1:] = tail_sum[..., 1:] * q.pow(-orders[1:])
+    return transformed
+
+
+def anchored_differential_to_monomial_coefficients(
+    coefficients: torch.Tensor,
+    alpha: float,
+) -> torch.Tensor:
+    """Invert :func:`monomial_to_anchored_differential_coefficients`."""
+    if coefficients.ndim not in {1, 2}:
+        raise ValueError(
+            "coefficients must have shape [K+1] or [N,K+1], "
+            f"got {tuple(coefficients.shape)}"
+        )
+    if not 0.0 <= float(alpha) < 1.0:
+        raise ValueError(f"alpha must satisfy 0 <= alpha < 1, got {alpha}")
+    order_count = int(coefficients.size(-1))
+    q = torch.as_tensor(1.0 - float(alpha), dtype=coefficients.dtype, device=coefficients.device)
+    reconstructed = torch.zeros_like(coefficients)
+    if order_count == 1:
+        reconstructed[..., 0] = coefficients[..., 0]
+        return reconstructed
+    orders = torch.arange(order_count, dtype=coefficients.dtype, device=coefficients.device)
+    scaled = coefficients * q.pow(orders)
+    reconstructed[..., 0] = coefficients[..., 0] - scaled[..., 1]
+    if order_count > 2:
+        reconstructed[..., 1:-1] = scaled[..., 1:-1] - scaled[..., 2:]
+    reconstructed[..., -1] = scaled[..., -1]
+    return reconstructed
+
+
 class MoPF(nn.Module):
     """Multi-order Personalized Filtering for multimodal attributed graphs.
 
@@ -174,6 +229,28 @@ class MoPF(nn.Module):
                 "model.node_conditioner_mode must be absolute|pdc|pdc_v2_sep|pdc_v2_full, got "
                 f"{self.node_conditioner_mode!r}"
             )
+        self.multihop_mode = str(
+            cfg.model.get("multihop_mode", "cumulative")
+        ).strip().lower()
+        if self.multihop_mode not in {"cumulative", "anchored_differential"}:
+            raise ValueError(
+                "model.multihop_mode must be cumulative|anchored_differential, "
+                f"got {self.multihop_mode!r}"
+            )
+        self.multihop_anchor_alpha = float(
+            cfg.model.get("multihop_anchor_alpha", 0.1)
+        )
+        if not 0.0 <= self.multihop_anchor_alpha < 1.0:
+            raise ValueError(
+                "model.multihop_anchor_alpha must satisfy 0 <= alpha < 1, got "
+                f"{self.multihop_anchor_alpha}"
+            )
+        if self.multihop_mode == "anchored_differential" and self.node_conditioner_mode != "absolute":
+            raise ValueError(
+                "model.multihop_mode='anchored_differential' requires "
+                "model.node_conditioner_mode='absolute'; historical PDC paths "
+                "are not supported in U2-C0"
+            )
         self.ppc_weight = float(cfg.model.get("ppc_weight", 0.0))
         if self.ppc_weight < 0.0:
             raise ValueError(f"ppc_weight must be >= 0, got {self.ppc_weight}")
@@ -226,6 +303,11 @@ class MoPF(nn.Module):
             )
 
         gamma_init = self._make_global_prior()
+        if self.multihop_mode == "anchored_differential":
+            gamma_init = monomial_to_anchored_differential_coefficients(
+                gamma_init,
+                self.multihop_anchor_alpha,
+            )
         self.gamma_global = nn.Parameter(
             gamma_init,
             requires_grad=self.global_filter_trainable,
@@ -780,6 +862,42 @@ class MoPF(nn.Module):
             bases.append(h)
         return bases
 
+    def _build_multihop_banks(
+        self,
+        h0: torch.Tensor,
+        norm_edge_index: torch.Tensor,
+        norm_edge_weight: torch.Tensor,
+    ) -> dict[str, list[torch.Tensor]]:
+        """Build explicit state and filter-response banks.
+
+        The default cumulative branch delegates to the historical
+        ``_propagation_bank`` exactly.  The opt-in prototype keeps anchored
+        cumulative states for conditioning and exposes hop-wise differential
+        responses as filter values.  No normalization, MLP, or learned scale
+        is applied to the differential values.
+        """
+        if self.multihop_mode == "cumulative":
+            bases = self._propagation_bank(h0, norm_edge_index, norm_edge_weight)
+            return {"states": bases, "responses": bases}
+
+        alpha = self.multihop_anchor_alpha
+        states = [h0]
+        current = h0
+        for _ in range(self.max_order):
+            propagated = self._propagate_once(
+                current,
+                norm_edge_index,
+                norm_edge_weight,
+            )
+            current = (1.0 - alpha) * propagated + alpha * h0
+            states.append(current)
+        responses = [states[0]]
+        responses.extend(
+            states[order] - states[order - 1]
+            for order in range(1, len(states))
+        )
+        return {"states": states, "responses": responses}
+
     def pdc_rho(self, modality: str) -> torch.Tensor:
         """Return PDC's bounded scalar calibration profile.
 
@@ -1114,18 +1232,22 @@ class MoPF(nn.Module):
             int(x.size(0)),
             h_visual.dtype,
         )
-        bases_text = self._propagation_bank(h_text, norm_t_index, norm_t_weight)
-        bases_visual = self._propagation_bank(h_visual, norm_v_index, norm_v_weight)
+        banks_text = self._build_multihop_banks(h_text, norm_t_index, norm_t_weight)
+        banks_visual = self._build_multihop_banks(h_visual, norm_v_index, norm_v_weight)
+        states_text = banks_text["states"]
+        states_visual = banks_visual["states"]
+        responses_text = banks_text["responses"]
+        responses_visual = banks_visual["responses"]
 
         delta_node_text, conditioned_bases_text, pdc_aux_text = self._node_residuals(
-            bases_text,
+            states_text,
             self.node_proj_text,
             self.node_vector_text,
             "text",
             pdc_rho_text,
         )
         delta_node_visual, conditioned_bases_visual, pdc_aux_visual = self._node_residuals(
-            bases_visual,
+            states_visual,
             self.node_proj_visual,
             self.node_vector_visual,
             "visual",
@@ -1133,8 +1255,8 @@ class MoPF(nn.Module):
         )
         eta_text = self._effective_coefficients("text", delta_node_text)
         eta_visual = self._effective_coefficients("visual", delta_node_visual)
-        z_text = self._filter_bases(bases_text, eta_text)
-        z_visual = self._filter_bases(bases_visual, eta_visual)
+        z_text = self._filter_bases(responses_text, eta_text)
+        z_visual = self._filter_bases(responses_visual, eta_visual)
 
         z_text_refined = self.text_refine_norm(
             z_text + self.text_refine_mlp(z_text)
@@ -1155,8 +1277,17 @@ class MoPF(nn.Module):
             "norm_t_weight": norm_t_weight,
             "norm_v_index": norm_v_index,
             "norm_v_weight": norm_v_weight,
-            "bases_text": bases_text,
-            "bases_visual": bases_visual,
+            # In cumulative mode these are the historical monomial banks;
+            # in prototype mode they remain backward-compatible aliases for
+            # the response values consumed by the filter.
+            "bases_text": responses_text,
+            "bases_visual": responses_visual,
+            "states_text": states_text,
+            "states_visual": states_visual,
+            "responses_text": responses_text,
+            "responses_visual": responses_visual,
+            "conditioned_states_text": conditioned_bases_text,
+            "conditioned_states_visual": conditioned_bases_visual,
             "conditioned_bases_text": conditioned_bases_text,
             "conditioned_bases_visual": conditioned_bases_visual,
             "pdc_aux_text": pdc_aux_text,

@@ -497,3 +497,139 @@ Authoritative U2-B artifacts:
 - `outputs/u2b_semantic_preserving_multihop_screening/u2b_master_summary.json`
 - `outputs/u2b_semantic_preserving_multihop_screening/u2b_master_table.csv`
 - `docs/mopf_u2b_semantic_preserving_multihop_screening.md`
+
+## U2-C0 — State–Response Decoupling and Differential-Basis Integration Audit
+
+U2-C0 was the final integration/algebra/code-path audit before any authorized
+U2-C retraining. It was frozen and inference-only: no NC retraining, LP run,
+checkpoint write, downstream redesign, alpha selection, or K tuning was
+performed. The audit consumed all 15 U1-T Phase-B T2 best-validation
+checkpoints with the frozen `learned_diag_cos` relation and `tau=0.35`, using
+only the formal dataset depths
+`K={Movies:3, Toys:3, Grocery:2, ele-fashion:3, Reddit-S:3}`.
+
+Repository provenance was checked on branch `vnext` with a clean worktree at
+the start (`HEAD=c1fe198`, U2-B). `git switch vnext` succeeded and the local
+branch matched `origin/vnext`; `git fetch origin` and `git pull --ff-only origin
+vnext` were attempted but both reported the real network failure
+`ssh: Could not resolve hostname github.com: Temporary failure in name
+resolution`. No synchronization success was inferred from that failure.
+
+### Terminology correction
+
+The earlier U2-B phrase **Hop-wise Structural Innovation** is refined for
+mathematical accuracy to **Hop-wise Differential Structural Response**
+(逐跳差分结构响应). For `D_k=S_k-S_{k-1}`, the formal interpretation is the
+representation change induced by one additional propagation step. It is not
+exact k-hop unique information, independent new structural information,
+orthogonal innovation, or newly observed k-hop nodes. Earlier U2-B results are
+retained, with this wording correction applied to their interpretation.
+
+### Algebraic identities
+
+With `q=1-alpha`, the audit verified in CPU float64:
+
+`S_k=q P S_{k-1}+alpha H`
+
+`D_k=S_k-S_{k-1}`
+
+`D_k=q^k P^(k-1)(P-I)H`
+
+and therefore:
+
+`D_k^B3=q^k D_k^B1`.
+
+Across every dataset, seed, modality, and formal K, the maximum state
+reconstruction error was `1.7764e-15` absolute and `1.9581e-17` relative L2;
+the maximum closed-form error was `1.8296e-13` absolute and `8.4294e-14`
+relative L2; and the maximum B3/B1 scaling error was `1.7053e-13` absolute
+and `1.0420e-13` relative L2. The alpha-to-zero limit also passed exactly at
+the recorded float64 precision.
+
+The anchor term cancels in the differential values. Semantic anchoring is
+represented in cumulative states `S_k`; `D_k` retains the propagation
+difference and the `q^k` scaling, not an additive `alpha H` term at each hop.
+
+### State–response decoupling design
+
+The opt-in internal `multihop_mode=anchored_differential` implements:
+
+- `S_k` as the state bank supplied to the node/modality coefficient
+  conditioner;
+- `D_k` as the response bank supplied to the response filter;
+- explicit `states_text`, `states_visual`, `responses_text`,
+  `responses_visual`, `eta_text`, `eta_visual`, `z_text`, and `z_visual`
+  outputs;
+- backward-compatible `bases_*` aliases referring to filter response values.
+
+The historical `cumulative` mode delegates to the existing
+`_propagation_bank()` path and remains the default because
+`configs/model/mopf.yaml` was not changed. `anchored_differential` is allowed
+only with `node_conditioner_mode=absolute`; historical PDC modes fail
+explicitly in this prototype path, while cumulative PDC behavior remains
+compatible.
+
+### Basis-equivalent coefficients and initialization
+
+The reusable transform supports `[K+1]` and `[N,K+1]` coefficients:
+
+`tilde_eta_0=sum_k eta_k`,
+
+`tilde_eta_j=q^(-j) sum_{k=j}^K eta_k`.
+
+The exact inverse was implemented and round-trip checked in float64. For the
+historical `gamma_global` prior, the prototype first constructs the unchanged
+monomial prior and then applies the alpha `0.1` transform. Formal K maximum
+`q^(-K)` was `1.23457` for Grocery (`K=2`) and `1.37174` for the K=3
+datasets; no coefficient explosion occurred.
+
+Current cumulative and anchored-differential models had identical parameter
+counts (`996684` total and trainable parameters in the initialization audit),
+identical state-key sets, and fixed non-trainable alpha. Toy-graph and real
+dataset initialization comparisons passed the required relative-L2 `<1e-6`
+criterion for `z_text`, `z_visual`, refined outputs, and fused `z`. The
+largest recorded max-absolute difference was `3.8147e-6`; it was retained,
+not hidden or accepted by a relaxed tolerance, and is attributed to float32
+recurrence/filter accumulation order.
+
+For all frozen learned checkpoints, transformed effective eta coefficients
+reconstructed the original filter with maximum relative L2 `1.4601e-7` and
+maximum absolute difference `5.7736e-5`. The absolute residual is recorded as
+the corresponding float32 checkpoint/accumulation-order effect; the relative
+criterion passed without tolerance inflation.
+
+### Anchor functional path
+
+The anchor was verified to enter a nontrivial functional path through
+`S_k -> node residual -> eta`. The audit compared current monomial states and
+anchored states using identical learned node projectors, node vectors, gamma,
+and modality residuals, then composed both eta sets over the same monomial
+values. The path was not machine-zero across the 15 checkpoints and both
+modalities. This is a frozen mechanism diagnostic, not a task-performance
+claim.
+
+### Runtime and formal-integrity audit
+
+The CUDA smoke path ran both cumulative and anchored-differential toy forward/
+backward passes with finite loss and finite gradients, with the same-order
+`O(K|E|d)` sparse path and no dense `N×N` allocation or eigendecomposition.
+All 15 checkpoint bytes and model-state digests were unchanged. The formal
+`mopf.yaml` relation, `tau=0.35`, default cumulative behavior, LP/fusion/task
+paths, and frozen baseline provenance were unchanged.
+
+### U2-C0 gate
+
+**Decision: A — Proceed to U2-C: state–response integration is mathematically
+and numerically valid.**
+
+This gate is based only on algebraic validity, coordinate-transform validity,
+initialization equivalence, parameter invariance, numerical integrity, and a
+nontrivial frozen anchor-conditioner path. It does not claim downstream
+superiority. The next stage must still use the corrected terminology and must
+not describe `D_k` as unique or orthogonal k-hop information.
+
+Authoritative U2-C0 artifacts:
+
+- `outputs/u2c0_state_response_integration_audit/u2c0_master_summary.json`
+- `outputs/u2c0_state_response_integration_audit/u2c0_master_table.csv`
+- `docs/mopf_u2c0_state_response_integration_audit.md`

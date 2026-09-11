@@ -429,6 +429,20 @@ class MoPF(nn.Module):
         self.delta_gamma_text = nn.Parameter(torch.zeros(self.max_order + 1))
         self.delta_gamma_visual = nn.Parameter(torch.zeros(self.max_order + 1))
 
+        # U3-B TCPR is opt-in so the frozen C1 model keeps its exact state
+        # dict and forward path by default.  The only new trainable values are
+        # one zero-initialized order profile per modality.
+        self.use_transport_residual = bool(
+            cfg.model.get("use_transport_residual", False)
+        )
+        if self.use_transport_residual:
+            self.theta_transport_text = nn.Parameter(
+                torch.zeros(self.max_order + 1)
+            )
+            self.theta_transport_visual = nn.Parameter(
+                torch.zeros(self.max_order + 1)
+            )
+
         self.node_proj_text = nn.ModuleList(
             nn.Linear(hidden_dim, self.filter_rank) for _ in range(self.max_order + 1)
         )
@@ -826,6 +840,55 @@ class MoPF(nn.Module):
             posinf=0.0,
             neginf=0.0,
         )
+
+    @staticmethod
+    def _mean_incident_conductance(
+        edge_index: torch.Tensor,
+        conductance: torch.Tensor,
+        num_nodes: int,
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        """Return U3-A mean incident conductance on raw physical support."""
+        degree = torch.zeros(
+            num_nodes, dtype=conductance.dtype, device=conductance.device
+        )
+        incident_sum = torch.zeros_like(degree)
+        for endpoint in (edge_index[0], edge_index[1]):
+            degree.index_add_(0, endpoint, torch.ones_like(conductance))
+            incident_sum.index_add_(0, endpoint, conductance)
+        mean_conductance = incident_sum / degree.clamp_min(1.0)
+        non_isolated = degree > 0.0
+        if bool(non_isolated.any()):
+            graph_mean = mean_conductance[non_isolated].mean()
+        elif conductance.numel():
+            graph_mean = conductance.mean()
+        else:
+            graph_mean = conductance.new_zeros(())
+        mean_conductance = torch.where(
+            non_isolated, mean_conductance, graph_mean
+        )
+        return mean_conductance, degree
+
+    def _transport_context(
+        self,
+        edge_index: torch.Tensor,
+        edges: dict[str, torch.Tensor],
+        num_nodes: int,
+    ) -> dict[str, torch.Tensor]:
+        """Build centered U3-A conductance context for both modalities.
+
+        The returned centered contexts are detached.  This lets TCPR read the
+        learned U1 transport state while preserving U1's attribution path.
+        """
+        output: dict[str, torch.Tensor] = {}
+        for modality, weight_key in (("text", "w_t"), ("visual", "w_v")):
+            mean_conductance, degree = self._mean_incident_conductance(
+                edge_index, edges[weight_key], num_nodes
+            )
+            centered = mean_conductance - mean_conductance.mean()
+            output[f"mean_conductance_{modality}"] = mean_conductance.detach()
+            output[f"transport_context_{modality}"] = centered.detach()
+            output[f"transport_degree_{modality}"] = degree.detach()
+        return output
 
     @torch.no_grad()
     def conductance_stats(
@@ -1251,6 +1314,7 @@ class MoPF(nn.Module):
         self,
         modality: str,
         node_residual: torch.Tensor,
+        transport_context: torch.Tensor | None = None,
     ) -> torch.Tensor:
         if modality == "text":
             delta_gamma = self.delta_gamma_text
@@ -1260,7 +1324,29 @@ class MoPF(nn.Module):
             raise ValueError(f"Unknown modality: {modality!r}")
         if not self.use_modality_residual:
             delta_gamma = torch.zeros_like(delta_gamma)
-        return self.gamma_global.unsqueeze(0) + delta_gamma.unsqueeze(0) + node_residual
+        effective = (
+            self.gamma_global.unsqueeze(0)
+            + delta_gamma.unsqueeze(0)
+            + node_residual
+        )
+        if not self.use_transport_residual:
+            return effective
+        if modality == "text":
+            theta = self.theta_transport_text
+        elif modality == "visual":
+            theta = self.theta_transport_visual
+        else:
+            raise ValueError(f"Unknown modality: {modality!r}")
+        if transport_context is None:
+            transport_context = effective.new_zeros(effective.size(0))
+        if transport_context.ndim != 1 or transport_context.size(0) != effective.size(0):
+            raise ValueError(
+                "transport_context must have shape [N] matching node_residual, "
+                f"got {tuple(transport_context.shape)} for N={effective.size(0)}"
+            )
+        beta = theta - theta.mean()
+        tau = transport_context.detach().to(dtype=effective.dtype).unsqueeze(-1) * beta.unsqueeze(0)
+        return effective + tau
 
     @staticmethod
     def _filter_bases(bases: list[torch.Tensor], eta: torch.Tensor) -> torch.Tensor:
@@ -1370,8 +1456,41 @@ class MoPF(nn.Module):
             "visual",
             pdc_rho_visual,
         )
-        eta_text = self._effective_coefficients("text", delta_node_text)
-        eta_visual = self._effective_coefficients("visual", delta_node_visual)
+        transport = self._transport_context(edge_index, edges, int(x.size(0)))
+        eta_text = self._effective_coefficients(
+            "text",
+            delta_node_text,
+            transport["transport_context_text"],
+        )
+        eta_visual = self._effective_coefficients(
+            "visual",
+            delta_node_visual,
+            transport["transport_context_visual"],
+        )
+        if self.use_transport_residual:
+            beta_transport_text = (
+                self.theta_transport_text - self.theta_transport_text.mean()
+            )
+            beta_transport_visual = (
+                self.theta_transport_visual - self.theta_transport_visual.mean()
+            )
+            tau_transport_text = (
+                transport["transport_context_text"].unsqueeze(-1)
+                * beta_transport_text.unsqueeze(0)
+            )
+            tau_transport_visual = (
+                transport["transport_context_visual"].unsqueeze(-1)
+                * beta_transport_visual.unsqueeze(0)
+            )
+        else:
+            beta_transport_text = delta_node_text.new_zeros(self.max_order + 1)
+            beta_transport_visual = delta_node_visual.new_zeros(self.max_order + 1)
+            tau_transport_text = delta_node_text.new_zeros(
+                delta_node_text.size(0), self.max_order + 1
+            )
+            tau_transport_visual = delta_node_visual.new_zeros(
+                delta_node_visual.size(0), self.max_order + 1
+            )
         z_text = self._filter_bases(responses_text, eta_text)
         z_visual = self._filter_bases(responses_visual, eta_visual)
 
@@ -1411,6 +1530,16 @@ class MoPF(nn.Module):
             "pdc_aux_visual": pdc_aux_visual,
             "delta_node_text": delta_node_text,
             "delta_node_visual": delta_node_visual,
+            "mean_conductance_text": transport["mean_conductance_text"],
+            "mean_conductance_visual": transport["mean_conductance_visual"],
+            "transport_context_text": transport["transport_context_text"],
+            "transport_context_visual": transport["transport_context_visual"],
+            "transport_degree_text": transport["transport_degree_text"],
+            "transport_degree_visual": transport["transport_degree_visual"],
+            "beta_transport_text": beta_transport_text,
+            "beta_transport_visual": beta_transport_visual,
+            "tau_transport_text": tau_transport_text,
+            "tau_transport_visual": tau_transport_visual,
             "eta_text": eta_text,
             "eta_visual": eta_visual,
             "z_text": z_text,

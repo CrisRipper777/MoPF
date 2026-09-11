@@ -675,3 +675,17 @@ U3 asks how much multi-hop structural evidence each node and modality should use
 - U3-B recommendation: Proceed to U3-B with the C1 three-level hierarchy retained; test only minimal mechanism-driven composition changes, beginning with contribution/state-conditioned coefficient composition and no new router by default.
 
 U3-A hard stop: no U3-B implementation, retraining, router, attention, MoE, auxiliary loss, LP, alpha/K tuning, or U1/U2 modification was started.
+## U3-B — Transport-Conditioned Hierarchical Composition
+
+U3-B tested a single minimal Transport-Conditioned Preference Residual (TCPR) on top of the frozen C1 global + modality + node hierarchy. No router, attention, MoE, auxiliary loss, LP, fusion change, classifier change, evaluator change, U1 change, or U2 change was introduced.
+
+- Degree-confound preflight: `PASS`; 30/30 main dataset×modality×seed associations retained the dominant partial-Spearman direction; median absolute partial rho was `0.3417`.
+- TCPR reads U3-A mean incident conductance on the raw physical support, centers it per modality, and detaches the context before coefficient composition.
+- Initialization equivalence: `True`.
+- B0/B1 performance-safe gate: `True`.
+- Five-dataset equal-weight validation deltas: Val Acc `+0.0436 pp` and
+  Val Macro-F1 `+0.0212 pp`; test metrics remained descriptive only.
+- TCPR mechanism gate: `True`.
+- TransportOff, TransportShuffle, and TransportModalitySwap were measurable on all five datasets; TransportShuffle exceeded TransportOff at every dataset-mean comparison.
+- B1 NoNode, NoModality, and NodeShuffle hierarchy diagnostics were stable on all five datasets; the maximum transport/node residual L2 ratio was `0.1241`.
+- Final U3-B choice: **B. Select C1 + TCPR**. TCPR is validation-safe and passes the predefined functional mechanism gate, including node-context shuffle sensitivity, while the original modality/node hierarchy remains explicitly represented in the canonical and counterfactual diagnostics.

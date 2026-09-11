@@ -30,6 +30,8 @@ multihop_anchor_alpha: 0.1
 global_filter_trainable: true
 use_modality_residual: true
 use_node_residual: true
+# U3-B formal selection: Transport-Conditioned Preference Residual.
+use_transport_residual: true
 hrc_weight: 0.0
 
 fusion_mode: concat_residual_mlp

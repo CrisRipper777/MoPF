@@ -55,6 +55,7 @@ from scripts.run_mopf_u1_semantic_conductance import (  # noqa: E402
 
 OUTPUT_ROOT = ROOT / "outputs" / "u3a_node_modality_preference_diagnosis"
 U2C_SUMMARY = ROOT / "outputs" / "u2c_formal_factorial_training" / "u2c_master_summary.json"
+FORMAL_MODEL_CONFIG = ROOT / "configs" / "model" / "mopf.yaml"
 SHUFFLE_SEEDS = (20260921, 20260922, 20260923)
 INTERVENTIONS = ("Full", "NoNode", "NoModality", "GlobalOnly", "NodeShuffle", "ModalitySwap")
 _CONFIG_LOCK = threading.Lock()
@@ -103,6 +104,11 @@ def _compose_c1_cfg(dataset: str, seed: int, device: str):
     split_override = _fixed_split_override(dataset)
     if split_override is not None:
         overrides.append(f"dataset.nc_split_path={split_override}")
+    overrides.append(
+        "model.use_transport_residual=false"
+        if "use_transport_residual:" in FORMAL_MODEL_CONFIG.read_text(encoding="utf-8")
+        else "+model.use_transport_residual=false"
+    )
     with _CONFIG_LOCK:
         with initialize_config_dir(version_base=None, config_dir=str(ROOT / "configs")):
             return compose(config_name="config", overrides=overrides)

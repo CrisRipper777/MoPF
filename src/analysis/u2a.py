@@ -185,14 +185,16 @@ def _linear_cka(first: torch.Tensor, second: torch.Tensor) -> float:
 def linear_cka_matrix(
     responses: list[torch.Tensor],
     node_subset: torch.Tensor,
+    *,
+    computation_dtype: torch.dtype = torch.float64,
 ) -> torch.Tensor:
     subset = node_subset.to(device=responses[0].device)
-    selected = [response.index_select(0, subset) for response in responses]
+    selected = [response.index_select(0, subset).to(dtype=computation_dtype) for response in responses]
     count = len(selected)
-    matrix = torch.zeros((count, count), dtype=torch.float64, device=responses[0].device)
+    matrix = torch.zeros((count, count), dtype=computation_dtype, device=responses[0].device)
     for i in range(count):
         for j in range(i, count):
-            value = _linear_cka(selected[i].double(), selected[j].double())
+            value = min(1.0, max(0.0, _linear_cka(selected[i], selected[j])))
             matrix[i, j] = value
             matrix[j, i] = value
     return matrix
@@ -483,9 +485,10 @@ def modality_response_diagnostics(
     node_subset: torch.Tensor,
     operator_audit: dict[str, Any],
     spectral_audit: dict[str, Any],
+    cka_dtype: torch.dtype = torch.float64,
 ) -> dict[str, Any]:
     cosine = frobenius_cosine_matrix(responses)
-    cka = linear_cka_matrix(responses, node_subset)
+    cka = linear_cka_matrix(responses, node_subset, computation_dtype=cka_dtype)
     gram, spectrum = normalized_response_gram(responses)
     novelty = incremental_novelty(responses)
     evolution = _evolution_payload(

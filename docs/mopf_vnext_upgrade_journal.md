@@ -418,3 +418,82 @@ This is the U2-B gate only; U2-A itself is now stopped. The pending final-paper
 2×2 relation-attribution ablation remains registered: A `separate_cos,tau=2`,
 B `learned_diag_cos,tau=2`, C `separate_cos,tau=0.35`, D
 `learned_diag_cos,tau=0.35`. It was not run here and does not block U2.
+
+## U2-B — Semantic-Preserving Distinctive Multi-Hop Propagation
+
+U2-B screened frozen response-coordinate mechanisms only. It used the 15 final
+U1-T Phase-B T2 best-validation checkpoints (5 datasets × 3 seeds), the frozen
+`learned_diag_cos` relation with `tau=0.35`, and the formal dataset depths
+`K={Movies:3, Toys:3, Grocery:2, ele-fashion:3, Reddit-S:3}`. The analysis
+stress-tested `K=1..6` without changing any formal training configuration,
+checkpoint, optimizer, LP path, or model source. No training step was run.
+
+The four analysis variants were:
+
+- B0: current cumulative states, `S_0=H_0`, `S_k=P S_{k-1}`, `C_k=S_k`;
+- B1: ordinary propagation with hop innovations,
+  `C_0=S_0`, `C_k=S_k-S_{k-1}`;
+- B2: semantic anchoring,
+  `S_k=(1-alpha)P S_{k-1}+alpha H_0`, `C_k=S_k`, with
+  `alpha={0.05,0.1,0.2}`;
+- B3: anchored propagation plus hop innovations, using the same alpha grid.
+
+Innovation reconstruction was audited on CPU in float64 with tolerance
+`1e-6`; the maximum reconstruction error across all 15 checkpoints,
+modalities, variants, and stress depths was `0.0`. B0 formal equivalence to
+the original response bank also had maximum absolute error `0.0`. Checkpoint
+SHA256 values and model-state digests were unchanged.
+
+### U2-B findings
+
+- Semantic anchoring was effective for retention: B2 passed on all 5/5
+  datasets with all 3/3 seeds direction-consistent. At K=6, semantic-retention
+  CKA for B2 was `0.5902` at the main `alpha=0.1`, versus `0.4615` for B0.
+  The sensitivity grid was monotone in the expected direction: alpha `0.05`,
+  `0.1`, and `0.2` gave K=6 retention CKA means `0.5256`, `0.5902`, and
+  `0.7105`, respectively. Anchoring alone did not solve redundancy: B2 still
+  had K=6 high-hop cosine `0.9999` and novelty `0.0023`.
+- Hop innovation was effective for distinctiveness: B1 passed on all 5/5
+  datasets with all 3/3 seeds direction-consistent. At K=6, B1 reduced
+  high-hop Frobenius cosine from the B0 value `0.9994` to `0.6527`, reduced
+  high-hop CKA from `0.9979` to `0.7468`, and raised final novelty from
+  `0.0044` to `0.1121`. Its final response magnitude ratio was `0.0213`,
+  above the vanishing threshold `1e-4`.
+- B3 jointly passed on all 5/5 datasets with all 3/3 seeds
+  direction-consistent. At the main alpha `0.1` and K=6, it retained the B2
+  semantic CKA `0.5902`, while retaining B1-like distinctiveness
+  (`0.6527` high-hop cosine, `0.7468` high-hop CKA, `0.1128` novelty). The
+  final innovation magnitude ratio was `0.0113`, also above `1e-4`.
+- The factorial effects separate the mechanisms: anchoring mainly improved
+  semantic-retention CKA (`+0.0998` main effect), while innovation mainly
+  reduced high-hop cosine (`-0.7687`), reduced high-hop CKA (`-0.5045`), and
+  increased novelty (`+0.5633`). The interaction was small relative to the
+  innovation main effect, supporting the combined B3 interpretation.
+- The K stress test showed cumulative B0 becoming progressively redundant:
+  high-hop cosine increased from `0.9936` at K=3 to `0.9994` at K=6, while
+  novelty decreased from `0.0857` to `0.0044`. B1 and B3 retained a distinct
+  innovation signal at K=6. Text and visual responses had different
+  magnitudes and retention offsets by dataset, but the qualitative mechanism
+  direction was consistent across both modalities; the result is not a
+  single-modality artifact.
+
+### U2-B gate and decision
+
+**Decision: A — proceed to U2-C with B3, main `alpha=0.1`.** The language is
+restricted to mitigating propagation-induced semantic dilution, reducing
+multi-hop response redundancy, preserving modality-specific semantics, and
+maintaining distinctive structural evidence. It does not claim to solve
+oversmoothing or oversquashing, and no downstream U2-C change was implemented
+in U2-B.
+
+Orthogonal response construction remains a fallback only if the authorized
+U2-C study finds that B3 is insufficient. The pending relation-level 2×2
+attribution (`separate_cos/tau2`, `learned_diag_cos/tau2`,
+`separate_cos/tau0.35`, `learned_diag_cos/tau0.35`) remains registered and was
+not run here.
+
+Authoritative U2-B artifacts:
+
+- `outputs/u2b_semantic_preserving_multihop_screening/u2b_master_summary.json`
+- `outputs/u2b_semantic_preserving_multihop_screening/u2b_master_table.csv`
+- `docs/mopf_u2b_semantic_preserving_multihop_screening.md`

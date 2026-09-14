@@ -315,6 +315,21 @@ NC 日志中的 `model params` 是 encoder 加线性 classifier 的总数：768+
 
 ### 历史阶段判断
 
-上述内容是历史阶段的判断，现已由上面的 F1-B frozen reevaluation 取代。若
-论文需要外部 NC 主表，仍需按 F1-A 的 `RERUN_REQUIRED` 清单，在冻结协议下
-统一重跑 external baselines；不得把历史表直接升级为正式对照。
+上述内容是历史阶段的诊断，MoPF 主结果现以 F1-B U3-B1 `REUSE_EXACT` 为准，
+fresh F1-B 结果作为 reproducibility check。F1-C 已进一步完成历史 external
+baseline 的 behavior-equivalence certification：9 个 external models 在 5 个
+NC 数据集上的 135 个 seed records 全部通过，现可进入正式对照，但历史 source
+未记录 producing execution SHA，故其身份是 certified reuse 而非 exact SHA reuse。
+
+最终 NC 对照表、paper-facing 表和逐 seed provenance audit 位于：
+
+- `outputs/f1_final_execution/tables/f1_nc_final_comparison.csv`
+- `outputs/f1_final_execution/tables/f1_nc_final_comparison_paper_table.csv`
+- `outputs/f1_final_execution/f1c_historical_baseline_certification.csv`
+- `docs/mopf_f1c_historical_baseline_certification.md`
+
+相对于各数据集 strongest eligible baseline，MoPF 在 NC Test Accuracy 上的
+delta（Movies/Toys/Grocery/ele-fashion/Reddit-S）为 `+0.3898/+0.2738/-0.0781/
++0.0932/-0.0944` 个百分点；Test Macro-F1 delta 为
+`+0.4437/-0.0760/+0.3677/-0.2757/-0.3751` 个百分点。Test 指标全部
+descriptive only，不作显著性或 SOTA 宣称。

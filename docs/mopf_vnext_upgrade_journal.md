@@ -801,3 +801,24 @@ cells that remained `RERUN_REQUIRED` or historical-only were excluded from forma
 main tables. The final tables and the complete interpretation are in
 `docs/mopf_f1_final_benchmark_results.md`. The F2 gate is **PASS — Proceed F2**;
 F2 was not started during F1-B1, and this stage hard-stopped after documentation.
+
+## F1-C — Historical Baseline Equivalence Certification
+
+F1-C completed the historical external-baseline equivalence certification using
+only completion/provenance audits, source comparisons, metric aggregation, table
+generation, and documentation. No architecture change, training rerun,
+hyperparameter tuning, evaluator change, or split change was made.
+
+All 135 historical external NC seed records (9 models × 5 datasets × 3 seeds) and
+all 27 historical external sports seed records (9 models × 1 dataset × 3 seeds)
+were certified as `CERTIFIED_BEHAVIOR_EQUIVALENT_REUSE`. Historical producing
+execution SHA was not recorded and remains an explicit limitation; it was not
+fabricated. `map_mag*` remains historical-internal and the old sports `mopf`
+output remains pre-U3-B1, so neither enters the external formal main table.
+
+The final NC and sports comparison tables are under
+`outputs/f1_final_execution/tables/`, with the certification artifacts in
+`outputs/f1_final_execution/f1c_historical_baseline_certification.csv` and
+`.json`. Test metrics remain descriptive only. Cloth remains a separate
+quasi-held-out table and is not averaged with formal sports. F1-C is **CLOSED**;
+the F2 gate is **PASS — Proceed F2**. F2 was not started.

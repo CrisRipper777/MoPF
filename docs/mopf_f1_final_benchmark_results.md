@@ -1,8 +1,9 @@
 # MoPF-vNext F1 Final Benchmark Results
 
-本文件是 F1-B1 的最终汇总。F1-B1 只进行了 completion audit、provenance
-audit、指标聚合和文档生成；没有重新训练、架构修改、超参数调优、评估器修改
-或数据划分修改。结果生成日期：`2026-09-14`。
+本文件是 F1-B1 与 F1-C 的最终汇总。F1-C 对历史 external baseline 执行了
+behavior-equivalence certification，并只进行了审计、重分类、指标聚合、表格
+生成和文档更新；没有重新训练、架构修改、超参数调优、评估器修改或数据划分
+修改。结果生成日期：`2026-09-14`。
 
 ## 1. Protocol
 
@@ -22,8 +23,10 @@ audit、指标聚合和文档生成；没有重新训练、架构修改、超参
   cloth 使用 F1-B fresh execution 结果。
 
 Completion audit 结果为 48/48：`failed=0`、`missing=0`、`incomplete=0`、
-`duplicate=0`。因此本文件给出正式汇总，但不扩展到缺少完整 provenance 的
-历史 external NC/sports baseline。
+`duplicate=0`。F1-C 又逐 seed 审计了 135 个历史 external NC records 与 27 个
+历史 external sports records；它们均通过行为等价认证并进入下面的正式比较。
+历史输出未记录 producing execution SHA，故这些结果是
+`CERTIFIED_BEHAVIOR_EQUIVALENT_REUSE`，不是伪造 SHA 的 `REUSE_EXACT`。
 
 ## 2. NC main results
 
@@ -55,15 +58,33 @@ and all 15 seed-level differences are in
 The largest absolute seed-level difference is 2.1734 percentage points (Grocery,
 seed 43, Test Macro-F1); this is an audit finding, not a basis for source selection.
 
-No eligible formal external NC baseline is available in F1-B1. F1-A classified
-the 135 external NC cells as `RERUN_REQUIRED` because their producing SHA,
-evaluator, and/or checkpoint-selection provenance was incomplete. Consequently,
-no formal NC strongest-baseline delta, best count, or top-2 count is reported.
+F1-A 原先因历史 producing SHA 等字段未记录而将 135 个 external NC cells 标为
+`RERUN_REQUIRED`。F1-C 按行为等价规则复核后，将它们全部重分类为
+`CERTIFIED_BEHAVIOR_EQUIVALENT_REUSE`：split、features、baseline model source/config、
+训练协议、有效 evaluator 语义和 validation-only checkpoint selection 均等价。
+因此下面的 final comparison 可以报告 strongest eligible baseline，但不做
+post-hoc model selection。
+
+相对于每个数据集的 strongest eligible baseline，MoPF 的 test mean delta 为：
+
+| Dataset | Test Accuracy strongest baseline | MoPF delta (pp) | Test Macro-F1 strongest baseline | MoPF delta (pp) |
+|---|---:|---:|---:|---:|
+| Movies | lgmrec 55.5222 | +0.3898 | lgmrec 49.2728 | +0.4437 |
+| Toys | lgmrec 79.1818 | +0.2738 | lgmrec 76.5190 | -0.0760 |
+| Grocery | dip 83.6506 | -0.0781 | dip 75.8024 | +0.3677 |
+| ele-fashion | dip 88.0430 | +0.0932 | dip 77.3445 | -0.2757 |
+| Reddit-S | dip 96.4454 | -0.0944 | dip 92.3912 | -0.3751 |
+
+MoPF is best on 4/10 of these NC test comparisons and top-2 on 6/10. These are
+direct table comparisons only; they do not imply significance or global SOTA.
 
 Machine-readable outputs:
 
 - [`f1_nc_full_results.csv`](../outputs/f1_final_execution/tables/f1_nc_full_results.csv)
 - [`f1_nc_paper_table.csv`](../outputs/f1_final_execution/tables/f1_nc_paper_table.csv)
+- [`f1_nc_final_comparison.csv`](../outputs/f1_final_execution/tables/f1_nc_final_comparison.csv)
+- [`f1_nc_final_comparison_paper_table.csv`](../outputs/f1_final_execution/tables/f1_nc_final_comparison_paper_table.csv)
+- [`f1c_comparative_statistics.csv`](../outputs/f1_final_execution/f1c_comparative_statistics.csv)
 
 ## 3. Sports formal LP results
 
@@ -73,14 +94,22 @@ The formal sports result is MoPF on `sports-copurchase`, with seeds `42, 43, 44`
 |---|---:|---:|---:|---:|---:|
 | MoPF | 40.5950 ± 0.2371 | 37.4791 ± 0.3360 | 21.5611 ± 0.3899 | 43.0091 ± 0.4423 | 73.0441 ± 0.3769 |
 
-The 27 external formal sports LP cells were `RERUN_REQUIRED` in F1-A and were
-not converted into a formal comparison in F1-B1. Thus the table describes the
-frozen MoPF result and does not establish a formal external ranking.
+F1-A 原先将 27 个 external sports LP cells 标为 `RERUN_REQUIRED`。F1-C 完成行为
+等价认证后，9 个 external models 均可正式复用。相对于 strongest eligible
+baseline，MoPF 的 sports mean delta 为：Val MRR `+2.4740` pp、Test MRR
+`+2.3364` pp、Test Hits@1 `+2.6586` pp、Test Hits@3 `+2.7237` pp、Test Hits@10
+`+0.5898` pp；5/5 指标为最高均值。Test 仍全部是 descriptive only。
+
+历史 `map_mag_v3` 与旧版 historical `mopf` 保持 internal/old reference，未进入
+formal external main table。
 
 [`f1_lp_sports_full_results.csv`](../outputs/f1_final_execution/tables/f1_lp_sports_full_results.csv)
 and
 [`f1_lp_sports_paper_table.csv`](../outputs/f1_final_execution/tables/f1_lp_sports_paper_table.csv)
-contain the full and paper-facing versions.
+contain the F1-B MoPF-only table. The F1-C final comparison is in
+[`f1_lp_sports_final_comparison.csv`](../outputs/f1_final_execution/tables/f1_lp_sports_final_comparison.csv)
+and
+[`f1_lp_sports_final_comparison_paper_table.csv`](../outputs/f1_final_execution/tables/f1_lp_sports_final_comparison_paper_table.csv).
 
 ## 4. Cloth quasi-held-out LP results
 
@@ -162,9 +191,10 @@ Representative parameter counts:
 
 ## 7. Provenance
 
-The final audit contains 63 passing records: 48 fresh F1-B runs plus 15 F1-A
-`REUSE_EXACT` U3-B1 NC runs. Every record was checked for seed, dataset, model,
-task, resolved configuration, freeze SHA, execution/producing SHA, evaluator,
+The F1-B audit contains 63 passing records: 48 fresh F1-B runs plus 15 F1-A
+`REUSE_EXACT` U3-B1 NC runs. F1-C adds 162 certified historical external seed
+records: 135 NC and 27 sports. Every historical record was checked for seed,
+dataset, model, resolved configuration, freeze target, source snapshot, evaluator,
 split, and validation-only checkpoint selection. Sports records are marked
 `formal`; cloth records are marked `quasi-held-out`.
 
@@ -175,29 +205,32 @@ SHA and formal model configuration hash above. The machine-readable audit is in
 [`f1b1_provenance_audit.csv`](../outputs/f1_final_execution/f1b1_provenance_audit.csv)
 and [`f1b1_provenance_audit.json`](../outputs/f1_final_execution/f1b1_provenance_audit.json).
 
-Historical-only and `RERUN_REQUIRED` external NC/sports results are excluded from
-formal main tables. No provenance issue remains for the included rows.
+The historical source manifest does not contain an original producing execution
+SHA; this remains an explicit provenance limitation. It does not invalidate the
+behavior-equivalence certification, because the old source snapshot and effective
+protocol checks are recorded in
+[`f1c_historical_baseline_certification.csv`](../outputs/f1_final_execution/f1c_historical_baseline_certification.csv)
+and its JSON companion.
 
 ## 8. Limitations / exceptions
 
-- Formal external NC and sports baseline comparisons are unavailable because the
-  F1-A inventory classified those cells as `RERUN_REQUIRED`; no formal rank is
-  inferred from historical-only values.
+- Historical external NC and sports values are now formal-eligible by F1-C
+  behavior-equivalence certification. Their original producing execution SHA was
+  not recorded, so the decision is certified reuse rather than exact SHA reuse.
 - Cloth is quasi-held-out and must not be described as the formal sports benchmark
   or combined with sports in an average.
 - NC has two retained sources by policy: U3-B1 `REUSE_EXACT` is primary, while the
   fresh F1-B run is reproducibility evidence. The fresh source was not selected
   because it was higher or lower.
 - Test metrics are descriptive only. No significance tests were run, so “best” is
-  used only for the directly comparable cloth table and does not imply significance.
+  used only for directly comparable tables and does not imply significance.
 - Peak GPU memory was unavailable in the logs; efficiency reporting is limited to
   parameter counts and observed log spans.
-- F1-B1 made no architecture change and performed no hyperparameter tuning.
+- F1-B1/F1-C made no architecture change and performed no hyperparameter tuning.
 
 ## F2 gate
 
-**PASS — Proceed F2.** Formal NC is complete (`15/15` fresh cells, with the
-15-cell `REUSE_EXACT` primary source also provenance-valid), formal sports LP is
-complete (`3/3`), and all included provenance checks pass. F2 was not started in
-F1-B1; this document is the hard stop for final result aggregation.
-
+**F1-C CLOSED. PASS — Proceed F2.** Formal NC is complete, all 135 external NC
+seed records are equivalence-certified, formal sports LP is complete, and all 27
+external sports seed records are equivalence-certified. F2 was not started here;
+this document is the hard stop for final result aggregation.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import warnings
 
 import torch
 import torch.nn as nn
@@ -10,6 +11,21 @@ from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_geometric.utils import scatter
 
 from .common import make_norm
+
+
+# PyTorch 2.4.0's non-reentrant checkpoint implementation still constructs
+# ``torch.cpu.amp.autocast`` during backward recomputation.  That call is
+# internal to PyTorch and emits a deprecation warning even when the project
+# uses the supported ``use_reentrant=False`` API.  Filter only this known
+# upstream warning; checkpointing, recomputation, and gradient behavior are
+# unchanged.  Newer PyTorch versions use ``torch.amp.autocast("cpu", ...)``
+# and simply do not match this filter.
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message=r"`torch\.cpu\.amp\.autocast\(args\.\.\.\)` is deprecated\.",
+    module=r"torch\.utils\.checkpoint",
+)
 
 
 class ProjectionMLP(nn.Module):

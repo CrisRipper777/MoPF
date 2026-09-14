@@ -18,9 +18,10 @@ method freeze SHA `4ddbd6918ceebadc25eed2694e1b463f9aac87f4`，正式
 - 数值单位为百分比，格式为 `mean ± population std`。
 - F1-B 48/48 个计划 run 已完成；`failed=0`、`missing=0`、`incomplete=0`、`duplicate=0`。
 
-正式 sports LP 与 cloth quasi-held-out LP 严格分开。历史 sports baseline
-没有完整的 producing SHA、evaluator 和 checkpoint-selection provenance，
-因此不计入下面的 formal sports 主表；它们仅在文档末尾作为历史结果保留。
+正式 sports LP 与 cloth quasi-held-out LP 严格分开。F1-B 主表先保留冻结版
+MoPF 的结果；历史 sports baseline 的 producing SHA 虽未记录，但 F1-C 已在
+文档末尾完成 behavior-equivalence certification，并据此生成独立的最终
+formal external comparison。
 
 ## Formal sports-copurchase LP
 
@@ -30,9 +31,10 @@ method freeze SHA `4ddbd6918ceebadc25eed2694e1b463f9aac87f4`，正式
 |---|---:|---:|---:|---:|---:|
 | mopf | **40.5950 ± 0.2371** | **37.4791 ± 0.3360** | **21.5611 ± 0.3899** | **43.0091 ± 0.4423** | **73.0441 ± 0.3769** |
 
-由于外部 sports baseline 在 F1-A 中被判定为 `RERUN_REQUIRED`，本表只回答
-“冻结版 MoPF 在 formal sports LP 上的结果”，不能据此声称相对于外部模型
-的正式排名。
+F1-A 曾因历史 source provenance 不完整将外部 sports baseline 标为
+`RERUN_REQUIRED`；F1-C 已按行为等价规则完成复核。上表仍保留 F1-B 的 MoPF
+主结果，包含外部 baseline 的最终 formal comparison 见下方 F1-C 表；不把
+历史 internal `map_mag_v3` 或旧版 `mopf` 计入外部排名。
 
 ## Quasi-held-out cloth-copurchase LP
 
@@ -73,11 +75,13 @@ Hits@10 以及 Val MRR。相对于各指标第二名，MoPF 的均值优势分�
 和 provenance 检查；所有已加载结果均为 finite，且 validation-only selection
 guard 与 frozen provenance audit 均通过。
 
-## Historical sports-copurchase benchmark（非 F1-B formal 主表）
+## Historical sports-copurchase benchmark（F1-C source audit）
 
 以下内容保留早期 `outputs/lp_benchmark/` 的 11 模型 benchmark，便于复核
-历史实验，但不与上面的 F1-B formal sports 结果合并，也不应作为当前 frozen
-external comparison 使用。该历史实验的数值同样为百分比，格式为
+历史 source。F1-C 已证明其中 9 个 external baseline 在当前 frozen formal
+protocol 下行为等价，因此它们进入最终 external comparison；`map_mag_v3`
+仍是 historical internal model，旧版 `mopf` 仍是 pre-U3-B1 reference，二者
+不进入 formal main table。该历史实验的数值同样为百分比，格式为
 `mean ± population std`。
 
 ### 历史实验设置
@@ -107,3 +111,16 @@ external comparison 使用。该历史实验的数值同样为百分比，格式
 | mopf | **40.1393 ± 0.2652** | **37.1078 ± 0.2304** | **21.4061 ± 0.1400** | **42.5823 ± 0.3009** | 72.1888 ± 0.4717 |
 
 历史结果路径：`../outputs/lp_benchmark/sports-copurchase/`。
+
+F1-C 最终 formal sports comparison（9 个 certified external baseline + F1-B
+冻结版 MoPF）位于：
+
+- `outputs/f1_final_execution/tables/f1_lp_sports_final_comparison.csv`
+- `outputs/f1_final_execution/tables/f1_lp_sports_final_comparison_paper_table.csv`
+- `outputs/f1_final_execution/f1c_historical_baseline_certification.csv`
+- `docs/mopf_f1c_historical_baseline_certification.md`
+
+相对于 strongest eligible baseline，MoPF 的 mean delta 为：Val MRR `+2.4740`
+pp、Test MRR `+2.3364` pp、Test Hits@1 `+2.6586` pp、Test Hits@3 `+2.7237`
+pp、Test Hits@10 `+0.5898` pp。5/5 指标为最高均值；Test 指标仍仅作
+descriptive reporting，不代表显著性或全局 SOTA。

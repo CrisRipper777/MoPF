@@ -1,33 +1,96 @@
 # LP Benchmark Results
 
-## 实验设置
+F1-B1 的最终汇总见 [mopf_f1_final_benchmark_results.md](mopf_f1_final_benchmark_results.md)。
+本文件保留 F1-B fresh LP 结果；sports 为 formal，cloth 为 quasi-held-out，二者不混合
+平均，且所有 Test 指标均为 descriptive only。
+
+## Final F1-B authoritative results
+
+本节是当前冻结协议下的正式结果。结果生成日期为 `2026-09-14`，对应
+method freeze SHA `4ddbd6918ceebadc25eed2694e1b463f9aac87f4`，正式
+`configs/model/mopf.yaml` SHA256 为
+`1e29aa0f7141bbeeb16c695ba294358f59441f75b0d92fc7ffb55f560f7d140a`。
+
+- 统一协议：`unified_sampled_lp_v1`。
+- Seeds：`42, 43, 44`。
+- 训练：sampled link prediction；评估：full-graph exact inference。
+- checkpoint 只按 validation MRR 选择；Test 指标仅作描述，不参与选择或调参。
+- 数值单位为百分比，格式为 `mean ± population std`。
+- F1-B 48/48 个计划 run 已完成；`failed=0`、`missing=0`、`incomplete=0`、`duplicate=0`。
+
+正式 sports LP 与 cloth quasi-held-out LP 严格分开。历史 sports baseline
+没有完整的 producing SHA、evaluator 和 checkpoint-selection provenance，
+因此不计入下面的 formal sports 主表；它们仅在文档末尾作为历史结果保留。
+
+## Formal sports-copurchase LP
+
+当前 F1-B formal sports LP 完成了 MoPF 的 3 个 seed：
+
+| Model | Val MRR | Test MRR | Test Hits@1 | Test Hits@3 | Test Hits@10 |
+|---|---:|---:|---:|---:|---:|
+| mopf | **40.5950 ± 0.2371** | **37.4791 ± 0.3360** | **21.5611 ± 0.3899** | **43.0091 ± 0.4423** | **73.0441 ± 0.3769** |
+
+由于外部 sports baseline 在 F1-A 中被判定为 `RERUN_REQUIRED`，本表只回答
+“冻结版 MoPF 在 formal sports LP 上的结果”，不能据此声称相对于外部模型
+的正式排名。
+
+## Quasi-held-out cloth-copurchase LP
+
+cloth 是未参与 U1/U2/U3 选择的 quasi-held-out extension，不得与 formal
+sports LP 合并平均。该表包含 MoPF 和 9 个 external baseline，各运行
+3 个 seed。
+
+| Model | Val MRR | Test MRR | Test Hits@1 | Test Hits@3 | Test Hits@10 |
+|---|---:|---:|---:|---:|---:|
+| mlp | 21.2479 ± 0.2152 | 18.9668 ± 0.2017 | 9.0236 ± 0.1510 | 19.1235 ± 0.2124 | 39.4065 ± 0.4626 |
+| gcn | 23.2875 ± 0.1624 | 20.9900 ± 0.1172 | 11.0351 ± 0.1021 | 21.9186 ± 0.1359 | 41.0537 ± 0.7002 |
+| sage | 27.6355 ± 0.1767 | 24.6818 ± 0.1284 | 12.7090 ± 0.0962 | 26.1489 ± 0.1188 | 50.3954 ± 0.2247 |
+| mmgcn | 29.5478 ± 0.0803 | 26.2543 ± 0.0398 | 13.7166 ± 0.0316 | 28.3123 ± 0.1046 | 53.3201 ± 0.1659 |
+| mgat | 28.4310 ± 0.1654 | 25.2154 ± 0.1343 | 13.1594 ± 0.0821 | 26.9263 ± 0.2334 | 51.2648 ± 0.2997 |
+| dip | 29.1923 ± 0.8636 | 25.7576 ± 0.8178 | 13.2880 ± 0.6200 | 27.8389 ± 1.0326 | 52.7814 ± 1.3475 |
+| dgf | 29.3892 ± 0.1720 | 25.9258 ± 0.1337 | 13.7932 ± 0.1358 | 27.8040 ± 0.1399 | 51.9602 ± 0.2377 |
+| dmgc | 26.4087 ± 0.1246 | 23.3502 ± 0.1081 | 11.5177 ± 0.0666 | 24.6966 ± 0.0846 | 48.6312 ± 0.2445 |
+| lgmrec | 24.7819 ± 0.1950 | 22.1648 ± 0.1988 | 11.4688 ± 0.2151 | 23.3268 ± 0.2761 | 44.2805 ± 0.2865 |
+| mopf | **31.1114 ± 0.4978** | **27.9103 ± 0.3502** | **15.4326 ± 0.1858** | **30.4852 ± 0.4481** | **54.5655 ± 0.7671** |
+
+### Cloth result analysis
+
+MoPF 在 cloth 的五个报告指标上均为最高均值：Test MRR、Hits@1、Hits@3、
+Hits@10 以及 Val MRR。相对于各指标第二名，MoPF 的均值优势分别为
+`+1.6560`、`+1.6394`、`+2.1729`、`+1.2454` 和 `+1.5636` 个百分点。
+这些是 quasi-held-out 泛化结果，不应被表述为 formal sports benchmark
+上的结论。
+
+## F1-B artifacts and audit
+
+- [F1-B completion audit](../outputs/f1_final_execution/f1b_completion.json)
+- [F1-B machine-readable summary](../outputs/f1_final_execution/f1b_summary.json)
+- [F1-B Markdown summary](../outputs/f1_final_execution/f1b_summary.md)
+- [F1-B execution plan](../outputs/f1_final_execution/f1b_plan.csv)
+- [F1-B formal output root](../outputs/f1_final_execution/)
+
+每个 fresh run 均通过 required marker、checkpoint、metrics、resolved config
+和 provenance 检查；所有已加载结果均为 finite，且 validation-only selection
+guard 与 frozen provenance audit 均通过。
+
+## Historical sports-copurchase benchmark（非 F1-B formal 主表）
+
+以下内容保留早期 `outputs/lp_benchmark/` 的 11 模型 benchmark，便于复核
+历史实验，但不与上面的 F1-B formal sports 结果合并，也不应作为当前 frozen
+external comparison 使用。该历史实验的数值同样为百分比，格式为
+`mean ± population std`。
+
+### 历史实验设置
 
 - 数据集：`sports-copurchase`
 - 模型：11 个模型（MAP-MAG 仅保留 `map_mag_v3`，另含 `mopf`）
 - Seeds：`42, 43, 44`
 - LP 协议：`unified_sampled_lp_v1`
 - 训练方式：sampled link prediction
-- Neighbor sampling：两跳 `[5, 5]`（模型特殊深度由项目 runner 解析）
+- Neighbor sampling：两跳 `[5, 5]`
 - Training negative：每条正边 1 个 filtered negative
 - LP projection dimension：`128`
 - Inference：full-graph exact inference
-- 表中数值：百分比；格式为 `mean ± population std`
-- Job 状态：11/11 已完成，0 失败，0 未启动
-- 原始结果根目录：`../outputs/lp_benchmark/`
-
-普通 baseline 的配置直接对应 `configs/model/` 中的同名 YAML；MAP-MAG 系列仅运行 `map_mag_v3.yaml`，不纳入 v1/v2/full/lp preset。
-
-## 结果总览
-
-| 指标 | 最优模型 | 结果 |
-|---|---|---:|
-| Val MRR | `mopf` | **40.1393 ± 0.2652** |
-| Test MRR | `mopf` | **37.1078 ± 0.2304** |
-| Test Hits@1 | `mopf` | **21.4061 ± 0.1400** |
-| Test Hits@3 | `mopf` | **42.5823 ± 0.3009** |
-| Test Hits@10 | `mmgcn` | **72.4543 ± 0.3007** |
-
-## 详细结果
 
 | Model | Val MRR | Test MRR | Test Hits@1 | Test Hits@3 | Test Hits@10 |
 |---|---:|---:|---:|---:|---:|
@@ -43,20 +106,4 @@
 | map_mag_v3 | 39.8790 ± 0.2599 | 36.8362 ± 0.2255 | 20.9642 ± 0.1827 | 42.4683 ± 0.3127 | 71.8583 ± 0.4453 |
 | mopf | **40.1393 ± 0.2652** | **37.1078 ± 0.2304** | **21.4061 ± 0.1400** | **42.5823 ± 0.3009** | 72.1888 ± 0.4717 |
 
-## 结果路径
-
-- `mlp`：[../outputs/lp_benchmark/sports-copurchase/mlp/seed42_runs3/results.json](../outputs/lp_benchmark/sports-copurchase/mlp/seed42_runs3/results.json)；[launcher.log](../outputs/lp_benchmark/sports-copurchase/mlp/seed42_runs3/launcher.log)
-- `gcn`：[../outputs/lp_benchmark/sports-copurchase/gcn/seed42_runs3/results.json](../outputs/lp_benchmark/sports-copurchase/gcn/seed42_runs3/results.json)；[launcher.log](../outputs/lp_benchmark/sports-copurchase/gcn/seed42_runs3/launcher.log)
-- `sage`：[../outputs/lp_benchmark/sports-copurchase/sage/seed42_runs3/results.json](../outputs/lp_benchmark/sports-copurchase/sage/seed42_runs3/results.json)；[launcher.log](../outputs/lp_benchmark/sports-copurchase/sage/seed42_runs3/launcher.log)
-- `mmgcn`：[../outputs/lp_benchmark/sports-copurchase/mmgcn/seed42_runs3/results.json](../outputs/lp_benchmark/sports-copurchase/mmgcn/seed42_runs3/results.json)；[launcher.log](../outputs/lp_benchmark/sports-copurchase/mmgcn/seed42_runs3/launcher.log)
-- `mgat`：[../outputs/lp_benchmark/sports-copurchase/mgat/seed42_runs3/results.json](../outputs/lp_benchmark/sports-copurchase/mgat/seed42_runs3/results.json)；[launcher.log](../outputs/lp_benchmark/sports-copurchase/mgat/seed42_runs3/launcher.log)
-- `dip`：[../outputs/lp_benchmark/sports-copurchase/dip/seed42_runs3/results.json](../outputs/lp_benchmark/sports-copurchase/dip/seed42_runs3/results.json)；[launcher.log](../outputs/lp_benchmark/sports-copurchase/dip/seed42_runs3/launcher.log)
-- `dgf`：[../outputs/lp_benchmark/sports-copurchase/dgf/seed42_runs3/results.json](../outputs/lp_benchmark/sports-copurchase/dgf/seed42_runs3/results.json)；[launcher.log](../outputs/lp_benchmark/sports-copurchase/dgf/seed42_runs3/launcher.log)
-- `dmgc`：[../outputs/lp_benchmark/sports-copurchase/dmgc/seed42_runs3/results.json](../outputs/lp_benchmark/sports-copurchase/dmgc/seed42_runs3/results.json)；[launcher.log](../outputs/lp_benchmark/sports-copurchase/dmgc/seed42_runs3/launcher.log)
-- `lgmrec`：[../outputs/lp_benchmark/sports-copurchase/lgmrec/seed42_runs3/results.json](../outputs/lp_benchmark/sports-copurchase/lgmrec/seed42_runs3/results.json)；[launcher.log](../outputs/lp_benchmark/sports-copurchase/lgmrec/seed42_runs3/launcher.log)
-- `map_mag_v3`：[../outputs/lp_benchmark/sports-copurchase/map_mag_v3/seed42_runs3/results.json](../outputs/lp_benchmark/sports-copurchase/map_mag_v3/seed42_runs3/results.json)；[launcher.log](../outputs/lp_benchmark/sports-copurchase/map_mag_v3/seed42_runs3/launcher.log)
-- `mopf`：[../outputs/lp_benchmark/sports-copurchase/mopf/seed42_runs3/results.json](../outputs/lp_benchmark/sports-copurchase/mopf/seed42_runs3/results.json)；[launcher.log](../outputs/lp_benchmark/sports-copurchase/mopf/seed42_runs3/launcher.log)
-
-## 运行说明
-
-本报告由 `scripts/run_sports_copurchase_lp_benchmark.py` 自动生成。若有失败 job，表中保留 `—`，请先检查对应 `launcher.log`，修复后重新执行同一命令即可续跑并刷新本报告。
+历史结果路径：`../outputs/lp_benchmark/sports-copurchase/`。

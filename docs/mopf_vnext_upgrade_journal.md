@@ -781,3 +781,23 @@ No formal full training, benchmark execution, architecture change, evaluator
 change, split change, or final conclusion was performed in F1-B0. Smoke tests
 are isolated under `outputs/f1b_smoke/`; formal outputs are reserved for the
 user's later manual execution.
+
+## F1 — Final Benchmark Results
+
+F1-B1 completed the final result aggregation after all user-launched F1-B full
+runs finished. Completion audit passed with 48/48 fresh runs and no failed,
+missing, incomplete, or duplicate run. This stage performed only completion and
+provenance audits, metric aggregation, table generation, and documentation.
+
+There was no architecture change and no hyperparameter tuning. The NC reporting
+policy uses the F1-A-audited U3-B1 `REUSE_EXACT` results as the primary table and
+retains fresh F1-B NC results as a reproducibility check; no source was chosen by
+its numerical advantage. Formal sports LP and cloth quasi-held-out LP are reported
+in separate tables, with no sports/cloth mixed average. Test metrics are
+descriptive only. Cloth is explicitly quasi-held-out.
+
+All 63 included provenance records passed. Formal external NC and sports baseline
+cells that remained `RERUN_REQUIRED` or historical-only were excluded from formal
+main tables. The final tables and the complete interpretation are in
+`docs/mopf_f1_final_benchmark_results.md`. The F2 gate is **PASS — Proceed F2**;
+F2 was not started during F1-B1, and this stage hard-stopped after documentation.

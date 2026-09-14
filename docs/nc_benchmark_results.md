@@ -1,6 +1,63 @@
 # NC Benchmark Results
 
-## 实验设置
+## F1-B fresh execution — reproducibility check
+
+F1-B1 canonical NC reporting uses the F1-A-audited U3-B1 `REUSE_EXACT` results as
+the primary table; the fresh results in this document are retained as a
+reproducibility check. See the [F1 final benchmark results](mopf_f1_final_benchmark_results.md)
+for the canonical NC table, fresh-vs-reuse audit, and final interpretation.
+
+本节是当前冻结方法与评估协议下的 F1-B fresh MoPF NC 记录。结果生成日期为
+`2026-09-14`，对应 method freeze SHA
+`4ddbd6918ceebadc25eed2694e1b463f9aac87f4`，正式
+`configs/model/mopf.yaml` SHA256 为
+`1e29aa0f7141bbeeb16c695ba294358f59441f75b0d92fc7ffb55f560f7d140a`。
+
+- 数据集：`Movies`、`Toys`、`Grocery`、`ele-fashion`、`Reddit-S`。
+- 每个数据集使用 seeds `42, 43, 44`，共 15 个 fresh frozen reevaluation runs。
+- NC 协议：`unified_full_graph_nc_v1`；训练方式：transductive full-graph training。
+- checkpoint 只按 validation 指标选择；Test 指标仅作描述，不参与选择或调参。
+- 数值单位为百分比，格式为 `mean ± population std`。
+- F1-B 全部 15/15 个 MoPF NC run 完成，metrics 均 finite，provenance 与
+  validation-only selection guard 均通过。
+
+### 三-seed汇总
+
+| Dataset | Val Accuracy | Val Macro-F1 | Test Accuracy | Test Macro-F1 |
+|---|---:|---:|---:|---:|
+| Movies | 57.6785 ± 0.3472 | 49.9429 ± 0.9556 | 55.8721 ± 0.1979 | 49.9310 ± 0.3709 |
+| Toys | 80.4301 ± 0.0395 | 77.2573 ± 0.0358 | 80.1401 ± 0.4784 | 77.0464 ± 0.2522 |
+| Grocery | 84.0996 ± 0.1805 | 77.6816 ± 0.6317 | 82.8990 ± 0.0414 | 75.1120 ± 1.0243 |
+| ele-fashion | 88.0434 ± 0.0823 | 76.2246 ± 0.4404 | 88.1248 ± 0.1390 | 76.9414 ± 0.5838 |
+| Reddit-S | 96.4349 ± 0.3252 | 92.7554 ± 0.4708 | 96.5083 ± 0.3704 | 92.5926 ± 0.8549 |
+
+### 结果解读
+
+这 15 个结果是冻结版 MoPF 的正式 NC 记录，但 F1-B 没有重新执行外部
+NC baselines。F1-A 将历史 external NC 结果判定为 `RERUN_REQUIRED`，因为
+其 producing SHA、evaluator 和 checkpoint-selection provenance 不完整；
+因此下面保留的旧 13-model 表只能作为历史参考，不能与本节组成当前正式
+external comparison 或据此宣称 MoPF 的正式排名。
+
+在 MoPF 自身的五个数据集结果中，Test Accuracy 范围为 `55.8721%` 至
+`96.5083%`，Test Macro-F1 范围为 `49.9310%` 至 `92.5926%`。跨 seed 的
+Accuracy 波动较小（标准差 `0.0414–0.4784` 个百分点）；Macro-F1 的波动
+相对更明显，尤其是 Grocery（`1.0243` 个百分点）和 Reddit-S（`0.8549`
+个百分点），但没有发现非有限值或训练协议异常。
+
+### F1-B artifacts and audit
+
+- [F1-B completion audit](../outputs/f1_final_execution/f1b_completion.json)
+- [F1-B machine-readable summary](../outputs/f1_final_execution/f1b_summary.json)
+- [F1-B Markdown summary](../outputs/f1_final_execution/f1b_summary.md)
+- [F1-B execution plan](../outputs/f1_final_execution/f1b_plan.csv)
+- [F1-B NC output root](../outputs/f1_final_execution/nc/)
+
+NC 每个 fresh run 的独立目录包含 resolved config、provenance、training log、
+best checkpoint 和 metrics；F1-B 总体 48/48 个任务（NC、sports formal LP、
+cloth quasi-held-out LP）均已完成。
+
+## 历史 benchmark 实验设置（非 F1-B formal 对照）
 
 - 数据集：`Movies`、`Toys`、`Grocery`、`ele-fashion`、`Reddit-S`
 - 模型：原有 13 个实现模型 + 新增 `mopf`
@@ -11,11 +68,12 @@
 - 表中数值：`mean ± population std`，单位为 `%`
 - 原始结果目录：`outputs/full_benchmark/nc/`
 
-原 benchmark 共完成 `5 × 13 = 65` 个 jobs；本次新增 MoPF 的 5 个
-`num_runs=3` jobs。原有结果由各模型目录下的 `seed42_runs3/results.json`
-汇总而来，MoPF 结果来自本报告列出的 2026-09-09 输出目录。
+本节表格来自早期 `outputs/full_benchmark/nc/` 历史 benchmark，保留用于
+复核已有模型结果。原 benchmark 共完成 `5 × 13 = 65` 个 jobs；其外部
+baseline 与早期 MoPF 结果均未作为当前 F1-B formal comparison 使用。F1-B
+的冻结版 MoPF 结果请以上面的独立 15-run 汇总为准。
 
-## 结果总览
+## 历史结果总览（非 F1-B formal 主表）
 
 | Dataset | Test Accuracy 最优 | Test Macro-F1 最优 |
 |---|---|---|
@@ -120,7 +178,7 @@
 | map_mag_v3 | 95.9631 ± 0.0785 | 95.8687 ± 0.0646 | 91.5258 ± 0.1923 |
 | mopf | 96.3511 ± 0.0926 | **96.4769 ± 0.0680** | **92.4040 ± 0.1055** |
 
-## 跨数据集平均（仅作参考）
+## 历史跨数据集平均（仅作参考）
 
 这里对 5 个数据集的 Test 指标直接取算术平均，不替代逐数据集结果。
 
@@ -141,12 +199,12 @@
 | map_mag_v3 | 80.3260 | 73.9737 | 80.8441 |
 | mopf | **80.7201** | 73.9907 | **81.1120** |
 
-## 结果路径
+## 历史结果路径
 
 - [NC benchmark outputs](../outputs/full_benchmark/nc/)
 - [Benchmark manifest](../outputs/full_benchmark/benchmark_manifest.json)
 
-## MoPF 新增结果明细与训练检查
+## 历史 MoPF 结果明细与训练检查
 
 ### 运行范围
 
@@ -255,6 +313,8 @@ NC 日志中的 `model params` 是 encoder 加线性 classifier 的总数：768+
 
 需要保留的观察点是 ele-fashion 的 test Macro-F1：seed42/43 为 77.37/77.89%，seed44 为 70.81%，导致汇总标准差达到 3.22 个百分点；但该 seed 的 validation accuracy（88.25%）、test accuracy（88.25%）和 loss 曲线均正常。因此这更像是类别不均衡或少数类预测敏感导致的宏 F1 波动，而不是优化器、梯度或模型数值故障。相较旧跑次，准确率更稳定且略有提升，但 Macro-F1 跨 seed 波动更大。若 Macro-F1 是主要论文指标，正式实验应保留该 seed，并额外检查 class-wise confusion/support；不应直接删除该结果。
 
-### 当前判断
+### 历史阶段判断
 
-可以将这组结果作为 MoPF NC 的首轮三-seed benchmark 结果，并继续进行正式 seed42/多 seed 性能实验。训练本身没有需要立即修复的问题；后续优先关注 ele-fashion 的宏 F1 跨 seed 方差，并与 MAP-v1/v2/v3 使用完全相同的 split、协议和汇总方式进行横向比较。
+上述内容是历史阶段的判断，现已由上面的 F1-B frozen reevaluation 取代。若
+论文需要外部 NC 主表，仍需按 F1-A 的 `RERUN_REQUIRED` 清单，在冻结协议下
+统一重跑 external baselines；不得把历史表直接升级为正式对照。

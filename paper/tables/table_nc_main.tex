@@ -1,0 +1,29 @@
+\begin{table*}[t]
+\caption{Node classification results on Movies, Toys, Grocery, ele-fashion, and Reddit-S. Test Accuracy and Test Macro-F1 are percentages reported as mean $\pm$ population standard deviation over seeds 42, 43, and 44. All models use the frozen transductive full-graph protocol, validation-accuracy checkpoint selection, and the fixed task-level Macro-F1 label set.}
+\label{tab:nc_main}
+\centering
+\scriptsize
+\setlength{\tabcolsep}{3pt}
+\renewcommand{\arraystretch}{1.08}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lcccccccccc}
+\toprule
+Model & \multicolumn{2}{c}{Movies} & \multicolumn{2}{c}{Toys} & \multicolumn{2}{c}{Grocery} & \multicolumn{2}{c}{ele-fashion} & \multicolumn{2}{c}{Reddit-S} \\
+\cmidrule(lr){2-3} \cmidrule(lr){4-5} \cmidrule(lr){6-7} \cmidrule(lr){8-9} \cmidrule(lr){10-11}
+ & Acc. & Macro-F1 & Acc. & Macro-F1 & Acc. & Macro-F1 & Acc. & Macro-F1 & Acc. & Macro-F1 \\
+\midrule
+MLP & 50.91 $\pm$ 0.15 & 36.84 $\pm$ 2.22 & 74.30 $\pm$ 0.29 & 71.84 $\pm$ 0.38 & 78.86 $\pm$ 0.48 & 69.78 $\pm$ 1.18 & 87.92 $\pm$ 0.04 & 76.81 $\pm$ 0.31 & 92.82 $\pm$ 0.01 & 87.28 $\pm$ 0.03 \\
+GCN & 53.22 $\pm$ 0.51 & 45.30 $\pm$ 0.14 & 78.77 $\pm$ 0.22 & 75.25 $\pm$ 0.44 & 81.27 $\pm$ 0.12 & 71.95 $\pm$ 0.46 & 85.21 $\pm$ 0.10 & 73.02 $\pm$ 0.23 & 93.52 $\pm$ 0.08 & 88.88 $\pm$ 0.20 \\
+GraphSAGE & 52.50 $\pm$ 1.93 & 40.63 $\pm$ 10.84 & 77.75 $\pm$ 0.31 & 75.19 $\pm$ 0.22 & 82.61 $\pm$ 0.23 & 74.35 $\pm$ 0.42 & 87.75 $\pm$ 0.26 & 76.55 $\pm$ 0.93 & 94.84 $\pm$ 0.05 & 90.45 $\pm$ 0.17 \\
+MMGCN & 55.25 $\pm$ 1.00 & 48.00 $\pm$ 0.75 & 78.36 $\pm$ 0.25 & 75.33 $\pm$ 0.43 & 82.00 $\pm$ 0.11 & 71.70 $\pm$ 1.31 & 87.55 $\pm$ 0.05 & 76.30 $\pm$ 0.30 & 95.67 $\pm$ 0.15 & 91.25 $\pm$ 0.39 \\
+MGAT & 53.59 $\pm$ 0.19 & 35.94 $\pm$ 1.56 & 77.84 $\pm$ 0.11 & 74.05 $\pm$ 0.24 & 80.94 $\pm$ 0.34 & 68.40 $\pm$ 1.34 & 86.88 $\pm$ 0.14 & 72.35 $\pm$ 0.66 & 95.70 $\pm$ 0.13 & 90.56 $\pm$ 0.26 \\
+DiP & 55.07 $\pm$ 0.18 & 47.28 $\pm$ 0.56 & \underline{79.18 $\pm$ 0.36} & \underline{76.61 $\pm$ 0.26} & \underline{83.30 $\pm$ 0.26} & \underline{75.69 $\pm$ 0.47} & \underline{87.99 $\pm$ 0.28} & \textbf{77.13 $\pm$ 1.31} & \textbf{96.43 $\pm$ 0.05} & \textbf{92.42 $\pm$ 0.38} \\
+DGF & 51.35 $\pm$ 0.28 & 31.34 $\pm$ 3.19 & 78.35 $\pm$ 0.22 & 74.95 $\pm$ 0.58 & 81.47 $\pm$ 0.10 & 69.63 $\pm$ 0.11 & 86.86 $\pm$ 0.04 & 72.63 $\pm$ 0.43 & 95.98 $\pm$ 0.08 & 90.57 $\pm$ 0.55 \\
+DMGC & 46.55 $\pm$ 0.57 & 21.73 $\pm$ 1.56 & 71.49 $\pm$ 1.83 & 67.83 $\pm$ 1.44 & 72.22 $\pm$ 2.86 & 60.08 $\pm$ 2.84 & 86.42 $\pm$ 0.25 & 67.66 $\pm$ 4.52 & 92.79 $\pm$ 0.31 & 86.83 $\pm$ 0.32 \\
+LGMRec & \underline{55.59 $\pm$ 0.30} & \underline{49.20 $\pm$ 0.09} & 79.18 $\pm$ 0.02 & 76.52 $\pm$ 0.13 & 82.88 $\pm$ 0.08 & 75.33 $\pm$ 0.21 & 85.68 $\pm$ 0.31 & 71.29 $\pm$ 1.52 & 95.99 $\pm$ 0.04 & 91.89 $\pm$ 0.13 \\
+\midrule
+MoPF & \textbf{56.19 $\pm$ 0.52} & \textbf{49.49 $\pm$ 0.71} & \textbf{79.64 $\pm$ 0.20} & \textbf{76.99 $\pm$ 0.20} & \textbf{83.42 $\pm$ 0.30} & \textbf{76.18 $\pm$ 0.44} & \textbf{88.03 $\pm$ 0.10} & \underline{76.99 $\pm$ 0.65} & \underline{96.37 $\pm$ 0.26} & \underline{92.11 $\pm$ 0.53} \\
+\bottomrule
+\end{tabular}%
+}
+\end{table*}

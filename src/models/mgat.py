@@ -10,9 +10,6 @@ from torch_geometric.nn.conv import MessagePassing
 from torch_geometric.nn.inits import uniform
 from torch_geometric.utils import degree, remove_self_loops, softmax
 
-from .common import make_norm
-
-
 class GraphGAT(MessagePassing):
     def __init__(
         self,
@@ -47,7 +44,11 @@ class GraphGAT(MessagePassing):
         size=None,
         node_degree: torch.Tensor | None = None,
     ) -> torch.Tensor:
-        edge_index, _ = remove_self_loops(edge_index)
+        # Match OpenMAG: self-loops are removed for the default full-graph
+        # propagation path, while an explicitly supplied size keeps the
+        # caller's edge index semantics unchanged.
+        if size is None:
+            edge_index, _ = remove_self_loops(edge_index)
         x = x.unsqueeze(-1) if x.dim() == 1 else x
         x = torch.matmul(x, self.weight)
         if size is None:
@@ -75,7 +76,7 @@ class GraphGAT(MessagePassing):
             node_degree_j = degree(row, size[0], dtype=x_i.dtype)[row]
         else:
             node_degree_j = node_degree_j.view(-1)
-        deg_inv_sqrt = node_degree_j.clamp(min=1).pow(-0.5)
+        deg_inv_sqrt = node_degree_j.pow(-0.5)
         gate_w = torch.sigmoid(torch.mul(deg_inv_sqrt, inner_product))
 
         attention_w = softmax(torch.mul(inner_product, gate_w), edge_index_i, num_nodes=size_i)
@@ -96,7 +97,6 @@ class MgatBranch(nn.Module):
         hidden_dim: int,
         num_layers: int,
         latent_dim: int,
-        norm: str | None = "batchnorm",
     ):
         super().__init__()
         self.num_layers = num_layers
@@ -106,7 +106,6 @@ class MgatBranch(nn.Module):
         self.convs = nn.ModuleList()
         self.linears = nn.ModuleList()
         self.g_layers = nn.ModuleList()
-        self.norms = nn.ModuleList()
         for layer_in_dim in layer_input_dims:
             conv = GraphGAT(layer_in_dim, layer_in_dim, normalize=True, aggr="add")
             linear = nn.Linear(layer_in_dim, hidden_dim)
@@ -117,7 +116,6 @@ class MgatBranch(nn.Module):
             self.convs.append(conv)
             self.linears.append(linear)
             self.g_layers.append(g_layer)
-            self.norms.append(make_norm(norm, hidden_dim))
 
     def _project_features(self, x_feat: torch.Tensor) -> torch.Tensor:
         return F.normalize(torch.tanh(self.MLP(x_feat)), p=2, dim=-1)
@@ -125,11 +123,12 @@ class MgatBranch(nn.Module):
     def forward(self, x_feat: torch.Tensor, id_emb: torch.Tensor, edge_index: torch.Tensor) -> torch.Tensor:
         x = self._project_features(x_feat)
         layer_outputs: list[torch.Tensor] = []
-        for conv, linear, g_layer, norm in zip(self.convs, self.linears, self.g_layers, self.norms):
+        for conv, linear, g_layer in zip(self.convs, self.linears, self.g_layers):
             h = F.leaky_relu(conv(x, edge_index))
             x_hat = F.leaky_relu(linear(x)) + id_emb
-            x = norm(g_layer(h) + x_hat)
-            x = F.leaky_relu(x)
+            # OpenMAG applies no BatchNorm/LayerNorm between the residual
+            # fusion and the LeakyReLU.
+            x = F.leaky_relu(g_layer(h) + x_hat)
             layer_outputs.append(x)
 
         return torch.cat(layer_outputs, dim=1)
@@ -153,7 +152,7 @@ class MgatBranch(nn.Module):
     def inference(
         self,
         x_feat: torch.Tensor,
-        id_embedding: nn.Embedding,
+        id_embedding: torch.Tensor,
         edge_index: torch.Tensor,
         device: torch.device,
         batch_size: int,
@@ -166,7 +165,7 @@ class MgatBranch(nn.Module):
         clean_edge_index, _ = remove_self_loops(edge_index)
         full_degree = degree(clean_edge_index[0], num_nodes, dtype=h.dtype)
 
-        for conv, linear, g_layer, norm in zip(self.convs, self.linears, self.g_layers, self.norms):
+        for conv, linear, g_layer in zip(self.convs, self.linears, self.g_layers):
             data = Data(x=h, edge_index=edge_index, node_degree=full_degree)
             loader = NeighborLoader(
                 data,
@@ -178,11 +177,10 @@ class MgatBranch(nn.Module):
             out = torch.empty((num_nodes, linear.out_features), dtype=h.dtype, device="cpu")
             for batch in loader:
                 batch = batch.to(device)
-                id_emb = id_embedding(batch.n_id)
+                id_emb = id_embedding[batch.n_id]
                 h_g = F.leaky_relu(conv(batch.x, batch.edge_index, node_degree=batch.node_degree))
                 x_hat = F.leaky_relu(linear(batch.x)) + id_emb
-                z = norm(g_layer(h_g) + x_hat)
-                z = F.leaky_relu(z)[: batch.batch_size]
+                z = F.leaky_relu(g_layer(h_g) + x_hat)[: batch.batch_size]
                 out[batch.n_id[: batch.batch_size].cpu()] = z.detach().cpu()
             layer_outputs.append(out)
             h = out
@@ -197,7 +195,6 @@ class Model(nn.Module):
         num_nodes = int(data_info["num_nodes"])
         hidden_dim = int(cfg.model.hidden_dim)
         num_layers = int(cfg.model.get("num_layers", 2))
-        norm = cfg.model.get("norm", "batchnorm")
         if num_layers < 1:
             raise ValueError(f"num_layers must be >= 1, got {num_layers}")
 
@@ -211,8 +208,13 @@ class Model(nn.Module):
                 f"text_dim+visual_dim={self.text_dim + self.visual_dim} exceeds input_dim={input_dim}"
             )
 
-        self.id_embedding = nn.Embedding(num_nodes, hidden_dim)
-        nn.init.xavier_normal_(self.id_embedding.weight)
+        # OpenMAG creates this tensor as a non-registered Tensor, so Adam
+        # does not update it.  Registering it as a buffer preserves that
+        # behavior while making the current trainer's best-checkpoint restore
+        # correct and deterministic.
+        id_embedding = torch.empty(num_nodes, hidden_dim)
+        nn.init.xavier_normal_(id_embedding)
+        self.register_buffer("id_embedding", id_embedding)
         self._batch_n_id: torch.Tensor | None = None
 
         self.v_branch = MgatBranch(
@@ -220,14 +222,12 @@ class Model(nn.Module):
             hidden_dim=hidden_dim,
             num_layers=num_layers,
             latent_dim=256,
-            norm=norm,
         )
         self.t_branch = MgatBranch(
             in_dim=self.text_dim,
             hidden_dim=hidden_dim,
             num_layers=num_layers,
             latent_dim=100,
-            norm=norm,
         )
 
         self.out_dim = hidden_dim * num_layers
@@ -235,8 +235,8 @@ class Model(nn.Module):
     def _get_id_emb(self, num_nodes: int) -> torch.Tensor:
         n_id = getattr(self, "_batch_n_id", None)
         if n_id is not None:
-            return self.id_embedding(n_id)
-        return self.id_embedding.weight[:num_nodes]
+            return self.id_embedding[n_id]
+        return self.id_embedding[:num_nodes]
 
     def forward(self, x: torch.Tensor, edge_index: torch.Tensor):
         text_feat = x[:, : self.text_dim]

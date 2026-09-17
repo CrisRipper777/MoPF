@@ -8,6 +8,9 @@ seed: 42
 num_runs: 3
 device: cuda:0
 
+# Frozen F2 interface. CLI overrides use, for example, ablation=wo_tcpr.
+ablation: full
+
 paths:
   data_root: /hdd1/DataInHere/YHF/data
   split_root: /hdd1/DataInHere/YHF/data/MAGB_split

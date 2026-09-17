@@ -603,6 +603,7 @@ def _run_single_lp(
     best_model_state = None
     best_predictor_state = None
     best_projection_state = None
+    best_epoch: int | None = None
     patience_value = cfg.task.get("patience")
     patience_total = None if patience_value is None else int(patience_value)
     patience_left = patience_total
@@ -748,6 +749,7 @@ def _run_single_lp(
             best_test = {
                 "val_mrr": val_metrics["mrr"],
             }
+            best_epoch = epoch
             best_model_state = clone_state_dict(model)
             best_predictor_state = clone_state_dict(predictor)
             best_projection_state = clone_state_dict(projection) if projection is not None else None
@@ -933,6 +935,9 @@ def _run_single_lp(
             {
                 "task": "lp",
                 "seed": seed,
+                "selection": "best_val_mrr",
+                "epoch": best_epoch,
+                "metrics": dict(best_test),
                 "model_state": clone_state_dict(model),
                 "head_state": clone_state_dict(predictor),
                 "proj_state": clone_state_dict(projection) if projection is not None else None,

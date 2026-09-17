@@ -48,7 +48,7 @@ def _cfg(**overrides) -> _CfgNode:
         node_conditioner_mode="absolute",
     )
     model.update(overrides)
-    return _CfgNode(model=model, task=_CfgNode(num_neighbors=[5, 5]))
+    return _CfgNode(model=model, task=_CfgNode(num_neighbors=[5, 5]), ablation="full")
 
 
 def _graph() -> tuple[torch.Tensor, torch.Tensor]:

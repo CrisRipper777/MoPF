@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import hashlib
 import json
+import shutil
 import sys
+import time
 from pathlib import Path
 
 if __package__ is None or __package__ == "":
@@ -13,6 +15,7 @@ import torch
 from hydra.core.hydra_config import HydraConfig
 from omegaconf import DictConfig, OmegaConf
 
+from src.ablation import build_ablation_manifest, cfg_ablation
 from src.data import load_mag_data
 from src.tasks import run_lp, run_nc
 from src.utils.device import get_device
@@ -64,9 +67,12 @@ def _log_data_info(logger, data, model_name: str) -> None:
 
 @hydra.main(config_path="../configs", config_name="config", version_base=None)
 def main(cfg: DictConfig) -> None:
+    started_at = time.perf_counter()
     output_dir = Path(HydraConfig.get().runtime.output_dir)
     logger = setup_logger(output_dir, cfg.logging.level)
     logger.info("Resolved config:\n%s", OmegaConf.to_yaml(cfg, resolve=True))
+    ablation = cfg_ablation(cfg)
+    logger.info("Ablation: %s", ablation.name)
 
     device = get_device(str(cfg.device))
     torch_threads = cfg.task.get("torch_threads")
@@ -76,6 +82,21 @@ def main(cfg: DictConfig) -> None:
 
     data = load_mag_data(cfg, str(cfg.task.name), int(cfg.seed))
     _log_data_info(logger, data, str(cfg.model.name))
+    manifest = build_ablation_manifest(
+        cfg,
+        dataset=str(data.name),
+        task=str(cfg.task.name),
+        seed=int(cfg.seed),
+        split_source=(
+            data.info.get(f"{str(cfg.task.name)}_split_path")
+            or data.info.get("edge_split_path")
+            or data.info.get("node_split_path")
+        ),
+        project_root=Path(__file__).resolve().parents[1],
+    )
+    with (output_dir / "ablation_manifest.json").open("w", encoding="utf-8") as f:
+        json.dump(manifest, f, indent=2, ensure_ascii=False)
+    logger.info("Saved ablation manifest: %s", output_dir / "ablation_manifest.json")
 
     if int(cfg.task.epochs) <= 0:
         logger.info("task.epochs <= 0, stopping after data loading/split preparation")
@@ -91,6 +112,69 @@ def main(cfg: DictConfig) -> None:
     with (output_dir / "results.json").open("w", encoding="utf-8") as f:
         json.dump(serializable, f, indent=2)
     logger.info("Saved results: %s", output_dir / "results.json")
+
+    checkpoint_path = cfg.task.get("save_ckpt_path")
+    checkpoint_metadata = {}
+    if checkpoint_path:
+        checkpoint = Path(str(checkpoint_path))
+        if int(cfg.num_runs) > 1:
+            checkpoint = checkpoint.with_name(
+                f"{checkpoint.stem}_run{int(cfg.num_runs)}{checkpoint.suffix}"
+            )
+        # F2 launches use num_runs=1. For legacy multi-run invocations, the
+        # aggregate launcher already owns the per-run checkpoint convention.
+        if checkpoint.is_file():
+            payload = torch.load(checkpoint, map_location="cpu", weights_only=False)
+            if isinstance(payload, dict):
+                checkpoint_metadata = {
+                    "selection": payload.get("selection"),
+                    "best_epoch": payload.get("epoch"),
+                }
+
+    runtime_seconds = time.perf_counter() - started_at
+    peak_gpu_memory_mib = None
+    if torch.cuda.is_available() and str(device).startswith("cuda"):
+        try:
+            peak_gpu_memory_mib = float(torch.cuda.max_memory_allocated(device) / (1024**2))
+        except (RuntimeError, ValueError):
+            peak_gpu_memory_mib = None
+    metrics_payload = {
+        "task": str(cfg.task.name),
+        "dataset": str(data.name),
+        "model": str(cfg.model.name),
+        "ablation": ablation.name,
+        "seed": int(cfg.seed),
+        "selection_metric": manifest["evaluation_metric"],
+        "checkpoint_selection": manifest["checkpoint_selection"],
+        "best_epoch": checkpoint_metadata.get("best_epoch"),
+        "runtime_seconds": runtime_seconds,
+        "peak_gpu_memory_mib": peak_gpu_memory_mib,
+        "checkpoint": str(checkpoint_path) if checkpoint_path else None,
+        "checkpoint_metadata": checkpoint_metadata,
+        "metrics": serializable,
+    }
+    with (output_dir / "metrics.json").open("w", encoding="utf-8") as f:
+        json.dump(metrics_payload, f, indent=2, ensure_ascii=False)
+    if checkpoint_path and Path(str(checkpoint_path)).is_file():
+        with (output_dir / "complete.marker").open("w", encoding="utf-8") as f:
+            json.dump(
+                {
+                    "status": "complete",
+                    "task": str(cfg.task.name),
+                    "dataset": str(data.name),
+                    "ablation": ablation.name,
+                    "seed": int(cfg.seed),
+                },
+                f,
+                indent=2,
+            )
+        logger.info("Saved metrics and completion marker")
+    hydra_config = output_dir / ".hydra" / "config.yaml"
+    if hydra_config.is_file():
+        shutil.copyfile(hydra_config, output_dir / "resolved_config.yaml")
+    main_log = output_dir / "main.log"
+    if main_log.is_file():
+        shutil.copyfile(main_log, output_dir / "train.log")
 
 
 if __name__ == "__main__":

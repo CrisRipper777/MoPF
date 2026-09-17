@@ -10,6 +10,8 @@ from torch.utils.checkpoint import checkpoint
 from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_geometric.utils import scatter
 
+from src.ablation import cfg_ablation, effective_edge_weight_mode, effective_multihop_modes
+
 from .common import make_norm
 
 
@@ -198,6 +200,8 @@ class MoPF(nn.Module):
 
     def __init__(self, cfg, data_info: dict):
         super().__init__()
+        self.ablation = cfg_ablation(cfg)
+        self.ablation_name = self.ablation.name
         input_dim = int(data_info["input_dim"])
         hidden_dim = int(cfg.model.get("hidden_dim", 256))
         dropout = float(cfg.model.get("dropout", 0.2))
@@ -242,9 +246,12 @@ class MoPF(nn.Module):
             cfg.model.get("diffusion_add_self_loops", True)
         )
 
-        self.edge_weight_mode = str(
-            cfg.model.get("edge_weight_mode", "separate_cos")
-        ).strip().lower()
+        configured_edge_weight_mode = effective_edge_weight_mode(
+            cfg.model, self.ablation
+        )
+        # A1 removes only U1 learned calibration. It keeps the same physical
+        # support and modality-specific semantic edge weighting.
+        self.edge_weight_mode = configured_edge_weight_mode
         if self.edge_weight_mode not in self.EDGE_WEIGHT_MODES:
             valid = ", ".join(sorted(self.EDGE_WEIGHT_MODES))
             raise ValueError(
@@ -295,8 +302,10 @@ class MoPF(nn.Module):
         )
         self.use_modality_residual = bool(
             cfg.model.get("use_modality_residual", True)
-        )
-        self.use_node_residual = bool(cfg.model.get("use_node_residual", True))
+        ) and self.ablation.modality_residual
+        self.use_node_residual = bool(
+            cfg.model.get("use_node_residual", True)
+        ) and self.ablation.node_residual
         self.hrc_weight = float(cfg.model.get("hrc_weight", 0.0))
         if self.hrc_weight < 0.0:
             raise ValueError(f"hrc_weight must be >= 0, got {self.hrc_weight}")
@@ -318,31 +327,9 @@ class MoPF(nn.Module):
         # ``multihop_mode`` field remains accepted for old checkpoints and
         # configs: cumulative -> ordinary+cumulative, and
         # anchored_differential -> anchored+differential.
-        legacy_multihop_mode = cfg.model.get("multihop_mode", None)
-        state_mode = cfg.model.get("multihop_state_mode", None)
-        response_mode = cfg.model.get("multihop_response_mode", None)
-        if legacy_multihop_mode is not None:
-            # An explicitly supplied legacy field wins so an old Hydra
-            # override is not silently ignored by the new factor fields.
-            legacy = str(legacy_multihop_mode)
-            legacy = legacy.strip().lower()
-            legacy_mapping = {
-                "cumulative": ("ordinary", "cumulative"),
-                "anchored_differential": ("anchored", "differential"),
-            }
-            if legacy not in legacy_mapping:
-                raise ValueError(
-                    "model.multihop_mode must be cumulative|anchored_differential, "
-                    f"got {legacy!r}"
-                )
-            state_mode, response_mode = legacy_mapping[legacy]
-        elif state_mode is None and response_mode is None:
-            state_mode, response_mode = "ordinary", "cumulative"
-        else:
-            state_mode = "ordinary" if state_mode is None else str(state_mode)
-            response_mode = "cumulative" if response_mode is None else str(response_mode)
-        self.multihop_state_mode = str(state_mode).strip().lower()
-        self.multihop_response_mode = str(response_mode).strip().lower()
+        self.multihop_state_mode, self.multihop_response_mode = effective_multihop_modes(
+            cfg.model, self.ablation
+        )
         if self.multihop_state_mode not in {"ordinary", "anchored"}:
             raise ValueError(
                 "model.multihop_state_mode must be ordinary|anchored, "
@@ -450,7 +437,7 @@ class MoPF(nn.Module):
         # one zero-initialized order profile per modality.
         self.use_transport_residual = bool(
             cfg.model.get("use_transport_residual", False)
-        )
+        ) and self.ablation.tcpr
         if self.use_transport_residual:
             self.theta_transport_text = nn.Parameter(
                 torch.zeros(self.max_order + 1)

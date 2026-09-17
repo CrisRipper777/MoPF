@@ -10,7 +10,12 @@ from torch.utils.checkpoint import checkpoint
 from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_geometric.utils import scatter
 
-from src.ablation import cfg_ablation, effective_edge_weight_mode, effective_multihop_modes
+from src.ablation import (
+    cfg_ablation,
+    effective_composition_mode,
+    effective_edge_weight_mode,
+    effective_multihop_modes,
+)
 
 from .common import make_norm
 
@@ -249,8 +254,6 @@ class MoPF(nn.Module):
         configured_edge_weight_mode = effective_edge_weight_mode(
             cfg.model, self.ablation
         )
-        # A1 removes only U1 learned calibration. It keeps the same physical
-        # support and modality-specific semantic edge weighting.
         self.edge_weight_mode = configured_edge_weight_mode
         if self.edge_weight_mode not in self.EDGE_WEIGHT_MODES:
             valid = ", ".join(sorted(self.EDGE_WEIGHT_MODES))
@@ -258,6 +261,7 @@ class MoPF(nn.Module):
                 f"model.edge_weight_mode must be one of [{valid}], "
                 f"got {self.edge_weight_mode!r}"
             )
+        self.composition_mode = effective_composition_mode(cfg.model, self.ablation)
         self.edge_weight_min = float(cfg.model.get("edge_weight_min", 0.1))
         if not 0.0 <= self.edge_weight_min <= 1.0:
             raise ValueError(
@@ -1358,6 +1362,18 @@ class MoPF(nn.Module):
             output = output + eta[:, order : order + 1] * base
         return output
 
+    def _compose_responses(
+        self,
+        responses: list[torch.Tensor],
+        eta: torch.Tensor,
+    ) -> torch.Tensor:
+        """Compose the fixed response bank using the resolved Stage-III mode."""
+        if self.composition_mode == "uniform":
+            # Keep S_0,...,S_K as the exact response bank and bypass every
+            # learned/adaptive coefficient contribution in the final stream.
+            return torch.stack(responses, dim=1).mean(dim=1)
+        return self._filter_bases(responses, eta)
+
     @staticmethod
     def _effective_radius(eta: torch.Tensor) -> torch.Tensor:
         """Return the absolute-coefficient weighted propagation order.
@@ -1494,8 +1510,8 @@ class MoPF(nn.Module):
             tau_transport_visual = delta_node_visual.new_zeros(
                 delta_node_visual.size(0), self.max_order + 1
             )
-        z_text = self._filter_bases(responses_text, eta_text)
-        z_visual = self._filter_bases(responses_visual, eta_visual)
+        z_text = self._compose_responses(responses_text, eta_text)
+        z_visual = self._compose_responses(responses_visual, eta_visual)
 
         z_text_refined = self.text_refine_norm(
             z_text + self.text_refine_mlp(z_text)

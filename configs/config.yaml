@@ -8,7 +8,9 @@ seed: 42
 num_runs: 3
 device: cuda:0
 
-# Frozen F2 interface. CLI overrides use, for example, ablation=wo_tcpr.
+# Unified ablation interface. Legacy F2 names and Core Story names are both
+# resolved centrally in src.ablation; formal Core Story launchers never add a
+# Full run.
 ablation: full
 
 paths:

@@ -34,6 +34,10 @@ use_node_residual: true
 use_transport_residual: true
 hrc_weight: 0.0
 
+# Stage III final response-bank composition: adaptive | uniform.
+# Core Story wo_adaptive_composition resolves this to uniform centrally.
+composition_mode: adaptive
+
 fusion_mode: concat_residual_mlp
 
 export_aux_stats: false

@@ -169,9 +169,14 @@ def main(cfg: DictConfig) -> None:
                 indent=2,
             )
         logger.info("Saved metrics and completion marker")
-    hydra_config = output_dir / ".hydra" / "config.yaml"
-    if hydra_config.is_file():
-        shutil.copyfile(hydra_config, output_dir / "resolved_config.yaml")
+    # Persist a genuinely resolved configuration for reproducibility audits.
+    # The Hydra internal config may retain `${...}` interpolation markers.
+    resolved_config = OmegaConf.to_container(cfg, resolve=True)
+    (output_dir / "resolved_config.yaml").write_text(
+        OmegaConf.to_yaml(resolved_config, resolve=True), encoding="utf-8"
+    )
+    with (output_dir / "resolved_config.json").open("w", encoding="utf-8") as f:
+        json.dump(resolved_config, f, indent=2, ensure_ascii=False)
     main_log = output_dir / "main.log"
     if main_log.is_file():
         shutil.copyfile(main_log, output_dir / "train.log")

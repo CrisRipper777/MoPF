@@ -1,7 +1,9 @@
-"""Frozen MoPF F2 ablation definitions and provenance helpers.
+"""Frozen MoPF ablation definitions and provenance helpers.
 
 The resolver is independent of the model implementation so NC and LP share
-exactly the same ablation vocabulary and manifest semantics.
+exactly the same ablation vocabulary and manifest semantics.  The historical
+F2 names remain frozen; the paper-facing Core Story variants use explicit
+stage-level overrides and are kept in a separate catalog.
 """
 
 from __future__ import annotations
@@ -15,15 +17,24 @@ from typing import Any
 @dataclass(frozen=True)
 class AblationSpec:
     name: str
+    # Historical F2 compatibility field.  Do not reinterpret this field:
+    # ``wo_learned_semantic_calibration`` means learned_diag_cos -> separate_cos.
     learned_relation_calibration: bool
     semantic_anchor: bool
     global_preference: bool
     modality_residual: bool
     node_residual: bool
     tcpr: bool
+    # New Core Story controls.  ``None`` means use the configured Full value;
+    # a non-None value is an explicit paper-facing override.
+    relation_calibration: bool = True
+    edge_weight_override: str | None = None
+    composition_mode: str | None = None
 
 
-_FULL = AblationSpec("full", True, True, True, True, True, True)
+_FULL = AblationSpec(
+    "full", True, True, True, True, True, True, composition_mode="adaptive"
+)
 
 ABLATION_SPECS: dict[str, AblationSpec] = {
     "full": _FULL,
@@ -49,6 +60,31 @@ ABLATION_SPECS: dict[str, AblationSpec] = {
     "wo_modality_tcpr": AblationSpec(
         "wo_modality_tcpr", True, True, True, False, True, False
     ),
+    # Core Story A1 is intentionally not represented by the historical
+    # learned_relation_calibration switch.  Its exact degeneration is the
+    # raw physical-support path, while the old variant remains separate_cos.
+    "wo_relation_calibration": AblationSpec(
+        "wo_relation_calibration",
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        relation_calibration=False,
+        edge_weight_override="raw_uniform",
+    ),
+    "wo_adaptive_composition": AblationSpec(
+        "wo_adaptive_composition",
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        relation_calibration=True,
+        composition_mode="uniform",
+    ),
 }
 
 MAIN_ABLATIONS = (
@@ -64,6 +100,12 @@ INTERACTION_ABLATIONS = (
     "wo_modality_tcpr",
 )
 ALL_ABLATIONS = MAIN_ABLATIONS + INTERACTION_ABLATIONS
+
+CORE_STORY_ABLATIONS = (
+    "wo_relation_calibration",
+    "wo_semantic_anchor",
+    "wo_adaptive_composition",
+)
 
 
 def resolve_ablation(name: str | None) -> AblationSpec:
@@ -86,9 +128,23 @@ def cfg_ablation(cfg: Any) -> AblationSpec:
 
 def effective_edge_weight_mode(model_cfg: Any, spec: AblationSpec) -> str:
     configured = str(model_cfg.get("edge_weight_mode", "separate_cos")).strip().lower()
+    if spec.edge_weight_override is not None:
+        return str(spec.edge_weight_override).strip().lower()
     if not spec.learned_relation_calibration and configured == "learned_diag_cos":
         return "separate_cos"
     return configured
+
+
+def effective_composition_mode(model_cfg: Any, spec: AblationSpec) -> str:
+    """Resolve adaptive/uniform final response-bank composition."""
+    configured = str(model_cfg.get("composition_mode", "adaptive")).strip().lower()
+    mode = spec.composition_mode or configured
+    if mode not in {"adaptive", "uniform"}:
+        raise ValueError(
+            "model.composition_mode must be adaptive|uniform, "
+            f"got {mode!r}"
+        )
+    return mode
 
 
 def effective_multihop_modes(model_cfg: Any, spec: AblationSpec) -> tuple[str, str]:
@@ -127,11 +183,26 @@ def build_ablation_manifest(
     split_source: str | None,
     project_root: Path,
 ) -> dict[str, Any]:
-    """Build the human- and machine-readable per-run F2 manifest."""
+    """Build the human- and machine-readable per-run manifest."""
     spec = cfg_ablation(cfg)
     model_cfg = cfg.model
     task_cfg = cfg.task
     state_mode, response_mode = effective_multihop_modes(model_cfg, spec)
+    edge_weight_mode = effective_edge_weight_mode(model_cfg, spec)
+    composition_mode = effective_composition_mode(model_cfg, spec)
+    configured_relation_calibration = str(
+        model_cfg.get("edge_weight_mode", "separate_cos")
+    ).strip().lower() != "raw_uniform"
+    configured_global_preference = bool(
+        model_cfg.get("global_filter_trainable", True)
+    )
+    configured_modality_residual = bool(
+        model_cfg.get("use_modality_residual", True)
+    )
+    configured_node_residual = bool(model_cfg.get("use_node_residual", True))
+    configured_relation_conditioned = bool(
+        model_cfg.get("use_transport_residual", False)
+    )
     raw_neighbors = task_cfg.get("num_neighbors", None)
     if raw_neighbors is not None and not isinstance(raw_neighbors, (str, bytes)):
         try:
@@ -142,23 +213,72 @@ def build_ablation_manifest(
     manifest.update(
         {
             "ablation_name": spec.name,
-            "edge_weight_mode": effective_edge_weight_mode(model_cfg, spec),
+            "edge_weight_mode": edge_weight_mode,
+            "configured_edge_weight_mode": str(
+                model_cfg.get("edge_weight_mode", "separate_cos")
+            ).strip().lower(),
+            "edge_weight_override": spec.edge_weight_override,
+            "composition_mode": composition_mode,
+            "configured_composition_mode": str(
+                model_cfg.get("composition_mode", "adaptive")
+            ).strip().lower(),
             "multihop_state_mode": state_mode,
             "multihop_response_mode": response_mode,
+            "semantic_anchor_active": bool(spec.semantic_anchor),
+            "semantic_anchor_effective": state_mode == "anchored",
+            "relation_calibration_active": bool(spec.relation_calibration),
+            "relation_calibration_effective": bool(
+                spec.relation_calibration and configured_relation_calibration
+            ),
+            "global_preference_active": bool(spec.global_preference),
+            "global_preference_effective": bool(
+                spec.global_preference and configured_global_preference
+            ),
+            "modality_residual_active": bool(spec.modality_residual),
+            "modality_residual_effective": bool(
+                spec.modality_residual and configured_modality_residual
+            ),
+            "node_residual_active": bool(spec.node_residual),
+            "node_residual_effective": bool(
+                spec.node_residual and configured_node_residual
+            ),
+            "relation_conditioned_refinement_active": bool(spec.tcpr),
+            "relation_conditioned_refinement_effective": bool(
+                spec.tcpr and configured_relation_conditioned
+            ),
             "alpha": float(model_cfg.get("multihop_anchor_alpha", 0.1)),
             "K": int(model_cfg.get("max_order", 3)),
             "hidden_dim": int(model_cfg.get("hidden_dim", 256)),
+            "dropout": float(model_cfg.get("dropout", 0.2)),
             "learning_rate": float(model_cfg.get("lr", task_cfg.get("lr"))),
+            "lr": float(model_cfg.get("lr", task_cfg.get("lr"))),
             "weight_decay": float(model_cfg.get("weight_decay", task_cfg.get("weight_decay"))),
             "optimizer": str(task_cfg.get("optimizer", "adamw")),
             "max_epochs": int(task_cfg.get("epochs")),
+            "epochs": int(task_cfg.get("epochs")),
             "patience": int(task_cfg.get("patience")),
             "temperature": float(model_cfg.get("edge_weight_temperature", 2.0)),
+            "relation_temperature": float(
+                model_cfg.get("edge_weight_temperature", 2.0)
+            ),
+            "filter_rank": int(model_cfg.get("filter_rank", 4)),
             "batch_size": int(task_cfg.get("batch_size", 0)),
             "num_neighbors": raw_neighbors,
             "negative_sampling": {
                 "task_num_train_neg": task_cfg.get("num_train_neg", None),
                 "dataset_lp_num_neg": cfg.dataset.get("lp_num_neg", None),
+            },
+            "sampling_config": {
+                "training_mode": str(task_cfg.get("training_mode", "unknown")),
+                "batch_size": int(task_cfg.get("batch_size", 0)),
+                "num_neighbors": raw_neighbors,
+                "subgraph_type": task_cfg.get("subgraph_type", None),
+                "num_train_neg": task_cfg.get("num_train_neg", None),
+                "train_pos_per_epoch": task_cfg.get("train_pos_per_epoch", None),
+                "positive_edge_mask_backend": task_cfg.get(
+                    "positive_edge_mask_backend", None
+                ),
+                "loader_num_workers": task_cfg.get("loader_num_workers", None),
             },
             "evaluation_metric": "val_acc" if task == "nc" else "val_mrr",
             "checkpoint_selection": (

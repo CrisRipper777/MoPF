@@ -2,18 +2,21 @@ from __future__ import annotations
 
 import subprocess
 import types
+from pathlib import Path
 
 import torch
 
 from src.ablation import (
     CORE_STORY_ABLATIONS,
+    build_ablation_manifest,
     effective_composition_mode,
     effective_edge_weight_mode,
     resolve_ablation,
 )
 from src.models.mopf import Model
+from scripts.check_core_story_ablation import PlannedRun, audit_config
 
-from tests.test_mopf import _cfg, _graph
+from tests.test_mopf import _CfgNode, _cfg, _graph
 
 
 DATA_INFO = {"input_dim": 10, "num_nodes": 7, "text_dim": 4, "visual_dim": 6}
@@ -58,6 +61,132 @@ def test_core_resolver_is_explicit_and_legacy_variant_is_not_reinterpreted() -> 
         "wo_semantic_anchor",
         "wo_adaptive_composition",
     )
+
+
+def _manifest_cfg() -> object:
+    cfg = _cfg(
+        edge_weight_mode="learned_diag_cos",
+        composition_mode="adaptive",
+        global_filter_trainable=True,
+        use_modality_residual=True,
+        use_node_residual=True,
+        use_transport_residual=True,
+        multihop_state_mode="anchored",
+        multihop_response_mode="cumulative",
+        multihop_anchor_alpha=0.1,
+        edge_weight_temperature=0.35,
+        filter_rank=4,
+    )
+    cfg["dataset"] = _CfgNode(lp_num_neg=None)
+    cfg.task.update(
+        name="nc",
+        protocol_version="unified_full_graph_nc_v1",
+        optimizer="adamw",
+        epochs=300,
+        lr=1e-3,
+        weight_decay=1e-4,
+        patience=30,
+        batch_size=1024,
+        num_neighbors=15,
+    )
+    return cfg
+
+
+def test_manifest_active_and_effective_flags_distinguish_bypassed_paths() -> None:
+    expected = {
+        "wo_relation_calibration": {
+            "relation_calibration_active": False,
+            "relation_calibration_effective": False,
+            "global_preference_active": True,
+            "global_preference_effective": True,
+            "modality_residual_active": True,
+            "modality_residual_effective": True,
+            "node_residual_active": True,
+            "node_residual_effective": True,
+            "relation_conditioned_refinement_active": True,
+            "relation_conditioned_refinement_effective": False,
+        },
+        "wo_semantic_anchor": {
+            "semantic_anchor_active": False,
+            "semantic_anchor_effective": False,
+            "global_preference_effective": True,
+            "modality_residual_effective": True,
+            "node_residual_effective": True,
+            "relation_conditioned_refinement_effective": True,
+        },
+        "wo_adaptive_composition": {
+            "global_preference_active": True,
+            "global_preference_effective": False,
+            "modality_residual_active": True,
+            "modality_residual_effective": False,
+            "node_residual_active": True,
+            "node_residual_effective": False,
+            "relation_conditioned_refinement_active": True,
+            "relation_conditioned_refinement_effective": False,
+        },
+    }
+    for variant, fields in expected.items():
+        cfg = _manifest_cfg()
+        cfg["ablation"] = variant
+        manifest = build_ablation_manifest(
+            cfg,
+            dataset="Movies",
+            task="nc",
+            seed=42,
+            split_source="fixed/split.pt",
+            project_root=Path(__file__).resolve().parents[1],
+        )
+        for field, value in fields.items():
+            assert manifest[field] is value, (variant, field, manifest[field])
+
+
+def test_checker_accepts_missing_ppc_weight_as_runtime_zero(tmp_path: Path) -> None:
+    run = PlannedRun("nc", "Movies", "wo_relation_calibration", 42, tmp_path)
+    payload = {
+        "dataset": {"name": "Movies", "nc_split_path": "fixed/split.pt"},
+        "task": {
+            "name": "nc",
+            "protocol_version": "unified_full_graph_nc_v1",
+            "optimizer": "adamw",
+            "epochs": 300,
+            "patience": 30,
+            "batch_size": 1024,
+            "inference_mode": "full",
+            "inference_batch_size": 4096,
+            "grad_clip": 1.0,
+            "early_stop_min_epoch": 30,
+            "early_stop_min_delta": 1e-4,
+            "eval_every": 1,
+            "scheduler": None,
+            "training_mode": "full_graph",
+            "num_neighbors": 15,
+            "loss": {"aux_weight": 1.0},
+        },
+        "model": {
+            "name": "mopf",
+            "max_order": 3,
+            "num_layers": 3,
+            "hidden_dim": 256,
+            "dropout": 0.2,
+            "edge_weight_mode": "learned_diag_cos",
+            "composition_mode": "adaptive",
+            "multihop_state_mode": "anchored",
+            "multihop_response_mode": "cumulative",
+            "multihop_anchor_alpha": 0.1,
+            "edge_weight_temperature": 0.35,
+            "edge_weight_min": 0.1,
+            "num_metric_perspectives": 4,
+            "filter_rank": 4,
+            "global_filter_trainable": True,
+            "use_transport_residual": True,
+            "use_modality_residual": True,
+            "use_node_residual": True,
+            "hrc_weight": 0.0,
+            "fusion_mode": "concat_residual_mlp",
+        },
+    }
+    issues = audit_config(run, payload)
+    assert not any("ppc_weight" in issue for issue in issues), issues
 
 
 def test_wo_relation_calibration_uses_uniform_weights_identical_operators_and_zero_context() -> None:

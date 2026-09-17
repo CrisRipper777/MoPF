@@ -203,6 +203,34 @@ def build_ablation_manifest(
     configured_relation_conditioned = bool(
         model_cfg.get("use_transport_residual", False)
     )
+    uses_adaptive_composition = composition_mode == "adaptive"
+    uses_raw_uniform_edges = edge_weight_mode == "raw_uniform"
+    effective_relation_calibration = bool(
+        spec.relation_calibration
+        and configured_relation_calibration
+        and not uses_raw_uniform_edges
+    )
+    effective_global_preference = bool(
+        spec.global_preference
+        and configured_global_preference
+        and uses_adaptive_composition
+    )
+    effective_modality_residual = bool(
+        spec.modality_residual
+        and configured_modality_residual
+        and uses_adaptive_composition
+    )
+    effective_node_residual = bool(
+        spec.node_residual
+        and configured_node_residual
+        and uses_adaptive_composition
+    )
+    effective_relation_conditioned = bool(
+        spec.tcpr
+        and configured_relation_conditioned
+        and not uses_raw_uniform_edges
+        and uses_adaptive_composition
+    )
     raw_neighbors = task_cfg.get("num_neighbors", None)
     if raw_neighbors is not None and not isinstance(raw_neighbors, (str, bytes)):
         try:
@@ -227,25 +255,15 @@ def build_ablation_manifest(
             "semantic_anchor_active": bool(spec.semantic_anchor),
             "semantic_anchor_effective": state_mode == "anchored",
             "relation_calibration_active": bool(spec.relation_calibration),
-            "relation_calibration_effective": bool(
-                spec.relation_calibration and configured_relation_calibration
-            ),
+            "relation_calibration_effective": effective_relation_calibration,
             "global_preference_active": bool(spec.global_preference),
-            "global_preference_effective": bool(
-                spec.global_preference and configured_global_preference
-            ),
+            "global_preference_effective": effective_global_preference,
             "modality_residual_active": bool(spec.modality_residual),
-            "modality_residual_effective": bool(
-                spec.modality_residual and configured_modality_residual
-            ),
+            "modality_residual_effective": effective_modality_residual,
             "node_residual_active": bool(spec.node_residual),
-            "node_residual_effective": bool(
-                spec.node_residual and configured_node_residual
-            ),
+            "node_residual_effective": effective_node_residual,
             "relation_conditioned_refinement_active": bool(spec.tcpr),
-            "relation_conditioned_refinement_effective": bool(
-                spec.tcpr and configured_relation_conditioned
-            ),
+            "relation_conditioned_refinement_effective": effective_relation_conditioned,
             "alpha": float(model_cfg.get("multihop_anchor_alpha", 0.1)),
             "K": int(model_cfg.get("max_order", 3)),
             "hidden_dim": int(model_cfg.get("hidden_dim", 256)),

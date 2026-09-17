@@ -88,6 +88,19 @@ relation-conditioned residual τ for the final modality representation.
 The adaptive parameters may remain instantiated for state-dict compatibility;
 they are not used by this final composition.
 
+For provenance, each entry below is `active/effective`. Active means the
+branch remains configured and instantiated; effective means it contributes to
+the final modality representation.
+
+| Component | `wo_relation_calibration` | `wo_semantic_anchor` | `wo_adaptive_composition` |
+|---|---:|---:|---:|
+| Relation calibration | `false/false` | `true/true` | `true/true` |
+| Semantic anchor | `true/true` | `false/false` | `true/true` |
+| Global preference | `true/true` | `true/true` | `true/false` |
+| Modality residual | `true/true` | `true/true` | `true/false` |
+| Node residual | `true/true` | `true/true` | `true/false` |
+| Relation-conditioned refinement | `true/false` | `true/true` | `true/false` |
+
 ## 4. Code/config mapping
 
 | Story element | Implementation |
@@ -111,14 +124,14 @@ they are not used by this final composition.
 The complete repository test suite passed:
 
 ```text
-209 passed, 6 warnings
+211 passed, 6 warnings
 ```
 
-The Core Story targeted suite plus the existing MoPF/F2 regression tests
-passed 63/63 cases. The new tests cover raw-unit weights, identical
+The Core Story targeted suite passed 8/8 tests. The new tests cover raw-unit weights, identical
 text/visual normalized operators, unchanged physical support, zero centered
 relation context, ordinary/cumulative A2 banks without H0 reinjection,
-exact A3 response means, finite forward/backward behavior, and shape
+exact A3 response means, active/effective manifest semantics, runtime-default
+aware `ppc_weight` checking, finite forward/backward behavior, and shape
 compatibility.
 
 The fixed-input, fixed-initial-state-dict Full regression compares the
@@ -210,6 +223,16 @@ Variants are exactly `wo_relation_calibration`, `wo_semantic_anchor`, and
 
 Run these manually in order after committing the implementation. The commands
 below are provided only; they were not executed as formal training.
+
+After the final formal commit, record its SHA and append
+`--expected-git-commit <FROZEN_SHA>` to every runner command:
+
+```bash
+FROZEN_SHA="$(git rev-parse HEAD)"
+```
+
+The runner then refuses to start if `HEAD` differs from that SHA. The checker
+also accepts `--expected-git-commit <FROZEN_SHA>` for the same provenance gate.
 
 ### Step A — dry-run all 63
 
@@ -341,6 +364,8 @@ Mean/std-only Full references do not imply paired seed observations.
 
 - The current worktree is intentionally modified by this implementation;
   commit it before using `--require-clean-git` for formal execution.
+- Formal runs should use one post-fix frozen SHA, passed to the runner with
+  `--expected-git-commit` and checked again by the completeness script.
 - Existing repository prose classifies Cloth LP as quasi-held-out. The present
   user-requested Core Story scope explicitly promotes it into the new 63-run
   ablation matrix; its established resolved MoPF protocol confirms K=3.

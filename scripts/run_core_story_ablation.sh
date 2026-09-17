@@ -15,6 +15,7 @@ OUTPUT_ROOT="${PROJECT_ROOT}/outputs/core_story_ablation"
 SKIP_EXISTING=0
 DRY_RUN=0
 REQUIRE_CLEAN_GIT=0
+EXPECTED_GIT_COMMIT=""
 
 NC_DATASETS=(Movies Toys Grocery ele-fashion Reddit-S)
 LP_DATASETS=(sports-copurchase cloth-copurchase)
@@ -34,6 +35,7 @@ Options:
   --skip-existing                 Skip a complete run directory
   --dry-run                       Print the plan without launching training
   --require-clean-git              Require an empty git worktree before launch
+  --expected-git-commit SHA       Require HEAD to equal SHA before launch
   -h, --help                      Show this help
 
 The launcher never includes Full and never reuses outputs/f2_ablation.
@@ -75,6 +77,7 @@ while [[ $# -gt 0 ]]; do
     --skip-existing) SKIP_EXISTING=1; shift ;;
     --dry-run) DRY_RUN=1; shift ;;
     --require-clean-git) REQUIRE_CLEAN_GIT=1; shift ;;
+    --expected-git-commit) [[ $# -ge 2 ]] || die "--expected-git-commit requires a value"; EXPECTED_GIT_COMMIT="$2"; shift 2 ;;
     -h|--help) usage; exit 0 ;;
     *) die "unknown option: $1" ;;
   esac
@@ -191,6 +194,10 @@ run_one() {
 
 if [[ "$REQUIRE_CLEAN_GIT" -eq 1 ]]; then
   [[ -z "$(git -C "$PROJECT_ROOT" status --porcelain)" ]] || die "git worktree is not clean"
+fi
+if [[ -n "$EXPECTED_GIT_COMMIT" ]]; then
+  actual_commit="$(git -C "$PROJECT_ROOT" rev-parse HEAD 2>/dev/null)" || die "unable to resolve git HEAD"
+  [[ "$actual_commit" == "$EXPECTED_GIT_COMMIT" ]] || die "git HEAD mismatch: expected $EXPECTED_GIT_COMMIT, got $actual_commit"
 fi
 
 planned=0

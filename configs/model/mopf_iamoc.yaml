@@ -1,0 +1,60 @@
+name: mopf_iamoc
+version: iamoc_v1
+
+hidden_dim: 256
+dropout: 0.2
+norm: layernorm
+
+max_order: 3
+num_layers: ${model.max_order}
+
+map_prior_restart: 0.15
+map_prior_order: 2
+
+diffusion_add_self_loops: true
+
+edge_weight_mode: learned_diag_cos # separate_cos | learned_diag_cos | multi_perspective_cos_broken | multi_perspective_cos | shared_avg_cos | raw_uniform
+num_metric_perspectives: 4
+metric_init_seed: 20260910
+metric_init_noise_std: 0.01
+edge_weight_min: 0.1
+edge_weight_temperature: 0.35
+
+filter_rank: 4
+
+# U2-C selection: C1 semantic-anchor-only.
+multihop_state_mode: anchored # ordinary | anchored
+multihop_response_mode: cumulative # cumulative | differential
+multihop_anchor_alpha: 0.1
+
+global_filter_trainable: true
+use_modality_residual: true
+use_node_residual: true
+# U3-B formal selection: Transport-Conditioned Preference Residual.
+use_transport_residual: true
+hrc_weight: 0.0
+
+# Stage III final response-bank composition: adaptive | uniform.
+# Core Story wo_adaptive_composition resolves this to uniform centrally.
+composition_mode: adaptive
+
+fusion_mode: concat_residual_mlp
+
+export_aux_stats: false
+export_node_aux: false
+export_edge_aux: false
+
+# IAMOC v1 changes preference estimation only; the response bank and all
+# inherited Stage I/II, fusion, and task-facing settings stay aligned to MoPF.
+use_hop_interaction: true
+hop_interaction_layers: 1
+hop_interaction_heads: 1
+hop_interaction_dropout: 0.0
+hop_interaction_order_embedding: true
+hop_interaction_gate_init: 0.10
+relation_conditioning: output # output | none | attention
+relation_bias_gate_init: 0.10
+export_hop_attention: false
+
+# The shared task-provided LP decoder remains unchanged.
+lp_pair_operator: null

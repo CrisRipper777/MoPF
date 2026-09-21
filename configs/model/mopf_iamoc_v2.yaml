@@ -1,0 +1,57 @@
+name: mopf_iamoc_v2
+version: iamoc_v2
+
+hidden_dim: 256
+dropout: 0.2
+norm: layernorm
+
+max_order: 3
+num_layers: ${model.max_order}
+
+map_prior_restart: 0.15
+map_prior_order: 2
+diffusion_add_self_loops: true
+
+edge_weight_mode: learned_diag_cos
+num_metric_perspectives: 4
+metric_init_seed: 20260910
+metric_init_noise_std: 0.01
+edge_weight_min: 0.1
+edge_weight_temperature: 0.35
+
+filter_rank: 4
+multihop_state_mode: anchored
+multihop_response_mode: cumulative
+multihop_anchor_alpha: 0.1
+
+global_filter_trainable: true
+use_modality_residual: true
+use_node_residual: true
+use_transport_residual: true
+hrc_weight: 0.0
+ppc_weight: 0.0
+composition_mode: adaptive
+fusion_mode: concat_residual_mlp
+
+export_aux_stats: false
+export_node_aux: false
+export_edge_aux: false
+
+use_hop_interaction: true
+hop_interaction_layers: 1
+hop_interaction_heads: 1
+hop_interaction_dropout: 0.0
+hop_interaction_order_embedding: true
+hop_interaction_gate_init: 0.10
+relation_conditioning: none
+relation_bias_gate_init: 0.10
+export_hop_attention: false
+
+# none=R0, rank1=R1, profile=R2/R3. R3 alone uses the inherited PPC.
+relation_state_mode: none
+relation_descriptor_eps: 1.0e-6
+relation_bias_init: 0.10
+relation_init_seed: 20260921
+relation_init_std: 0.02
+
+lp_pair_operator: null

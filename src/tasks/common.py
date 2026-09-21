@@ -65,10 +65,47 @@ def build_optimizer(parameters, cfg, model=None) -> torch.optim.Optimizer:
     name = str(cfg.task.get("optimizer", "adamw")).strip().lower()
     lr = float(cfg.model.get("lr", cfg.task.lr))
     weight_decay = float(cfg.model.get("weight_decay", cfg.task.weight_decay))
+    parameter_list = list(parameters)
+    optimizer_parameters: list[torch.nn.Parameter] | list[dict] = parameter_list
+
+    no_decay_names = frozenset(
+        str(parameter_name)
+        for parameter_name in getattr(model, "no_weight_decay_parameter_names", ())
+    )
+    if no_decay_names:
+        named_model_parameters = dict(model.named_parameters())
+        missing_names = no_decay_names - named_model_parameters.keys()
+        if missing_names:
+            raise ValueError(
+                "Model declared unknown no-weight-decay parameters: "
+                + ", ".join(sorted(missing_names))
+            )
+        no_decay_ids = {id(named_model_parameters[key]) for key in no_decay_names}
+        included_ids = {id(parameter) for parameter in parameter_list}
+        missing_from_optimizer = no_decay_ids - included_ids
+        if missing_from_optimizer:
+            raise ValueError(
+                "Model no-weight-decay parameters are absent from the optimizer input"
+            )
+        decay_parameters = [
+            parameter for parameter in parameter_list if id(parameter) not in no_decay_ids
+        ]
+        no_decay_parameters = [
+            parameter for parameter in parameter_list if id(parameter) in no_decay_ids
+        ]
+        optimizer_parameters = [
+            {"params": decay_parameters},
+            {"params": no_decay_parameters, "weight_decay": 0.0},
+        ]
+
     if name == "adamw":
-        return torch.optim.AdamW(parameters, lr=lr, weight_decay=weight_decay)
+        return torch.optim.AdamW(
+            optimizer_parameters, lr=lr, weight_decay=weight_decay
+        )
     if name == "adam":
-        return torch.optim.Adam(parameters, lr=lr, weight_decay=weight_decay)
+        return torch.optim.Adam(
+            optimizer_parameters, lr=lr, weight_decay=weight_decay
+        )
     raise ValueError(f"task.optimizer must be adam|adamw, got {name!r}")
 
 

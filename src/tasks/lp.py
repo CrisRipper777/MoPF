@@ -304,11 +304,12 @@ def _build_link_loader(
     edge_label: torch.Tensor,
     batch_generator: torch.Generator,
     neighbor_seed: int,
+    model: nn.Module | None = None,
 ) -> LinkNeighborLoader:
     num_workers = int(cfg.task.get("loader_num_workers", 0))
     return LinkNeighborLoader(
         pyg_data,
-        num_neighbors=_resolve_lp_num_neighbors(cfg),
+        num_neighbors=_resolve_lp_num_neighbors(cfg, model),
         batch_size=int(cfg.task.batch_size),
         shuffle=True,
         subgraph_type=str(cfg.task.get("subgraph_type", "bidirectional")),
@@ -329,21 +330,20 @@ def _build_link_loader(
     )
 
 
-def _resolve_lp_num_neighbors(cfg) -> list[int]:
+def _resolve_lp_num_neighbors(cfg, model: nn.Module | None = None) -> list[int]:
     """Resolve the sampler depth independently from encoder depth.
 
     The unified LP protocol is explicitly two-hop. Some baselines (e.g. DGF)
     use a larger internal filtering iteration count, which must not silently
     turn the link sampler into a ten-hop sampler.
 
-    MoPF is the sole exception: its explicit polynomial bank has one sampled
-    message-passing step per order, so its configured ``num_layers`` must be
-    represented in the sampled subgraph.  ``resolve_num_neighbors`` preserves
-    the existing neighbor values and repeats the final one as needed (e.g.
-    [5, 5] -> [5, 5, 5] for the default third-order MoPF).
+    Models with an explicit polynomial bank opt in through
+    ``requires_full_lp_sampler_depth``. Their configured ``num_layers`` must
+    be represented in the sampled subgraph. ``resolve_num_neighbors``
+    preserves the existing neighbor values and repeats the final one as needed
+    (e.g. [5, 5] -> [5, 5, 5] for a third-order encoder).
     """
-    model_cfg = cfg.get("model", {})
-    if str(model_cfg.get("name", "")).strip().lower() == "mopf":
+    if bool(getattr(model, "requires_full_lp_sampler_depth", False)):
         return resolve_num_neighbors(cfg)
     raw = cfg.task.get("num_neighbors", [5, 5])
     if isinstance(raw, str):
@@ -357,6 +357,33 @@ def _resolve_lp_num_neighbors(cfg) -> list[int]:
     if not values:
         raise ValueError("task.num_neighbors must contain at least one value")
     return values
+
+
+def _raise_if_nonfinite(value: torch.Tensor, label: str) -> None:
+    if not bool(torch.isfinite(value).all()):
+        finite_count = int(torch.isfinite(value).sum().item())
+        raise FloatingPointError(
+            f"Non-finite {label}: {finite_count}/{value.numel()} values are finite"
+        )
+
+
+@torch.no_grad()
+def _relation_training_stats(model: nn.Module) -> dict[str, float]:
+    output: dict[str, float] = {}
+    for modality in ("text", "visual"):
+        beta_name = f"relation_beta_raw_{modality}"
+        scale_name = f"theta_relation_scale_{modality}"
+        if not hasattr(model, beta_name) or not hasattr(model, scale_name):
+            continue
+        beta = getattr(model, beta_name).detach().double()
+        centered = beta - beta.mean()
+        output[f"beta_centered_rms_{modality}"] = float(
+            centered.square().mean().sqrt().item()
+        )
+        output[f"relation_scale_{modality}"] = float(
+            torch.sigmoid(getattr(model, scale_name).detach().double()).item()
+        )
+    return output
 
 
 def _seed_neighbor_worker(worker_id: int, base_seed: int) -> None:
@@ -492,6 +519,8 @@ def _evaluate_split(
         # Avoid materializing a second [batch*num_neg, dim] copy of every
         # source embedding. Linear layers accept the 3-D pair tensor directly.
         neg_score = predictor(neg_pair_feature).view(neg.size(0), neg.size(1))
+        _raise_if_nonfinite(pos_score, "LP evaluation positive scores")
+        _raise_if_nonfinite(neg_score, "LP evaluation negative scores")
         # 0901/RPTA protocol: pessimistic ties, i.e. an equal-scoring
         # negative is ranked ahead of the positive.
         ranks = 1.0 + (neg_score >= pos_score.view(-1, 1)).sum(dim=1).float()
@@ -574,7 +603,7 @@ def _run_single_lp(
             "this run is a sampled adaptation"
         )
     if uses_graph:
-        logger.info("Train neighbor sampling: %s", _resolve_lp_num_neighbors(cfg))
+        logger.info("Train neighbor sampling: %s", _resolve_lp_num_neighbors(cfg, model))
     logger.info("Inference mode: %s", inference_mode)
     logger.info("Train negative sampling: global filtered | num_neg=%d", int(cfg.task.num_train_neg))
     if train_pos_per_epoch is not None:
@@ -651,6 +680,7 @@ def _run_single_lp(
                 edge_label,
                 batch_generator,
                 neighbor_seed,
+                model=model,
             )
         else:
             loader = _build_edge_loader(cfg, edge_label_index, edge_label, batch_generator)
@@ -692,13 +722,23 @@ def _run_single_lp(
                     z_all = projection(z_all)
                 z_pairs = z_all.view(edges.size(0), 2, -1)
                 logits = predictor.score_pairs(z_pairs[:, 0], z_pairs[:, 1])
+            _raise_if_nonfinite(
+                logits, f"LP training logits at epoch {epoch} batch {step}"
+            )
             loss = criterion(logits, labels) + aux_weight * aux_loss
+            _raise_if_nonfinite(
+                loss, f"LP training loss at epoch {epoch} batch {step}"
+            )
             loss.backward()
             if grad_clip is not None:
                 clip_params = list(model.parameters()) + list(predictor.parameters())
                 if projection is not None:
                     clip_params += list(projection.parameters())
-                torch.nn.utils.clip_grad_norm_(clip_params, max_norm=float(grad_clip))
+                torch.nn.utils.clip_grad_norm_(
+                    clip_params,
+                    max_norm=float(grad_clip),
+                    error_if_nonfinite=True,
+                )
             optimizer.step()
             total_loss += float(loss.item()) * int(labels.numel())
             total_examples += int(labels.numel())
@@ -708,6 +748,18 @@ def _run_single_lp(
 
         train_loss = total_loss / max(total_examples, 1)
         aux_stats = summarize_aux_info_stats(aux_sums, aux_counts)
+        relation_stats = _relation_training_stats(model)
+        if relation_stats:
+            logger.info(
+                "Epoch %05d | beta_centered_rms_text %.8e | "
+                "beta_centered_rms_visual %.8e | relation_scale_text %.8f | "
+                "relation_scale_visual %.8f",
+                epoch,
+                relation_stats["beta_centered_rms_text"],
+                relation_stats["beta_centered_rms_visual"],
+                relation_stats["relation_scale_text"],
+                relation_stats["relation_scale_visual"],
+            )
         scheduler_step(cfg, optimizer, epoch, int(cfg.task.epochs))
         if epoch % int(cfg.task.eval_every) != 0:
             logger.info(

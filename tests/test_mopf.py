@@ -708,7 +708,7 @@ def test_mopf_pdc_v2_lp_forward_is_finite_and_uses_three_hop_sampler() -> None:
     cfg = OmegaConf.create(
         {"model": {"name": "mopf", "num_layers": 3}, "task": {"num_neighbors": [5, 5, 5]}}
     )
-    assert _resolve_lp_num_neighbors(cfg) == [5, 5, 5]
+    assert _resolve_lp_num_neighbors(cfg, model) == [5, 5, 5]
 
 
 def test_pdc_v2_frozen_masks_do_not_modify_checkpoint_state() -> None:
@@ -922,7 +922,7 @@ def test_mopf_lp_sampler_expands_default_two_hops_to_propagation_order() -> None
             "task": {"num_neighbors": [5, 5]},
         }
     )
-    assert _resolve_lp_num_neighbors(cfg) == [5, 5, 5]
+    assert _resolve_lp_num_neighbors(cfg, _build()) == [5, 5, 5]
 
 
 def test_mopf_absolute_mode_is_current_forward_default() -> None:

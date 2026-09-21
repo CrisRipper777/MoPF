@@ -202,6 +202,7 @@ class MoPF(nn.Module):
         "shared_avg_cos",
         "raw_uniform",
     }
+    requires_full_lp_sampler_depth = True
 
     def __init__(self, cfg, data_info: dict):
         super().__init__()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+import warnings
 from typing import Any
 
 import torch
@@ -11,6 +12,17 @@ from torch_geometric.nn.conv.gcn_conv import gcn_norm
 from torch_geometric.utils import scatter
 
 from .common import make_norm
+
+
+# PyTorch 2.4.0's non-reentrant checkpoint recomputation enters the deprecated
+# torch.cpu.amp.autocast context internally. Ignore only that upstream warning;
+# checkpointing, recomputation, gradients, and all other warnings are unchanged.
+warnings.filterwarnings(
+    "ignore",
+    category=FutureWarning,
+    message=r"`torch\.cpu\.amp\.autocast\(args\.\.\.\)` is deprecated\.",
+    module=r"torch\.utils\.checkpoint",
+)
 
 
 def _make_mlp(in_dim: int, hidden_dim: int, out_dim: int, dropout: float) -> nn.Sequential:
@@ -67,6 +79,14 @@ class CrossOrderAttentionBlock(nn.Module):
 
 class CoSIMAGFinal(nn.Module):
     """Three-stage multimodal encoder for relation-calibrated multi-order learning."""
+
+    # Sampled LP must expose one sampled neighborhood level for every explicit
+    # propagation order.  Task code consumes this capability without relying
+    # on model-name special cases.
+    requires_full_lp_sampler_depth = True
+    no_weight_decay_parameter_names = frozenset(
+        {"relation_beta_raw_text", "relation_beta_raw_visual"}
+    )
 
     def __init__(self, cfg, data_info: dict):
         super().__init__()
@@ -477,9 +497,10 @@ class CoSIMAGFinal(nn.Module):
     ) -> tuple[torch.Tensor, torch.Tensor]:
         raw = getattr(self, f"relation_beta_raw_{modality}")
         centered = raw - raw.mean()
-        beta_hat = centered / centered.square().mean().sqrt().clamp_min(
-            self.relation_descriptor_eps
+        denominator = torch.sqrt(
+            centered.square().mean().clamp_min(self.relation_descriptor_eps**2)
         )
+        beta_hat = centered / denominator
         scale = torch.sigmoid(getattr(self, f"theta_relation_scale_{modality}"))
         return beta_hat, scale
 

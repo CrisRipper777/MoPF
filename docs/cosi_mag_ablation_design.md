@@ -70,13 +70,18 @@ The model config copies the final model's frozen hyperparameters and changes
 only its name/version and the default `ablation_mode: full`. Supported model
 modes are `full`, `no_mrc`, `no_semantic_anchor`, and `no_rcmi`.
 
-The launcher has exactly three variants and three datasets:
+The launcher supports exactly three variants and six configured datasets:
 
 - Movies, NC
+- Toys, NC
 - Grocery, NC
+- ele-fashion, NC (optional extension)
+- Reddit-S, NC
 - sports-copurchase, LP
 
-Each dataset-variant pair is one launcher unit. It launches `src.main` once
+The正文 NC matrix uses Movies and Grocery. Toys, ele-fashion, and Reddit-S are
+optional exploratory NC extensions. Each selected dataset-variant pair is one
+launcher unit. It launches `src.main` once
 with base/split seed 42 and `num_runs=3`, so the task runner uses run seeds
 42/43/44 without changing the dataset split. There are 9 launcher units and
 27 training runs in the formal matrix. Sampled LP inherits

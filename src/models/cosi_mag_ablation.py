@@ -10,7 +10,7 @@ from .cosi_mag_final import CoSIMAGFinal
 
 
 ABLATION_MODES = frozenset(
-    {"full", "no_mrc", "no_semantic_anchor", "no_rcmi"}
+    {"full", "no_mrc", "no_semantic_anchor", "no_rcmi", "all_plain"}
 )
 
 
@@ -26,7 +26,7 @@ class CoSIMAGAblation(CoSIMAGFinal):
             )
 
         configured_alpha = float(model_cfg.get("multihop_anchor_alpha", 0.1))
-        expected_alpha = 0.0 if mode == "no_semantic_anchor" else 0.1
+        expected_alpha = 0.0 if mode in {"no_semantic_anchor", "all_plain"} else 0.1
         if not math.isclose(
             configured_alpha, expected_alpha, rel_tol=0.0, abs_tol=1e-12
         ):
@@ -41,7 +41,7 @@ class CoSIMAGAblation(CoSIMAGFinal):
     def _relation_calibration(
         self, h_text: torch.Tensor, h_visual: torch.Tensor, edge_index: torch.Tensor
     ) -> dict[str, torch.Tensor]:
-        if self.ablation_mode != "no_mrc":
+        if self.ablation_mode not in {"no_mrc", "all_plain"}:
             return super()._relation_calibration(h_text, h_visual, edge_index)
 
         # MRC is removed as a stage: physical edges receive unit weights and
@@ -64,7 +64,7 @@ class CoSIMAGAblation(CoSIMAGFinal):
         edge_weight: torch.Tensor,
         num_nodes: int,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        if self.ablation_mode != "no_mrc":
+        if self.ablation_mode not in {"no_mrc", "all_plain"}:
             return super()._local_relation_context(edge_index, edge_weight, num_nodes)
 
         # Do not infer a relation descriptor from unit weights. In particular,
@@ -85,7 +85,7 @@ class CoSIMAGAblation(CoSIMAGFinal):
         interaction_intervention: str,
         capture_attention: bool,
     ) -> tuple[list[torch.Tensor], torch.Tensor | None]:
-        if self.ablation_mode != "no_mrc":
+        if self.ablation_mode not in {"no_mrc", "all_plain"}:
             return super()._cross_order_interaction(
                 states,
                 modality,
@@ -116,7 +116,7 @@ class CoSIMAGAblation(CoSIMAGFinal):
         relation_permutation: torch.Tensor | None = None,
         capture_attention: bool = False,
     ) -> dict[str, Any]:
-        if self.ablation_mode != "no_rcmi":
+        if self.ablation_mode not in {"no_rcmi", "all_plain"}:
             return super()._encode_components(
                 x,
                 edge_index,

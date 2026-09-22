@@ -15,7 +15,7 @@ early_stop_min_epoch: 20
 early_stop_min_delta: 1e-4
 grad_clip: 1.0
 batch_size: 2048
-num_neighbors: [5, 5]
+num_neighbors: [5, 5, 5]
 subgraph_type: bidirectional
 num_train_neg: 1
 # Remove batch-positive message edges on CPU through LinkNeighborLoader's

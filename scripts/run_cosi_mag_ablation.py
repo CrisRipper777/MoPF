@@ -34,11 +34,21 @@ TASK_CONFIG_PATHS = {
 }
 DATASET_TASK = {
     "Movies": "nc",
+    "Toys": "nc",
     "Grocery": "nc",
+    "ele-fashion": "nc",
+    "Reddit-S": "nc",
     "sports-copurchase": "lp",
 }
 VARIANTS = ("no_mrc", "no_semantic_anchor", "no_rcmi")
-ALL_DATASETS = ("Movies", "Grocery", "sports-copurchase")
+ALL_DATASETS = (
+    "Movies",
+    "Toys",
+    "Grocery",
+    "ele-fashion",
+    "Reddit-S",
+    "sports-copurchase",
+)
 BASE_SEED = 42
 RUN_SEEDS = (42, 43, 44)
 NUM_RUNS = 3

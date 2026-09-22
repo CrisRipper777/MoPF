@@ -1,0 +1,7 @@
+name: mmgcn_probe
+id_mode: reference_fixed
+hidden_dim: 128
+num_layers: 2
+aggr: mean
+dropout: 0.5
+norm: batchnorm

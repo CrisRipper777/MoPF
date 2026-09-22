@@ -23,7 +23,10 @@ VARIANTS = {
 }
 DATASET_TASK = {
     "Movies": "nc",
+    "Toys": "nc",
     "Grocery": "nc",
+    "ele-fashion": "nc",
+    "Reddit-S": "nc",
     "sports-copurchase": "lp",
 }
 TASK_PROTOCOLS = {
@@ -32,7 +35,10 @@ TASK_PROTOCOLS = {
 }
 METRICS = {
     "Movies": [("Acc", "test_acc"), ("Macro-F1", "test_macro_f1")],
+    "Toys": [("Acc", "test_acc"), ("Macro-F1", "test_macro_f1")],
     "Grocery": [("Acc", "test_acc"), ("Macro-F1", "test_macro_f1")],
+    "ele-fashion": [("Acc", "test_acc"), ("Macro-F1", "test_macro_f1")],
+    "Reddit-S": [("Acc", "test_acc"), ("Macro-F1", "test_macro_f1")],
     "sports-copurchase": [("MRR", "test_mrr"), ("H@10", "test_hits@10")],
 }
 RUN_SEEDS = (42, 43, 44)
@@ -209,7 +215,14 @@ def load_pair_configs(
     }
     require(full_model == variant_model, "frozen model hyperparameters differ")
 
-    split_key = "nc_split_path" if task == "nc" else "edge_split_path"
+    if task == "nc":
+        split_key = (
+            "nc_split_path"
+            if "nc_split_path" in full_cfg.get("dataset", {})
+            else "node_split_path"
+        )
+    else:
+        split_key = "edge_split_path"
     split_path_text = full_cfg.get("dataset", {}).get(split_key)
     require(bool(split_path_text), f"resolved dataset config is missing {split_key}")
     split_path = Path(str(split_path_text))
@@ -330,7 +343,14 @@ def format_mean_std(value: tuple[float, float]) -> str:
     return f"{mean:.6f} ± {std:.6f}"
 
 
-def run_summarizer(benchmark_root: Path, ablation_root: Path) -> int:
+def run_summarizer(
+    benchmark_root: Path,
+    ablation_root: Path,
+    datasets: tuple[str, ...] = tuple(DATASET_TASK),
+    output_prefix: str = "table2",
+) -> int:
+    audit_suffix = output_prefix[len("table2"):] if output_prefix.startswith("table2") else f"_{output_prefix}"
+    audit_name = "resolved_protocol_audit.json" if not audit_suffix else f"resolved_protocol_audit{audit_suffix}.json"
     audit: dict[str, Any] = {
         "protocol": "cosi_mag_final_framework_ablation_v1",
         "benchmark_root": str(benchmark_root.resolve()),
@@ -339,6 +359,7 @@ def run_summarizer(benchmark_root: Path, ablation_root: Path) -> int:
         "run_seeds": list(RUN_SEEDS),
         "num_runs": NUM_RUNS,
         "task_protocols": TASK_PROTOCOLS,
+        "datasets": list(datasets),
         "units": [],
         "errors": [],
         "passed": False,
@@ -355,7 +376,7 @@ def run_summarizer(benchmark_root: Path, ablation_root: Path) -> int:
             path = benchmark_root / "manifests" / manifest_name
             check_top_manifest(path, task, "cosi_mag_final", None)
 
-        for dataset in DATASET_TASK:
+        for dataset in datasets:
             task = DATASET_TASK[dataset]
             full_dir = unit_path(benchmark_root, dataset)
             check_unit_manifest(
@@ -423,7 +444,7 @@ def run_summarizer(benchmark_root: Path, ablation_root: Path) -> int:
         # Full values have already been read from the clean benchmark. Keep
         # those values alongside the ablation rows in the final table.
         baseline_summaries: dict[tuple[str, str], tuple[float, float]] = {}
-        for dataset in DATASET_TASK:
+        for dataset in datasets:
             by_seed = seed_values[("full", dataset)]
             for _, metric_name in METRICS[dataset]:
                 values = [by_seed[seed][metric_name] for seed in RUN_SEEDS]
@@ -435,16 +456,25 @@ def run_summarizer(benchmark_root: Path, ablation_root: Path) -> int:
         audit["passed"] = True
     except (AuditError, OSError, KeyError, TypeError, ValueError, ImportError) as exc:
         audit["errors"].append(str(exc))
-        write_json(ablation_root / "resolved_protocol_audit.json", audit)
+        write_json(ablation_root / audit_name, audit)
         print(f"Protocol audit failed: {exc}", file=sys.stderr)
-        print(f"Saved audit: {ablation_root / 'resolved_protocol_audit.json'}", file=sys.stderr)
+        print(f"Saved audit: {ablation_root / audit_name}", file=sys.stderr)
         return 1
 
-    write_table(benchmark_root, ablation_root, table_values, seed_values)
-    write_json(ablation_root / "resolved_protocol_audit.json", audit)
-    print(f"Saved {ablation_root / 'table2.csv'}")
-    print(f"Saved {ablation_root / 'per_seed_deltas.csv'}")
-    print(f"Saved {ablation_root / 'resolved_protocol_audit.json'}")
+    write_table(
+        benchmark_root,
+        ablation_root,
+        table_values,
+        seed_values,
+        datasets=datasets,
+        output_prefix=output_prefix,
+    )
+    write_json(ablation_root / audit_name, audit)
+    suffix = output_prefix[len("table2"):] if output_prefix.startswith("table2") else f"_{output_prefix}"
+    delta_name = "per_seed_deltas" if not suffix else f"per_seed_deltas{suffix}"
+    print(f"Saved {ablation_root / f'{output_prefix}.csv'}")
+    print(f"Saved {ablation_root / f'{delta_name}.csv'}")
+    print(f"Saved {ablation_root / audit_name}")
     return 0
 
 
@@ -453,19 +483,17 @@ def write_table(
     ablation_root: Path,
     table_values: dict[tuple[str, str, str], tuple[float, float]],
     seed_values: dict[tuple[str, str], dict[int, dict[str, float]]],
+    *,
+    datasets: tuple[str, ...] = tuple(DATASET_TASK),
+    output_prefix: str = "table2",
 ) -> None:
     del benchmark_root  # Paths were validated and recorded in the audit payload.
-    table_path = ablation_root / "table2.csv"
+    table_path = ablation_root / f"{output_prefix}.csv"
     table_path.parent.mkdir(parents=True, exist_ok=True)
-    columns = [
-        "Model",
-        "Movies Acc",
-        "Movies Macro-F1",
-        "Grocery Acc",
-        "Grocery Macro-F1",
-        "Sports MRR",
-        "Sports H@10",
-    ]
+    columns = ["Model"]
+    for dataset in datasets:
+        prefix = "Sports" if dataset == "sports-copurchase" else dataset
+        columns.extend(f"{prefix} {display}" for display, _ in METRICS[dataset])
     rows = []
     row_order = [
         ("full", "CoSI-MAG"),
@@ -475,7 +503,8 @@ def write_table(
     ]
     for variant, label in row_order:
         row: dict[str, str] = {"Model": label}
-        for dataset, prefix in (("Movies", "Movies"), ("Grocery", "Grocery"), ("sports-copurchase", "Sports")):
+        for dataset in datasets:
+            prefix = "Sports" if dataset == "sports-copurchase" else dataset
             for display, metric_name in METRICS[dataset]:
                 row[f"{prefix} {display}"] = format_mean_std(
                     table_values[(variant, dataset, metric_name)]
@@ -486,7 +515,9 @@ def write_table(
         writer.writeheader()
         writer.writerows(rows)
 
-    delta_path = ablation_root / "per_seed_deltas.csv"
+    suffix = output_prefix[len("table2"):] if output_prefix.startswith("table2") else f"_{output_prefix}"
+    delta_name = "per_seed_deltas" if not suffix else f"per_seed_deltas{suffix}"
+    delta_path = ablation_root / f"{delta_name}.csv"
     with delta_path.open("w", encoding="utf-8", newline="") as handle:
         fieldnames = [
             "dataset",
@@ -500,7 +531,7 @@ def write_table(
         ]
         writer = csv.DictWriter(handle, fieldnames=fieldnames)
         writer.writeheader()
-        for dataset in DATASET_TASK:
+        for dataset in datasets:
             full_by_seed = seed_values[("full", dataset)]
             for variant, label in VARIANTS.items():
                 ablation_by_seed = seed_values[(variant, dataset)]
@@ -525,13 +556,34 @@ def write_table(
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--benchmark-root", type=Path, required=True)
-    parser.add_argument("--ablation-root", type=Path, required=True)
+    parser.add_argument(
+        "--ablation-root",
+        type=Path,
+        default=ROOT / "outputs" / "cosi_mag_final_ablation",
+    )
+    parser.add_argument(
+        "--datasets",
+        nargs="+",
+        choices=tuple(DATASET_TASK),
+        default=list(DATASET_TASK),
+        help="dataset subset to audit and summarize",
+    )
+    parser.add_argument(
+        "--output-prefix",
+        default="table2",
+        help="prefix for the CSV outputs (e.g. table2_nc)",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    return run_summarizer(args.benchmark_root, args.ablation_root)
+    return run_summarizer(
+        args.benchmark_root,
+        args.ablation_root,
+        datasets=tuple(args.datasets),
+        output_prefix=args.output_prefix,
+    )
 
 
 if __name__ == "__main__":

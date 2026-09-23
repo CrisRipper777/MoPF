@@ -307,6 +307,9 @@ def _run_single_nc(
             logits = classifier(z[train_idx_all])
             loss = criterion(logits, labels) + aux_weight * aux_loss
             loss.backward()
+            if hasattr(model, "gradient_diagnostics"):
+                aux_info = dict(aux_info or {})
+                aux_info.update(model.gradient_diagnostics())
             if grad_clip is not None:
                 torch.nn.utils.clip_grad_norm_(
                     list(model.parameters()) + list(classifier.parameters()), max_norm=float(grad_clip)
@@ -344,6 +347,9 @@ def _run_single_nc(
                     logits = classifier(z)
                 loss = criterion(logits, labels) + aux_weight * aux_loss
                 loss.backward()
+                if hasattr(model, "gradient_diagnostics"):
+                    aux_info = dict(aux_info or {})
+                    aux_info.update(model.gradient_diagnostics())
                 if grad_clip is not None:
                     torch.nn.utils.clip_grad_norm_(
                         list(model.parameters()) + list(classifier.parameters()), max_norm=float(grad_clip)

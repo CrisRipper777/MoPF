@@ -44,6 +44,10 @@ AUX_INFO_KEYS = (
     "gate_loss",
     "modality_balance_loss",
     "ppc_raw",
+    "mean_response_correction_ratio",
+    "max_response_correction_ratio",
+    "mean_response_correction_cosine",
+    "mean_gradient_norm",
 )
 
 

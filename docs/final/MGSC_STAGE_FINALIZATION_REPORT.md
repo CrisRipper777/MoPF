@@ -132,3 +132,78 @@ pass: 17 passed, including CPU finite/backward/integrity tests; CUDA C0 max
 absolute difference is 0.0. Full `pytest tests/` remains blocked at
 collection by six historical tests importing deleted legacy scripts; those
 scripts were not restored.
+
+## Paper evidence finalization
+
+1. **Figure 1 design and audit.** Figure 1(a) uses raw feature cosine
+   discrepancy on actual physical edges; Figure 1(b) reuses the leakage-safe
+   M1 preferred-lambda distributions; Figure 1(c) uses the new raw fixed-graph
+   multi-order linear-probe diagnostic. No MGSC checkpoint is used in the
+   motivation panels, and official test labels are not used. The panel-level
+   audit is in `docs/final/FIGURE1_EVIDENCE_AUDIT.md`.
+
+2. **Figure 2 architecture.** The architecture preview contains only the two
+   top-level stages, keeps text/visual propagation separate, and maps the
+   plotted objects to the current code in
+   `docs/final/FIGURE2_ARCHITECTURE_SPEC.md`.
+
+3. **Figure 3 claims.** Current P2 diagnostics support continuous MRC
+   response, small but measurable modality-specific neighbor allocation, and
+   nontrivial functional gate effects. They do not support relation
+   reliability, topology rewiring, gate causality, or M1 lambda as gate
+   ground truth. See `docs/final/FIGURE3_FINAL_CLAIMS.md`.
+
+4. **Figure 4 claims.** The safe interpretation is modality-/dataset-specific
+   order profiles and computationally active cross-order integration. The
+   interaction-off intervention is larger than uniform-attention in all five
+   NC datasets, but this is not a causal or universal accuracy claim. See
+   `docs/final/FIGURE4_FINAL_CLAIMS.md`.
+
+5. **Table 1.** The current Full P2 row is competitive and is ranked best among
+   the compared rows on both metrics in the generated descriptive table. The
+   MGSC-MAG margin over the strongest historical baseline ranges from +0.39 to
+   +0.95 percentage points in Accuracy and +0.48 to +1.31 points in Macro-F1.
+   Historical baseline provenance remains a limitation; no universal SOTA
+   claim is made.
+
+6. **Table 2.** The strict plain multi-order control is close to Full, with
+   Full better in 14/15 paired comparisons for both metrics. Raw Terminal is
+   sometimes higher than Full, so the table explicitly prevents a universal
+   necessity claim. Attribute Only is retained as a sanity control and not
+   treated as a pure innovation ablation.
+
+7. **Appendix ablation.** Table A1 reports paired deltas for Uniform Relations,
+   Global Context Gate, Uniform Integration, and No Cross-Order Interaction.
+   The signs are mixed and dataset-dependent; no module ranking is reported.
+   Fixed Gate 0.9 is not reported because no formal final-branch result was
+   found.
+
+8. **Efficiency.** Matched MGSC and plain-control training runtime and peak
+   GPU memory are exported. DiP and GraphSAGE have reliable instantiated
+   parameter counts only; time and memory are left blank because no matched
+   final-branch run exists.
+
+9. **Terminology.** The frozen vocabulary and prohibited interpretations are
+   recorded in `docs/final/PAPER_TERMINOLOGY.md`.
+
+10. **Contributions.** The paper uses exactly three contributions: the
+    empirical/problem perspective, the unified two-stage framework, and the
+    evidence-oriented five-NC evaluation. They are recorded in
+    `docs/final/PAPER_CONTRIBUTIONS.md`.
+
+11. **Blueprint.** The complete section-by-section outline and code-faithful
+    canonical P2 equations are in `docs/final/PAPER_V3_BLUEPRINT.md`.
+
+12. **Remaining TODOs.** Before submission, rerun or behavior-equivalence
+    certify the historical baseline table under the final fixed Macro-F1
+    evaluator, record a producing execution SHA if recoverable, and replace
+    preview plots with the journal's final typography. No new architecture
+    module is required.
+
+13. **Evidence inconsistency.** The main residual inconsistency is provenance:
+    Table 1 historical baselines come from the existing paper table, Table 2
+    Attribute Only comes from the formal functional-ablation matrix, while the
+    corrected-control Full/plain/raw rows come from the corrected matrix.
+    This is exposed in the machine-readable `source` fields and should remain
+    explicit in the manuscript. Frozen inference interventions are never
+    described as retrained performance.

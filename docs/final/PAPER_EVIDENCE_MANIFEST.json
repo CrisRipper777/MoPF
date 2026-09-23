@@ -1,0 +1,51 @@
+{
+  "canonical_model": "src/models/mgsc_mag.py (MGSCMAG; canonical P2 switches)",
+  "canonical_config": "configs/model/mgsc_mag_p2.yaml",
+  "git_sha": "0d062e43ed90c8bd52baa7051b39b11dffbd150b0",
+  "datasets": [
+    "Movies",
+    "Toys",
+    "Grocery",
+    "ele-fashion",
+    "Reddit-S"
+  ],
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "main_benchmark_source": "outputs/final/mgsc_corrected_controls/summary.csv; baselines: paper/tables/table_nc_main.tex",
+  "m1_source": "outputs/final/context_demand/ plus docs/final/context_demand_report.md",
+  "corrected_controls_source": "outputs/final/mgsc_corrected_controls/",
+  "fine_grained_ablation_source": "outputs/final/mgsc_functional_ablation/",
+  "figure3_source": "outputs/final/context_formation_analysis/ and outputs/final/paper_figures/figure3_data/",
+  "figure4_source": "outputs/final/multi_order_integration_analysis/ and outputs/final/paper_figures/figure4_data/",
+  "evidence_taxonomy": {
+    "empirical_motivation": [
+      "M1 raw feature/context probe",
+      "Figure 1(a,c) model-independent diagnostics"
+    ],
+    "downstream_performance": [
+      "Table 1 MGSC-MAG row",
+      "Table 2 Full and controls"
+    ],
+    "retrained_ablation": [
+      "outputs/final/mgsc_corrected_controls/",
+      "outputs/final/mgsc_functional_ablation/"
+    ],
+    "frozen_checkpoint_intervention": [
+      "Figure 3(c)",
+      "Figure 4(c)"
+    ],
+    "descriptive_diagnostics": [
+      "Figure 3(a,b)",
+      "Figure 4(a,b)"
+    ]
+  },
+  "scope": "NC only; Movies, Toys, Grocery, ele-fashion, Reddit-S; LP intentionally excluded",
+  "test_labels_in_m1": false,
+  "frozen_files_unchanged": [
+    "src/models/cosi_mag_final.py",
+    "configs/model/cosi_mag_final.yaml"
+  ]
+}

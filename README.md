@@ -170,7 +170,7 @@ python -m src.main dataset=Movies task=nc model=mlp num_runs=1 task.epochs=1 tas
 - MM-Graph NC/LP tasks use the official split files shipped in each dataset directory.
 - LP evaluation ranks one positive target against fixed negative targets and reports MRR / Hits@1 / Hits@3 / Hits@10.
 - NC uses the unified full-graph training protocol by default: one graph forward per epoch, CE on train nodes, validation-accuracy checkpoint selection, and one final test evaluation.
-- LP uses the unified sampled protocol: graph encoders use bidirectional two-hop `LinkNeighborLoader` sampling with one filtered negative per positive; the shared LP projection dimension is 128 and equal-score negatives use pessimistic ranking.
+- LP uses the current unified sampled protocol: graph encoders use bidirectional three-hop `LinkNeighborLoader` sampling with `num_neighbors=[5,5,5]`, aligned to `max_order=3`, and one filtered negative per positive; the shared LP projection dimension is 128 and equal-score negatives use pessimistic ranking. Historical outputs carrying `unified_sampled_lp_v1` include resolved `[5,5]` runs and must not be mixed with this three-hop setting; a future `unified_sampled_lp_v2` should freeze the corrected protocol.
 - Test metrics are computed once after training, by reloading the best validation checkpoint.
 - Dataset graphs do not add self-loops by default; models own their self-loop policy, e.g. GCN adds them internally.
 - `model=mlp` does not use graph sampling: NC uses node mini-batches and LP uses edge mini-batches.

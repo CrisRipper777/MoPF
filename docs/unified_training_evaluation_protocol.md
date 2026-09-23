@@ -38,7 +38,8 @@
 ### 3.2 训练
 
 - 所有图编码器统一使用 PyG `LinkNeighborLoader` sampled training。
-- 采样参数固定为两跳 `[5, 5]`、`subgraph_type=bidirectional`、batch size 2048。
+- 当前配置的采样参数为三跳 `[5, 5, 5]`、`subgraph_type=bidirectional`、batch size 2048，与 `max_order=3` 的显式三步 propagation 对齐。
+- 协议审计发现历史输出中存在同名 `unified_sampled_lp_v1` 且实际为两跳 `[5, 5]` 的 resolved configs；这些历史结果不能与当前三跳配置静默混报。后续应以 `unified_sampled_lp_v2` 冻结三跳协议并重新标记/重跑需要比较的 LP 结果。本轮不运行 LP。
 - 每个 epoch 使用全部训练正边；每个正例配一个当 epoch 重新采样的 filtered negative。
 - 每个 sampled batch 在前向前删除当前正监督边的两个消息方向，避免目标边泄漏。
 - 删除后端固定为 `global_eid`：在全局 train-only message graph 上预建

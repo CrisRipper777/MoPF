@@ -38,6 +38,34 @@ _FULL = AblationSpec(
 
 ABLATION_SPECS: dict[str, AblationSpec] = {
     "full": _FULL,
+    # SSI-MAG-V3 development switches.  The model consumes the exact name
+    # for stage-local interventions; these entries keep the existing Hydra
+    # manifest resolver and checkpoint metadata valid without changing any
+    # historical MoPF/CoSI-MAG ablation semantics.
+    "raw_relation": AblationSpec(
+        "raw_relation", True, True, True, True, True, True,
+        relation_calibration=False, edge_weight_override="raw_uniform",
+    ),
+    "fixed_reference": AblationSpec(
+        "fixed_reference", True, True, True, True, True, True,
+        composition_mode="adaptive",
+    ),
+    "terminal_context": AblationSpec(
+        "terminal_context", True, True, True, True, True, True,
+        composition_mode="adaptive",
+    ),
+    "no_context_change": AblationSpec(
+        "no_context_change", True, True, True, True, True, True,
+        composition_mode="adaptive",
+    ),
+    "no_cross_hop_interaction": AblationSpec(
+        "no_cross_hop_interaction", True, True, True, True, True, True,
+        composition_mode="adaptive",
+    ),
+    "uniform_context": AblationSpec(
+        "uniform_context", True, True, True, True, True, True,
+        composition_mode="uniform",
+    ),
     "wo_learned_semantic_calibration": AblationSpec(
         "wo_learned_semantic_calibration", False, True, True, True, True, True
     ),

@@ -1,0 +1,7 @@
+{
+  "status": "complete",
+  "task": "nc",
+  "dataset": "Grocery",
+  "ablation": "full",
+  "seed": 44
+}

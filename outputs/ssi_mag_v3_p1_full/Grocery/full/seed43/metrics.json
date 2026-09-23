@@ -1,0 +1,35 @@
+{
+  "task": "nc",
+  "dataset": "Grocery",
+  "model": "ssi_mag_v3",
+  "ablation": "full",
+  "seed": 43,
+  "selection_metric": "val_acc",
+  "checkpoint_selection": "best_val_accuracy",
+  "best_epoch": 81,
+  "runtime_seconds": 25.18868818390183,
+  "peak_gpu_memory_mib": 3534.70166015625,
+  "checkpoint": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v3_p1_full/Grocery/full/seed43/best.pt",
+  "checkpoint_metadata": {
+    "selection": "best_val_accuracy",
+    "best_epoch": 81
+  },
+  "metrics": {
+    "val_acc": {
+      "mean": 0.8436310291290283,
+      "std": 0.0
+    },
+    "val_macro_f1": {
+      "mean": 0.7784488378267816,
+      "std": 0.0
+    },
+    "test_acc": {
+      "mean": 0.8251830339431763,
+      "std": 0.0
+    },
+    "test_macro_f1": {
+      "mean": 0.7439840750241035,
+      "std": 0.0
+    }
+  }
+}

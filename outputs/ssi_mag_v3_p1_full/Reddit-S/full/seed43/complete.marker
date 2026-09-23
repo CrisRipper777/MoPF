@@ -1,0 +1,7 @@
+{
+  "status": "complete",
+  "task": "nc",
+  "dataset": "Reddit-S",
+  "ablation": "full",
+  "seed": 43
+}

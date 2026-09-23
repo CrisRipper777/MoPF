@@ -1,208 +1,134 @@
 # MGSC-MAG stage finalization report
 
-## Scope and decision
+## Scope and frozen reference
 
-The current paper scope in this round is **five NC datasets only**:
-Movies, Toys, Grocery, ele-fashion, and Reddit-S. LP, including Sports-LP, is
-not discussed or used in this round. The frozen CoSI reference files and the
-unified NC protocol were not modified.
-
-The working hypothesis is:
-
-> In a multimodal attributed graph, physical topology defines latent structural
-> dependence, but the semantic utility of structural context is not uniform at
-> the relation, node/context, or propagation-order granularities.
-
-The current working architecture is canonical P2, MGSC-MAG with
-`adaptive_context_gate=true`, `direct_interacted_integration=true`, and
-`use_legacy_relation_order_bias=true`.
-
-## A. Architecture data flow
-
-Text and visual features are projected independently to `H0^T` and `H0^V`.
-For each modality, MRC computes semantic edge scores, relation weights, and a
-normalized graph operator over the unchanged physical topology. Each order
-forms a neighborhood proposal from the previous state. A modality-specific
-gate MLP uses `(H0, N, |H0-N|, H0*N, p_k)` to form `S_k`; this yields the
-modality-specific state bank `[S0,...,SK]`.
-
-Each state receives its order embedding and enters the existing single-head
-cross-order attention with retained legacy relation-order bias. The interacted
-states are used directly in P2 composition with the existing global,
-modality, and node preference coefficients `eta`. Text and visual outputs are
-refined separately, then fused only at the final late-fusion stage. No early
-fusion or topology change was introduced.
-
-The exact formulas and canonical switches are recorded in
-`docs/final/MGSC_P2_ARCHITECTURE.md` and
-`configs/model/mgsc_mag_p2.yaml`.
-
-## B. M1 support for heterogeneous contextualization demand
-
-M1 used model-independent row-normalized frozen modality features, physical
-neighbors only, no self-loop in the neighborhood mean, no labels, no MRC, and
-an internal deterministic train/dev probe split. Official validation nodes
-were used only for the predeclared final probe evaluation; test labels were not
-used. The node-wise oracle gap is descriptive and is not realizable model or
-test performance.
-
-| Dataset | Modality | Global-best λ | Entropy | Non-global ratio | T/V disagreement | Oracle relative gap |
-|---|---|---:|---:|---:|---:|---:|
-| Movies | Text | 0.00 | 0.7155 | 0.5210 | 0.6509 | 0.0121 |
-| Movies | Visual | 0.50 | 0.9081 | 0.8755 | 0.6509 | 0.0390 |
-| Grocery | Text | 0.00 | 0.6625 | 0.4996 | 0.6120 | 0.0088 |
-| Grocery | Visual | 0.50 | 0.8784 | 0.8952 | 0.6120 | 0.0534 |
-| ele-fashion | Text | 0.25 | 0.9455 | 0.8736 | 0.6280 | 0.0530 |
-| ele-fashion | Visual | 0.25 | 0.8956 | 0.8892 | 0.6280 | 0.0494 |
-
-At least two datasets satisfy the predeclared support rule, and the collapse
-exception is absent. **Gate A: PASS.** This supports entering P1, but it does
-not make the oracle policy realizable or establish statistical significance.
-
-## C. Functional ablation
-
-The formal matrix contains 5 datasets × 3 seeds × 7 variants = 105 runs. The
-authoritative outputs are in
-`outputs/final/mgsc_functional_ablation/`. Full P2 was reused only after code,
-split, and effective protocol/config fingerprints matched.
-
-| Dataset | Full Acc ± SD | Full Macro-F1 ± SD |
-|---|---:|---:|
-| Movies | 0.5640 ± 0.0115 | 0.5064 ± 0.0104 |
-| Toys | 0.7990 ± 0.0053 | 0.7736 ± 0.0057 |
-| Grocery | 0.8323 ± 0.0053 | 0.7566 ± 0.0067 |
-| ele-fashion | 0.8833 ± 0.0019 | 0.7789 ± 0.0045 |
-| Reddit-S | 0.9691 ± 0.0026 | 0.9321 ± 0.0035 |
-
-Mean paired deltas are `Full - Ablation`, in percentage points:
-
-| Dataset | Uniform relations Acc/F1 | Global gate Acc/F1 | Terminal only Acc/F1 | Uniform integration Acc/F1 | No cross-order Acc/F1 |
-|---|---:|---:|---:|---:|---:|
-| Movies | −0.13 / +0.31 | −0.04 / +0.76 | −0.25 / −0.63 | +0.20 / +0.30 | +0.22 / +0.79 |
-| Toys | −0.13 / +0.12 | −0.34 / −0.26 | −0.38 / −0.06 | +0.10 / +0.77 | −0.29 / −0.22 |
-| Grocery | −0.17 / −0.07 | +0.23 / +0.03 | −0.15 / −0.23 | −0.03 / −0.17 | −0.29 / −0.60 |
-| ele-fashion | +0.05 / +0.15 | +0.16 / −0.06 | +0.08 / +0.48 | +0.03 / +0.25 | +0.02 / −0.12 |
-| Reddit-S | +0.00 / +0.07 | +0.07 / +0.15 | −0.06 / −0.08 | +0.11 / +0.19 | +0.04 / +0.08 |
-
-The effects are mixed and mostly small. Therefore the ablation matrix supports
-the existence and functional use of the paths only in a bounded sense; it does
-not support a universal performance ranking of modules. Attribute Only is a
-sanity control, not a pure isolation of one innovation; its mean accuracy is
-lower than Full on all five datasets.
-
-## D. Mechanism chain
-
-The current evidence supports the following computational chain:
-
-`MRC relation response → modality-specific adaptive state formation →
-multi-order state bank → cross-order interaction → direct interacted-state
-composition`.
-
-It is a real computation chain because the intervention outputs change the
-intermediate/final representations, while the ablations preserve the task
-protocol and selectively replace the specified path.
-
-## E. Figure 3 diagnostics: context formation
-
-The source data and preview are under
-`outputs/final/context_formation_analysis/` and
-`outputs/final/paper_figures/figure3_data/`.
-
-- Relation calibration has nonzero text/visual response differences. For
-  Movies/Grocery/ele-fashion, mean semantic-score discrepancy is 0.1913,
-  0.1531, and 0.1453; corresponding learned relation-weight discrepancy is
-  0.0569, 0.0502, and 0.0446.
-- Neighbor allocation differs while physical topology is fixed. Mean TV
-  distance is 0.0153, 0.0159, and 0.0082 for those three datasets; top-neighbor
-  disagreement is 0.5800, 0.4976, and 0.2984.
-- Gate behavior is nontrivial and modality-dependent. For example, Movies has
-  mean text/visual gates of approximately 0.328/0.803, while Grocery is
-  approximately 0.633/0.590.
-- Shuffled gate interventions preserve gate marginals but change embeddings
-  and predictions. Embedding MAE / flip rate are Movies 0.0471/0.0323,
-  Grocery 0.0567/0.0148, ele-fashion 0.0941/0.0193, with nonzero effects also
-  on Toys and Reddit-S.
-
-These results support functional node-to-gate correspondence, not a claim that
-the gate is a supervised semantic ground truth or that it recovers a unique
-optimal lambda.
-
-## F. Figure 4 diagnostics: multi-order integration
-
-The source data and preview are under
-`outputs/final/multi_order_integration_analysis/` and
-`outputs/final/paper_figures/figure4_data/`.
-
-Order contributions use the explicitly reported magnitude normalization
-`q=abs(eta)/sum(abs(eta))`. Mean effective orders (text / visual) are:
-
-| Dataset | Text | Visual |
-|---|---:|---:|
-| Movies | 1.743 | 1.803 |
-| Toys | 1.818 | 1.979 |
-| Grocery | 1.898 | 1.983 |
-| ele-fashion | 1.795 | 1.719 |
-| Reddit-S | 1.760 | 1.738 |
-
-The attention CSV contains average query/key matrices for both modalities and
-all five datasets. Interaction-off changes are larger than uniform-attention
-changes in all five datasets: logit MAE is 0.2441/0.0439 on Movies,
-0.2084/0.0425 on Toys, 0.3175/0.0545 on Grocery, 0.6609/0.1474 on ele-fashion,
-and 0.1324/0.0232 on Reddit-S. This supports direct functional influence of
-the interaction residual, without implying a guaranteed accuracy gain.
-
-## G. Prior-init control
-
-The controlled direct-vs-legacy comparison was run on Movies, Grocery, and
-ele-fashion at seed 42 only. Direct-minus-legacy accuracy was −0.27, −0.38,
-and −0.10 percentage points; Macro-F1 was −2.23, −0.09, and +0.24 points.
-Because Movies Macro-F1 moved materially in this single-seed control, the
-current evidence does not justify changing the canonical P2 initialization.
-Keep `legacy_anchored` in canonical P2; retain `direct` as a future controlled
-study only.
-
-## H. Claims allowed and claims not allowed
-
-Supported claims:
-
-- contextualization demand is heterogeneous in the model-independent M1 probe;
-- P2 computes modality-specific relation response, adaptive state formation,
-  multi-order integration, and late fusion as separate stages;
-- gate and interaction interventions have measurable functional effects;
-- P2 is a viable unified working architecture under the five-NC protocol.
-
-Claims not supported by this round:
-
-- that semantic similarity is relation reliability;
-- that node-wise oracle lambda is realizable performance;
-- that every P2 component is necessary or universally improves accuracy;
-- that one modality/order is globally optimal;
-- that mechanism interventions are causal identification or statistical
-  significance tests;
-- any LP conclusion.
-
-## I. Freeze recommendation and risks
-
-I recommend freezing the current canonical P2 as the working architecture for
-the five-NC paper scope. There is no architecture-search blocker in the
-completed matrix. The main caveats are mixed small ablation deltas, the
-single-seed prior-init control, and the fact that diagnostic interventions are
-inference-only functional audits.
-
-The GPU device node became temporarily unavailable to new processes after the
-formal runs; diagnostics were therefore completed on CPU after confirming the
-same checkpoint-loading and finite-output paths. This affected execution mode,
-not data, checkpoints, or protocol. The final figure previews had no static
-source FAIL findings and passed panel-alignment, PDF glyph-size, and rendered-
-collision audits. Static preflight retains three preview-oriented warnings:
-300-dpi PNG rather than a 600-dpi TIFF submission raster, and a width that
-should be revisited for a target journal rather than this preview use.
-
-## J. Frozen files
-
-The following remained unmodified throughout this round:
+The current paper scope in this round is node classification on Movies, Toys,
+Grocery, ele-fashion, and Reddit-S only. Sports-LP and all other LP work are
+not discussed. The frozen CoSI reference and the unified NC protocol were not
+modified:
 
 - `src/models/cosi_mag_final.py`
 - `configs/model/cosi_mag_final.yaml`
 
-No commit or push was performed.
+The working architecture is canonical P2 in
+`configs/model/mgsc_mag_p2.yaml`.
+
+## A. Unified hypothesis
+
+Physical topology defines latent structural dependence, but the semantic
+utility of structural context is not uniform at relation, node/context, or
+propagation-order granularity. MGSC-MAG therefore separates modality-specific
+context-state formation from adaptive multi-order integration.
+
+## B. P2 data flow
+
+Text and visual features are projected independently. MRC produces separate
+modality relation responses and normalized graph operators over the unchanged
+physical topology. Each order forms a neighborhood proposal; an independent
+text/visual gate uses `(H0, N, |H0-N|, H0*N, p_k)` to form `S_k`. The state bank
+is `[S0,...,SK]`. Order-embedded states enter the existing cross-order
+attention with retained legacy relation-order bias. P2 composes the interacted
+states with the existing `eta` coefficients, refines each modality separately,
+and fuses only at the final late-fusion stage.
+
+## C. M1 and contextualization demand
+
+M1 used frozen row-normalized modality features, physical neighbors only, no
+self-loop in the neighborhood mean, no labels, no MRC, and deterministic
+internal train/dev probe splits. Test labels were never used. Gate A passed on
+Movies, Grocery, and ele-fashion under the predeclared thresholds. The
+node-wise oracle gap is a descriptive motivation upper bound, not a realizable
+model or test performance.
+
+## D. Corrected controls
+
+The formal corrected matrix completed 60 runs. Full mean test results were:
+
+| Dataset | Accuracy ± population SD | Macro-F1 ± population SD |
+|---|---:|---:|
+| Movies | 0.5643 ± 0.0052 | 0.5026 ± 0.0101 |
+| Toys | 0.8013 ± 0.0061 | 0.7741 ± 0.0067 |
+| Grocery | 0.8331 ± 0.0054 | 0.7581 ± 0.0106 |
+| ele-fashion | 0.8831 ± 0.0007 | 0.7812 ± 0.0048 |
+| Reddit-S | 0.9691 ± 0.0026 | 0.9320 ± 0.0037 |
+
+Full-minus-control paired means in percentage points were:
+
+| Dataset | Raw terminal Acc/F1 | Raw bank Acc/F1 | Plain backbone Acc/F1 |
+|---|---:|---:|---:|
+| Movies | +0.480 / +0.812 | +0.610 / −0.063 | +0.080 / +0.075 |
+| Toys | −0.354 / −0.405 | +0.153 / +0.303 | +0.540 / +0.544 |
+| Grocery | −0.098 / −0.479 | +0.420 / +0.120 | +0.390 / +0.345 |
+| ele-fashion | −0.167 / −0.237 | +0.014 / +0.758 | +0.214 / +0.462 |
+| Reddit-S | −0.042 / −0.162 | +0.157 / +0.321 | +0.231 / +0.243 |
+
+The strict plain backbone is close to Full despite removing conditional
+parameters; raw terminal is sometimes better. Thus the mechanism is real but
+not performance-dominant. This is a Tier-B result, not a module ranking.
+
+## E. Mechanism chain
+
+The current implementation forms a real computation chain:
+
+`MRC relation response → adaptive state formation → multi-order state bank →
+cross-order interaction → direct interacted-state composition`.
+
+The corrected C0 path is exactly equivalent to canonical MGSC in CPU/CUDA
+smoke checks. Raw controls bypass the Stage-II readout as specified, and the
+plain control uses exact unit pre-normalization relations and fixed gates.
+
+## F. Figure 3 context diagnostics
+
+Current source data are in `outputs/final/context_formation_analysis/` and
+`outputs/final/paper_figures/figure3_data/`. On Movies/Grocery/ele-fashion,
+mean text/visual semantic-score discrepancies are 0.183/0.151/0.146 and
+corresponding relation-weight discrepancies are 0.056/0.051/0.043. Mean
+neighbor TV distances are 0.0162/0.0166/0.0080, with top-neighbor
+disagreement 0.578/0.498/0.298. Gate interventions are nonzero on all five
+datasets; shuffled-gate embedding MAE ranges from 0.037 to 0.079 and flip
+rates from 0.004 to 0.033. These support functional modality/node dependence,
+not gate ground truth or causal identification.
+
+## G. Figure 4 integration diagnostics
+
+Current source data are in `outputs/final/multi_order_integration_analysis/`
+and `outputs/final/paper_figures/figure4_data/`. Contributions use
+`q=abs(eta)/sum(abs(eta))`. Mean effective order is concentrated near order 2,
+with text/visual means: Movies 1.741/1.802, Toys 1.818/1.975, Grocery
+1.940/1.977, ele-fashion 1.778/1.738, Reddit-S 1.759/1.738. The safe claim
+is modality/dataset-dependent order profiles, not strong universal node-level
+heterogeneity. Interaction-Off logit MAE is 0.268/0.230/0.383/0.372/0.133
+from Movies through Reddit-S, larger than Uniform-Attention in every case;
+this establishes direct functional influence without claiming universal
+accuracy gains.
+
+## H. Prior-init cleanup diagnostic
+
+Current seed-42 direct-minus-legacy accuracy is −0.120, −0.029, and −0.048
+percentage points for Movies, Grocery, and ele-fashion. Macro-F1 changes are
+−1.535, −0.301, and +0.477 points. The single-seed evidence does not justify
+changing canonical P2; keep legacy-anchored initialization.
+
+## I. Claims and freeze decision
+
+Supported: heterogeneous contextualization demand; a modality-separated,
+multi-granular P2 computation chain; measurable gate and interaction effects;
+and P2 as a viable five-NC working architecture.
+
+Not supported: semantic similarity as relation reliability, oracle lambda as a
+realizable policy, universal module necessity, universal accuracy improvement,
+causal mechanism claims, or any LP conclusion.
+
+Recommendation: freeze canonical P2 as the sole working architecture for this
+five-NC paper scope. No architecture-search blocker remains, but all claims
+should retain the bounded Tier-B language.
+
+## J. Reproducibility and tests
+
+Authoritative corrected-control files are under
+`outputs/final/mgsc_corrected_controls/`; the runner manifest records the
+dataset, seed, control, pairing, and population-SD protocol. Relevant tests
+pass: 17 passed, including CPU finite/backward/integrity tests; CUDA C0 max
+absolute difference is 0.0. Full `pytest tests/` remains blocked at
+collection by six historical tests importing deleted legacy scripts; those
+scripts were not restored.

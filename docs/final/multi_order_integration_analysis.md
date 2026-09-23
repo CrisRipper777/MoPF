@@ -20,11 +20,11 @@ quantiles and the effective-order summary.
 
 | Dataset | Text mean effective order ± SD | Visual mean effective order ± SD |
 |---|---:|---:|
-| Movies | 1.743 ± 0.002 | 1.803 ± 0.016 |
-| Toys | 1.818 ± 0.011 | 1.979 ± 0.003 |
-| Grocery | 1.898 ± 0.007 | 1.983 ± 0.007 |
-| ele-fashion | 1.795 ± 0.042 | 1.719 ± 0.046 |
-| Reddit-S | 1.760 ± 0.007 | 1.738 ± 0.003 |
+| Movies | 1.741 ± 0.002 | 1.802 ± 0.015 |
+| Toys | 1.818 ± 0.012 | 1.975 ± 0.003 |
+| Grocery | 1.940 ± 0.010 | 1.977 ± 0.012 |
+| ele-fashion | 1.778 ± 0.014 | 1.738 ± 0.029 |
+| Reddit-S | 1.759 ± 0.007 | 1.738 ± 0.003 |
 
 These summaries show different modality/dataset order profiles. They are not
 evidence that a single propagation depth is optimal for every node.
@@ -49,11 +49,11 @@ The normal representation is compared with:
 
 | Dataset | Uniform logit MAE | Interaction-off logit MAE | Uniform flip | Interaction-off flip |
 |---|---:|---:|---:|---:|
-| Movies | 0.0439 | 0.2441 | 0.0209 | 0.1156 |
-| Toys | 0.0425 | 0.2084 | 0.0079 | 0.0313 |
-| Grocery | 0.0545 | 0.3175 | 0.0064 | 0.0440 |
-| ele-fashion | 0.1474 | 0.6609 | 0.0124 | 0.0433 |
-| Reddit-S | 0.0232 | 0.1324 | 0.0009 | 0.0017 |
+| Movies | 0.0481 | 0.2682 | 0.0206 | 0.1170 |
+| Toys | 0.0476 | 0.2303 | 0.0078 | 0.0336 |
+| Grocery | 0.0727 | 0.3831 | 0.0067 | 0.0412 |
+| ele-fashion | 0.0457 | 0.3719 | 0.0039 | 0.0336 |
+| Reddit-S | 0.0231 | 0.1327 | 0.0010 | 0.0020 |
 
 The larger interaction-off changes relative to uniform-attention changes show
 that the interaction residual can materially alter the final representation
@@ -64,6 +64,7 @@ interaction must lower held-out accuracy on every dataset.
 
 Together with the functional ablation, the analysis supports a real
 multi-order computation chain and provides paper-facing evidence for
-heterogeneous order contributions and direct interacted-state influence. It
-does not justify adding a new interaction module, changing the eta definition,
+dataset/modality-dependent order profiles and direct interacted-state
+influence. It does not justify claiming strong universal node-level order
+heterogeneity, adding a new interaction module, changing the eta definition,
 or claiming that one order or one modality is universally dominant.

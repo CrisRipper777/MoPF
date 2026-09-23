@@ -46,10 +46,17 @@ def canonical_cfg(dataset: str, seed: int):
 
 
 def checkpoint_path(dataset: str, seed: int, root: Path) -> Path:
-    path = root / f"{dataset}_seed{seed}" / "P2" / "best.pt"
-    if not path.is_file():
-        raise FileNotFoundError(f"missing formal P2 checkpoint: {path}")
-    return path
+    candidates = (
+        root / f"{dataset}_seed{seed}" / "P2" / "best.pt",
+        root / f"{dataset}_seed{seed}" / "full" / "best.pt",
+    )
+    for path in candidates:
+        if path.is_file():
+            return path
+    raise FileNotFoundError(
+        "missing formal P2/full checkpoint; checked: "
+        + ", ".join(str(path) for path in candidates)
+    )
 
 
 def load_checkpoint(dataset: str, seed: int, checkpoint: Path, device: torch.device):
@@ -70,4 +77,3 @@ def load_checkpoint(dataset: str, seed: int, checkpoint: Path, device: torch.dev
     model.eval()
     classifier.eval()
     return data, model, classifier
-

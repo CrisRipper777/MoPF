@@ -11,9 +11,9 @@ ele-fashion. The canonical P2 model was not changed.
 
 | Dataset | Direct − legacy accuracy | Direct − legacy Macro-F1 |
 |---|---:|---:|
-| Movies | −0.27 pp | −2.23 pp |
-| Grocery | −0.38 pp | −0.09 pp |
-| ele-fashion | −0.10 pp | +0.24 pp |
+| Movies | −0.12 pp | −1.53 pp |
+| Grocery | −0.03 pp | −0.30 pp |
+| ele-fashion | −0.05 pp | +0.48 pp |
 
 The accuracy changes are small, but the Movies Macro-F1 decrease is not
 negligible for a single seed. Therefore this control does not justify changing

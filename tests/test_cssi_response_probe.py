@@ -144,19 +144,33 @@ def test_plain_response_equivalence_and_leave_one_response_out_base_case():
     assert torch.isfinite(base).all()
 
 
-def test_utility_sign_convention_is_loss_base_minus_counterfactual():
+def test_utility_sign_convention_is_counterfactual_minus_base():
     label = torch.tensor([0])
     base_logits = torch.tensor([[4.0, 0.0]])
-    helpful_counterfactual = torch.tensor([[6.0, 0.0]])
-    harmful_counterfactual = torch.tensor([[1.0, 0.0]])
-    helpful = F.cross_entropy(base_logits, label) - F.cross_entropy(
-        helpful_counterfactual, label
+    helpful_counterfactual = torch.tensor([[1.0, 0.0]])
+    harmful_counterfactual = torch.tensor([[6.0, 0.0]])
+    helpful = F.cross_entropy(helpful_counterfactual, label) - F.cross_entropy(
+        base_logits, label
     )
-    harmful = F.cross_entropy(base_logits, label) - F.cross_entropy(
-        harmful_counterfactual, label
+    harmful = F.cross_entropy(harmful_counterfactual, label) - F.cross_entropy(
+        base_logits, label
     )
     assert helpful.item() > 0.0
     assert harmful.item() < 0.0
+
+
+def test_ce_and_margin_helpful_direction_agree_on_toy_example():
+    label = torch.tensor([0])
+    base_logits = torch.tensor([[4.0, 0.0]])
+    removed_logits = torch.tensor([[1.0, 0.0]])
+    ce_utility = F.cross_entropy(removed_logits, label) - F.cross_entropy(
+        base_logits, label
+    )
+    base_margin = base_logits[:, 0] - base_logits[:, 1]
+    removed_margin = removed_logits[:, 0] - removed_logits[:, 1]
+    margin_utility = base_margin - removed_margin
+    assert ce_utility.item() > 0.0
+    assert margin_utility.item() > 0.0
 
 
 def test_response_probe_adds_no_parameters_and_matches_canonical_all_plain_state_keys():

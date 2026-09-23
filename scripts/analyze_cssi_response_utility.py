@@ -317,7 +317,9 @@ def _run_one(
                         cf_split_logits, valid_labels, reduction="none"
                     )
                     cf_margin = _margin(cf_split_logits, valid_labels)
-                    utility_ce = base_loss - cf_loss
+                    # Positive means that removing the response increases CE
+                    # loss, i.e. the response was helpful.
+                    utility_ce = cf_loss - base_loss
                     utility_margin = base_margin - cf_margin
                     previous = states[order - 1][valid_node_ids]
                     response_selected = response[valid_node_ids]
@@ -330,6 +332,9 @@ def _run_one(
                     )
                     cosine_previous = F.cosine_similarity(
                         response_selected, previous, dim=-1, eps=epsilon
+                    )
+                    cosine_previous_h0 = F.cosine_similarity(
+                        previous, h0_selected, dim=-1, eps=epsilon
                     )
                 for row_index, node_id in enumerate(valid_node_ids.tolist()):
                     position = node_position[int(node_id)]
@@ -350,6 +355,9 @@ def _run_one(
                             "cosine_response_vs_h0": _as_float(cosine_h0[row_index]),
                             "cosine_response_vs_previous": _as_float(
                                 cosine_previous[row_index]
+                            ),
+                            "cosine_previous_vs_h0": _as_float(
+                                cosine_previous_h0[row_index]
                             ),
                             "utility_ce": _as_float(utility_ce[row_index]),
                             "utility_margin": _as_float(utility_margin[row_index]),
@@ -392,11 +400,187 @@ def _load_backbone_sanity(experiment_root: Path) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def _p1_diagnostics(
+    all_nodes: pd.DataFrame, summary: pd.DataFrame, epsilon: float
+) -> dict[str, pd.DataFrame]:
+    """Build corrected P1 diagnostics without pooling across unrelated cells."""
+    validation = summary[
+        (summary["split"] == "validation")
+        & (summary["degree_group"] == "all")
+        & (summary["aggregation"] == "seed_aggregate")
+    ].copy()
+    mean_dispersion = validation[
+        [
+            "dataset",
+            "modality",
+            "order",
+            "utility_ce_mean",
+            "utility_ce_std",
+        ]
+    ].copy()
+    mean_dispersion["mean_abs_over_std"] = mean_dispersion["utility_ce_mean"].abs() / (
+        mean_dispersion["utility_ce_std"] + epsilon
+    )
+
+    seed_rows = summary[
+        (summary["split"] == "validation")
+        & (summary["degree_group"] == "all")
+        & (summary["aggregation"] == "seed")
+    ].copy()
+    stability_rows: list[dict[str, Any]] = []
+    for (dataset, modality, order), group in seed_rows.groupby(
+        ["dataset", "modality", "order"]
+    ):
+        aggregate = validation[
+            (validation["dataset"] == dataset)
+            & (validation["modality"] == modality)
+            & (validation["order"] == order)
+        ].iloc[0]
+        seed_means = group["utility_ce_mean"].to_numpy(dtype=np.float64)
+        stability_rows.append(
+            {
+                "dataset": dataset,
+                "modality": modality,
+                "order": order,
+                "n_seeds": len(seed_means),
+                "aggregate_utility_mean": float(aggregate["utility_ce_mean"]),
+                "aggregate_utility_std": float(aggregate["utility_ce_std"]),
+                "effect_size_abs_mean_over_std": float(
+                    abs(aggregate["utility_ce_mean"])
+                    / (float(aggregate["utility_ce_std"]) + epsilon)
+                ),
+                "same_sign_across_seeds": bool(
+                    np.all(seed_means > 0.0) or np.all(seed_means < 0.0)
+                ),
+                "seed_mean_min": float(seed_means.min()),
+                "seed_mean_max": float(seed_means.max()),
+            }
+        )
+    stability = pd.DataFrame(stability_rows)
+    stability_summary_rows: list[dict[str, Any]] = []
+    for threshold in (0.0, 0.02, 0.05, 0.10):
+        selected = stability[stability["effect_size_abs_mean_over_std"] >= threshold]
+        stability_summary_rows.append(
+            {
+                "effect_threshold": threshold,
+                "n_cells": len(selected),
+                "n_same_sign": int(selected["same_sign_across_seeds"].sum()),
+                "same_sign_fraction": float(
+                    selected["same_sign_across_seeds"].mean()
+                )
+                if len(selected)
+                else float("nan"),
+            }
+        )
+    stability_summary = pd.DataFrame(stability_summary_rows)
+
+    response_association = validation[
+        [
+            "dataset",
+            "modality",
+            "order",
+            "response_norm_mean",
+            "utility_ce_mean",
+            "spearman_response_norm_utility_ce",
+        ]
+    ].copy()
+    response_association["association_type"] = "within_cell_node_level"
+    cross_cell = pd.DataFrame(
+        [
+            {
+                "association_type": "across_30_aggregate_cells",
+                "dataset": "all",
+                "modality": "all",
+                "order": "all",
+                "response_norm_mean": float(validation["response_norm_mean"].mean()),
+                "utility_ce_mean": float(validation["utility_ce_mean"].abs().mean()),
+                "spearman_response_norm_utility_ce": _spearman(
+                    validation["response_norm_mean"].to_numpy(dtype=np.float64),
+                    validation["utility_ce_mean"].abs().to_numpy(dtype=np.float64),
+                ),
+            }
+        ]
+    )
+    response_association = pd.concat(
+        [response_association, cross_cell], ignore_index=True
+    )
+
+    modality_pivot = validation.pivot_table(
+        index=["dataset", "order"], columns="modality", values="utility_ce_mean"
+    ).reset_index()
+    modality_difference = modality_pivot.rename(
+        columns={"text": "text_utility_mean", "visual": "visual_utility_mean"}
+    )
+    modality_difference["absolute_difference"] = (
+        modality_difference["text_utility_mean"]
+        - modality_difference["visual_utility_mean"]
+    ).abs()
+    modality_order_summary = (
+        modality_difference.groupby("order", as_index=False)["absolute_difference"]
+        .agg(["mean", "median"])
+        .reset_index()
+        .rename(
+            columns={
+                "mean": "absolute_difference_mean",
+                "median": "absolute_difference_median",
+            }
+        )
+    )
+    modality_order_summary["dataset"] = "order_summary"
+    modality_order_summary["text_utility_mean"] = np.nan
+    modality_order_summary["visual_utility_mean"] = np.nan
+    modality_order_summary["absolute_difference"] = np.nan
+    modality_order_summary = modality_order_summary[
+        [
+            "dataset",
+            "order",
+            "text_utility_mean",
+            "visual_utility_mean",
+            "absolute_difference",
+            "absolute_difference_mean",
+            "absolute_difference_median",
+        ]
+    ]
+    modality_difference["absolute_difference_mean"] = np.nan
+    modality_difference["absolute_difference_median"] = np.nan
+    modality_difference = pd.concat(
+        [modality_difference, modality_order_summary], ignore_index=True
+    )
+
+    saturation = validation[
+        [
+            "dataset",
+            "modality",
+            "order",
+            "response_norm_mean",
+            "normalized_response_norm_mean",
+            "normalized_response_norm_median",
+            "utility_ce_mean",
+            "utility_ce_std",
+        ]
+    ].copy()
+    saturation["near_degenerate_threshold"] = 1.0e-3
+    saturation["near_degenerate"] = (
+        saturation["normalized_response_norm_median"] <= 1.0e-3
+    )
+
+    return {
+        "mean_dispersion": mean_dispersion,
+        "seed_stability": stability,
+        "seed_stability_summary": stability_summary,
+        "response_association": response_association,
+        "modality_difference": modality_difference,
+        "saturation": saturation,
+    }
+
+
 def _write_report(
     report_path: Path,
     summary: pd.DataFrame,
     sanity: pd.DataFrame,
     checks: pd.DataFrame,
+    diagnostics: dict[str, pd.DataFrame],
+    output_root: Path,
     epsilon: float,
     splits: tuple[str, ...],
 ) -> None:
@@ -458,6 +642,21 @@ def _write_report(
     max_errors = {
         col: float(checks[col].max()) for col in check_cols if col in checks
     }
+    mean_dispersion = diagnostics["mean_dispersion"]
+    stability_summary = diagnostics["seed_stability_summary"]
+    response_association = diagnostics["response_association"]
+    within_association = response_association[
+        response_association["association_type"] == "within_cell_node_level"
+    ]["spearman_response_norm_utility_ce"].dropna()
+    cross_association = response_association[
+        response_association["association_type"] == "across_30_aggregate_cells"
+    ]["spearman_response_norm_utility_ce"].iloc[0]
+    modality_difference = diagnostics["modality_difference"]
+    modality_order_summary = modality_difference[
+        modality_difference["dataset"] == "order_summary"
+    ]
+    saturation = diagnostics["saturation"]
+    saturated_cells = saturation[saturation["near_degenerate"]]
 
     lines = [
         "# CSSI P1 Structural Response Report",
@@ -535,14 +734,15 @@ def _write_report(
         "Each counterfactual removes one response from one modality, keeps the "
         "other modality unchanged, then reruns modality refinement, late fusion, "
         "and the original classifier. The reported quantity is frozen-forward "
-        "functional utility: `u_ce = loss_base - loss_counterfactual` and "
+        "functional utility: `u_ce = loss_counterfactual - loss_base` and "
         "`u_margin = margin_base - margin_counterfactual`; positive means helpful.",
         "",
         "## 6. Per-dataset / modality / order statistics",
         "",
-        "Detailed machine-readable values are in `outputs/cssi_p1/summary.csv`; "
-        "node-level validation exports are compressed under "
-        "`outputs/cssi_p1/node_level/`. The principal aggregate columns are "
+        "Detailed machine-readable values are in the selected output directory's "
+        "`summary.csv`; "
+        f"node-level exports are compressed under `{output_root}/node_level/`. "
+        "The principal aggregate columns are "
         "`utility_ce_mean`, `utility_ce_std`, `p_utility_ce_gt0`, "
         "`p_utility_ce_lt0`, `response_norm_mean`, and the Pearson/Spearman "
         "response-norm correlations.",
@@ -587,7 +787,74 @@ def _write_report(
         f"`{agreement.mean():.4f}` and median `{agreement.median():.4f}`. "
         "Disagreements are retained in the raw and summary outputs.",
         "",
-        "## 11. Findings for H1.1–H1.6",
+        "## 11. Mean versus dispersion",
+        "",
+        f"Across the 30 cells, the mean and median of `|mean(u)|/(std(u)+epsilon)` "
+        f"are `{mean_dispersion['mean_abs_over_std'].mean():.4f}` and "
+        f"`{mean_dispersion['mean_abs_over_std'].median():.4f}`. The full cell-level "
+        "values are in `mean_dispersion.csv`; this separates population-average "
+        "utility from node-level heterogeneity.",
+        "",
+        "## 12. Effect-size-aware seed stability",
+        "",
+        "| minimum |mu|/sigma | cells | same-sign cells | fraction |",
+        "|---:|---:|---:|---:|",
+    ]
+    for _, row in stability_summary.iterrows():
+        lines.append(
+            f"| {row['effect_threshold']:.2f} | {int(row['n_cells'])} | "
+            f"{int(row['n_same_sign'])} | {row['same_sign_fraction']:.3f} |"
+        )
+    lines += [
+        "",
+        "The denominator for each row is restricted to cells whose aggregate "
+        "effect magnitude meets that threshold; near-zero cells are not treated "
+        "as equally strong evidence.",
+        "",
+        "## 13. Response magnitude association and modality differences",
+        "",
+        f"Within-cell node-level Spearman correlations have mean "
+        f"`{within_association.mean():.4f}` and median `{within_association.median():.4f}`. "
+        f"Across the 30 aggregate cells, Spearman(mean response norm, "
+        f"|mean utility|) is `{cross_association:.4f}`. These answer different "
+        "questions: node-level prediction within a condition versus utility scale "
+        "differences across conditions.",
+        "",
+        "| order | modality mean absolute difference | modality median absolute difference |",
+        "|---:|---:|---:|",
+    ]
+    for _, row in modality_order_summary.sort_values("order").iterrows():
+        lines.append(
+            f"| {int(row['order'])} | {row['absolute_difference_mean']:.5g} | "
+            f"{row['absolute_difference_median']:.5g} |"
+        )
+    lines += [
+        "",
+        "Per-dataset/order modality differences are in `modality_difference.csv`.",
+        "",
+        "## 14. Propagation saturation",
+        "",
+        "A validation cell is flagged near-degenerate when its aggregate median "
+        "`||R_k||/(||S_{k-1}||+epsilon)` is at most `1e-3`. This is a descriptive "
+        "flag, not a utility sign threshold.",
+    ]
+    if saturated_cells.empty:
+        lines.append("No aggregate cell crossed the near-degenerate threshold.")
+    else:
+        lines.append(
+            "Flagged cells: "
+            + ", ".join(
+                f"{row['dataset']}/{row['modality']}/order{int(row['order'])}"
+                for _, row in saturated_cells.iterrows()
+            )
+            + "."
+        )
+    lines += [
+        "The full saturation table is `saturation.csv`; utility signs in flagged "
+        "cells should not be interpreted as strong evidence of useful response "
+        "heterogeneity.",
+        "",
+        "## 15. Findings for H1.1–H1.6",
         "",
         f"- **H1.1 Non-degeneracy:** {len(nondegenerate)}/{len(validation)} "
         "aggregate cells contain both positive and negative CE utility; this "
@@ -602,17 +869,19 @@ def _write_report(
         f"- **H1.4 Order conditionality:** the mean within-cell spread across "
         f"orders over {len(order_spread)} dataset × modality pairs is "
         f"`{order_spread.mean():.5g}`.",
-        f"- **H1.5 Magnitude insufficiency:** the response-norm/CE Spearman "
-        f"distribution has mean `{magnitude.mean():.4f}` and median "
-        f"`{magnitude.median():.4f}`; weak or heterogeneous values support "
-        "the claim that magnitude alone is insufficient, while strong values "
-        "would qualify it.",
+        f"- **H1.5 Magnitude insufficiency:** within-cell response-norm/CE "
+        f"Spearman has mean `{within_association.mean():.4f}` and median "
+        f"`{within_association.median():.4f}`, so magnitude is weak for node-level "
+        "utility ranking. Across aggregate cells, however, the correlation with "
+        f"`|mean utility|` is `{cross_association:.4f}`; response attenuation can "
+        "explain utility scale across orders while remaining insufficient to decide "
+        "node-level helpful versus harmful sign.",
         f"- **H1.6 Stability:** same-sign seed means occur in "
         f"{stable_sign_cells}/{total_seed_cells} complete cells. Cross-dataset "
         "repetition is therefore reported explicitly rather than declared from "
         "one pooled number.",
         "",
-        "## 12. Implementation caveats / limitations",
+        "## 16. Implementation caveats / limitations",
         "",
         "This is a frozen-forward functional leave-one-response-out intervention, "
         "not a strict causal effect. It uses validation nodes for the decision, "
@@ -620,11 +889,10 @@ def _write_report(
         "classifier and downstream modules fixed. The inherited inactive RCMI/MRC "
         "parameters remain in the checkpoint but are bypassed by `all_plain`.",
         "",
-        "## 13. Recommendation for P2",
+        "## 17. Recommendation for P2",
         "",
-        "A P2 cross-modal evidence probe is warranted only as a follow-up diagnostic "
-        "if the cell-level signs, modality/order contrasts, and seed stability in "
-        "`summary.csv` are substantively interpretable. This P1 implementation "
+        "The follow-up P2 cross-modal evidence probe is reported separately in "
+        "`docs/cssi_p2_crossmodal_evidence_report.md`; this P1 implementation "
         "does not implement or select a P2 mechanism.",
         "",
         "## Reproducibility",
@@ -649,6 +917,16 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--device", default="cuda:0")
     parser.add_argument("--epsilon", type=float, default=DEFAULT_EPSILON)
     parser.add_argument("--tolerance", type=float, default=DEFAULT_TOLERANCE)
+    parser.add_argument(
+        "--report-path",
+        type=Path,
+        default=Path("docs/cssi_p1_corrected_report.md"),
+    )
+    parser.add_argument(
+        "--reuse-node-exports",
+        action="store_true",
+        help="reuse already generated node-level exports and only rebuild summaries",
+    )
     return parser.parse_args()
 
 
@@ -661,43 +939,76 @@ def main() -> None:
         experiment_root = (project_root / experiment_root).resolve()
     if not output_root.is_absolute():
         output_root = (project_root / output_root).resolve()
+    report_path = args.report_path
+    if not report_path.is_absolute():
+        report_path = (project_root / report_path).resolve()
     device = torch.device(args.device)
     if device.type == "cuda" and not torch.cuda.is_available():
         raise RuntimeError("CUDA requested for response analysis but CUDA is unavailable")
 
     frames: list[pd.DataFrame] = []
     check_rows: list[dict[str, Any]] = []
-    for dataset in args.datasets:
-        for seed in args.seeds:
-            frame, check_row = _run_one(
-                project_root,
-                experiment_root,
-                output_root,
-                dataset,
-                seed,
-                device,
-                tuple(args.splits),
-                args.epsilon,
-                args.tolerance,
-            )
-            frames.append(frame)
-            check_rows.append(check_row)
-            print(f"analyzed {dataset} seed={seed} rows={len(frame)}", flush=True)
+    if args.reuse_node_exports:
+        for dataset in args.datasets:
+            for seed in args.seeds:
+                split_frames = []
+                for split in args.splits:
+                    node_path = output_root / "node_level" / dataset / f"seed_{seed}_{split}.csv.gz"
+                    if not node_path.is_file():
+                        raise FileNotFoundError(f"missing node export: {node_path}")
+                    split_frames.append(pd.read_csv(node_path))
+                frame = pd.concat(split_frames, ignore_index=True)
+                frames.append(frame)
+                print(f"reused {dataset} seed={seed} rows={len(frame)}", flush=True)
+        existing_checks = experiment_root / "equivalence_checks.csv"
+        if existing_checks.is_file():
+            check_rows = pd.read_csv(existing_checks).to_dict("records")
+        else:
+            raise FileNotFoundError(f"missing equivalence checks: {existing_checks}")
+    else:
+        for dataset in args.datasets:
+            for seed in args.seeds:
+                frame, check_row = _run_one(
+                    project_root,
+                    experiment_root,
+                    output_root,
+                    dataset,
+                    seed,
+                    device,
+                    tuple(args.splits),
+                    args.epsilon,
+                    args.tolerance,
+                )
+                frames.append(frame)
+                check_rows.append(check_row)
+                print(f"analyzed {dataset} seed={seed} rows={len(frame)}", flush=True)
 
     all_nodes = pd.concat(frames, ignore_index=True)
     summary_rows: list[dict[str, Any]] = []
+    seed_groups = {
+        key: group
+        for key, group in all_nodes.groupby(
+            ["dataset", "seed", "split", "modality", "order"],
+            observed=True,
+            sort=False,
+        )
+    }
+    cell_groups = {
+        key: group
+        for key, group in all_nodes.groupby(
+            ["dataset", "split", "modality", "order"],
+            observed=True,
+            sort=False,
+        )
+    }
     for dataset in args.datasets:
         for seed in args.seeds:
             for split in args.splits:
                 for modality in MODALITIES:
                     for order in ORDERS:
                         for degree_group in ("all", "low", "medium", "high"):
-                            frame = all_nodes[
-                                (all_nodes["dataset"] == dataset)
-                                & (all_nodes["seed"] == seed)
-                                & (all_nodes["split"] == split)
-                                & (all_nodes["modality"] == modality)
-                                & (all_nodes["order"] == order)
+                            frame = seed_groups[
+                                (dataset, seed, split, modality, order)
                             ].copy()
                             if degree_group == "all":
                                 frame["degree_group"] = "all"
@@ -721,11 +1032,8 @@ def main() -> None:
             for modality in MODALITIES:
                 for order in ORDERS:
                     for degree_group in ("all", "low", "medium", "high"):
-                        frame = all_nodes[
-                            (all_nodes["dataset"] == dataset)
-                            & (all_nodes["split"] == split)
-                            & (all_nodes["modality"] == modality)
-                            & (all_nodes["order"] == order)
+                        frame = cell_groups[
+                            (dataset, split, modality, order)
                         ].copy()
                         if degree_group == "all":
                             frame["degree_group"] = "all"
@@ -747,20 +1055,25 @@ def main() -> None:
     summary = pd.DataFrame(summary_rows)
     output_root.mkdir(parents=True, exist_ok=True)
     summary.to_csv(output_root / "summary.csv", index=False)
+    diagnostics = _p1_diagnostics(all_nodes, summary, args.epsilon)
+    for name, frame in diagnostics.items():
+        frame.to_csv(output_root / f"{name}.csv", index=False)
     checks = pd.DataFrame(check_rows)
     checks.to_csv(output_root / "equivalence_checks.csv", index=False)
     sanity = _load_backbone_sanity(experiment_root)
     sanity.to_csv(output_root / "backbone_sanity.csv", index=False)
     _write_report(
-        project_root / "docs" / "cssi_p1_structural_response_report.md",
+        report_path,
         summary,
         sanity,
         checks,
+        diagnostics,
+        output_root,
         args.epsilon,
         tuple(args.splits),
     )
     print(f"wrote {output_root / 'summary.csv'}", flush=True)
-    print(f"wrote {project_root / 'docs' / 'cssi_p1_structural_response_report.md'}", flush=True)
+    print(f"wrote {report_path}", flush=True)
 
 
 if __name__ == "__main__":

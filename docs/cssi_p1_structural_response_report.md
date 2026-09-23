@@ -1,5 +1,10 @@
 # CSSI P1 Structural Response Report
 
+> **Superseded:** this historical report used the incorrect CE utility sign
+> `loss_base - loss_remove`. The corrected offline analysis is in
+> [`cssi_p1_corrected_report.md`](cssi_p1_corrected_report.md), generated from
+> the same frozen checkpoints without retraining.
+
 ## 1. Code / protocol audit
 
 This report uses the canonical `all_plain` backbone and the frozen NC protocol `unified_full_graph_nc_v1`. Only validation nodes are used for architecture and hypothesis decisions; test evaluation is disabled in the P1 launcher.

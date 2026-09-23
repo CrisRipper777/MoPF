@@ -1,0 +1,33 @@
+{
+  "datasets": [
+    "Movies",
+    "Toys",
+    "Grocery",
+    "ele-fashion",
+    "Reddit-S"
+  ],
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "expected_runs": 15,
+  "loaded_runs": 15,
+  "finite_runs": 15,
+  "errors": [],
+  "device": "cuda:0",
+  "test_metrics_read": false,
+  "training_invoked": false,
+  "ablation_invoked": false,
+  "lp_invoked": false,
+  "output_files": [
+    "p15_relation_attribution.csv",
+    "p15_semantic_reference_attribution.csv",
+    "p15_filter_attribution.csv",
+    "p15_context_change.csv",
+    "p15_attention_matrices.json",
+    "p15_consistency.csv",
+    "p15_summary.json",
+    "p15_report.md"
+  ]
+}

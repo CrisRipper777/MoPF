@@ -1,0 +1,45 @@
+name: mgsc_prior_init_control
+version: mgsc_prior_init_control
+
+hidden_dim: 256
+dropout: 0.2
+norm: layernorm
+
+max_order: 3
+num_layers: ${model.max_order}
+diffusion_add_self_loops: true
+
+edge_metric: learned_diag_cos
+metric_init_seed: 20260910
+edge_weight_min: 0.1
+edge_weight_temperature: 0.35
+eps: 1.0e-8
+
+filter_rank: 4
+multihop_state: anchored
+multihop_response: cumulative
+multihop_anchor_alpha: 0.1
+
+global_prior_restart: 0.15
+global_prior_order: 2
+
+hop_interaction_layers: 1
+hop_interaction_heads: 1
+hop_interaction_dropout: 0.0
+hop_interaction_order_embedding: true
+hop_interaction_gate_init: 0.10
+
+relation_descriptor_eps: 1.0e-6
+relation_bias_init: 0.10
+relation_init_seed: 20260921
+relation_init_std: 0.02
+
+fusion: concat_residual_mlp
+
+adaptive_context_gate: true
+context_gate_order_dim: 16
+context_gate_hidden_dim: 64
+direct_interacted_integration: true
+use_legacy_relation_order_bias: true
+prior_init_mode: legacy_anchored
+

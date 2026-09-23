@@ -85,6 +85,45 @@ ABLATION_SPECS: dict[str, AblationSpec] = {
         relation_calibration=True,
         composition_mode="uniform",
     ),
+    # MGSC-MAG functional ablations.  Their computation is implemented by
+    # src.models.mgsc_mag_ablation; these entries keep the shared manifest
+    # resolver aware of the paper-facing names without changing task logic.
+    "uniform_relations": AblationSpec(
+        "uniform_relations",
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        relation_calibration=False,
+        edge_weight_override="raw_uniform",
+    ),
+    "global_context_gate": AblationSpec(
+        "global_context_gate", True, True, True, True, True, True
+    ),
+    "terminal_state_only": AblationSpec(
+        "terminal_state_only", True, True, True, True, True, True
+    ),
+    "uniform_integration": AblationSpec(
+        "uniform_integration",
+        True,
+        True,
+        True,
+        True,
+        True,
+        True,
+        composition_mode="uniform",
+    ),
+    "no_cross_order_interaction": AblationSpec(
+        "no_cross_order_interaction", True, True, True, True, True, True
+    ),
+    "attribute_only": AblationSpec(
+        "attribute_only", True, True, True, True, True, True
+    ),
+    "fixed_gate_09": AblationSpec(
+        "fixed_gate_09", True, True, True, True, True, True
+    ),
 }
 
 MAIN_ABLATIONS = (
@@ -150,8 +189,17 @@ def effective_composition_mode(model_cfg: Any, spec: AblationSpec) -> str:
 def effective_multihop_modes(model_cfg: Any, spec: AblationSpec) -> tuple[str, str]:
     """Resolve the frozen state/response factors with A2 changing state only."""
     legacy = model_cfg.get("multihop_mode", None)
-    state_mode = model_cfg.get("multihop_state_mode", None)
-    response_mode = model_cfg.get("multihop_response_mode", None)
+    # Current MAG configs use ``multihop_state``/``multihop_response``;
+    # historical F2 configs used the *_mode names.  Prefer the current names
+    # while retaining the old compatibility path for manifest generation.
+    state_mode = model_cfg.get(
+        "multihop_state",
+        model_cfg.get("multihop_state_mode", None),
+    )
+    response_mode = model_cfg.get(
+        "multihop_response",
+        model_cfg.get("multihop_response_mode", None),
+    )
     if legacy is not None:
         legacy_key = str(legacy).strip().lower()
         legacy_mapping = {

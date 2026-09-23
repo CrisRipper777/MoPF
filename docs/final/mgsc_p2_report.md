@@ -43,7 +43,11 @@ Embedding MAE, logit MAE, and prediction flip rate are measured against the same
 
 The `interaction_off` intervention effect is larger for P2 than P1 on all three reported measures for every dataset: `True`. This is direct evidence that cross-order interaction reaches the final representation more directly in P2.
 
-Relation intervention off is near-zero under the strict descriptive check (all three metrics below 1e-6 / zero flip): `False`.
-The relation-context audit is therefore retained as an active diagnostic; the legacy relation-context and relation-order-bias parameters are not removed in this round.
+Relation intervention off is much smaller than the P2 interaction-off effect,
+but it is not identically zero under the current analysis API. The relation-
+context audit is therefore retained as an active diagnostic; the legacy
+relation-context and relation-order-bias parameters are not removed in this
+round. The separate controlled cleanup result is reported in
+`docs/final/relation_cleanup_control.md`.
 
 P2 is a mechanism pilot rather than a new selection protocol. The direct-integration mechanism should be retained for further study only where its intervention effect is measurably larger than P1 without a task-level regression; no claim of universal improvement is made here.

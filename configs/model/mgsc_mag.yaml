@@ -43,3 +43,6 @@ context_gate_hidden_dim: 64
 
 # P2 is deliberately off during P1.
 direct_interacted_integration: false
+
+# Controlled cleanup audit switch; keep legacy relation-order bias on by default.
+use_legacy_relation_order_bias: true

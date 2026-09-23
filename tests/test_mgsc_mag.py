@@ -7,7 +7,7 @@ from src.models.cosi_mag_final import CoSIMAGFinal
 from src.models.mgsc_mag import MGSCMAG
 
 
-def _cfg(*, adaptive: bool, direct: bool = False):
+def _cfg(*, adaptive: bool, direct: bool = False, legacy: bool = True):
     return OmegaConf.create(
         {
             "model": {
@@ -42,6 +42,7 @@ def _cfg(*, adaptive: bool, direct: bool = False):
                 "context_gate_order_dim": 4,
                 "context_gate_hidden_dim": 10,
                 "direct_interacted_integration": direct,
+                "use_legacy_relation_order_bias": legacy,
             }
         }
     )
@@ -126,3 +127,36 @@ def test_direct_interacted_integration_is_finite():
     assert torch.isfinite(analysis["z"]).all()
     assert torch.isfinite(analysis["z_text"]).all()
     assert torch.isfinite(analysis["z_visual"]).all()
+
+
+def test_gate_audit_interventions_preserve_marginal_or_constant_structure():
+    torch.manual_seed(19)
+    model = MGSCMAG(_cfg(adaptive=True, direct=True), DATA_INFO)
+    x, edge_index = _graph()
+    normal = model.analysis_intervention(x, edge_index, gate_intervention="normal")
+    globalized = model.analysis_intervention(x, edge_index, gate_intervention="globalized")
+    shuffled = model.analysis_intervention(
+        x, edge_index, gate_intervention="shuffled", gate_permutation_seed=77
+    )
+    fixed = model.analysis_intervention(x, edge_index, gate_intervention="fixed_0.9")
+    for analysis in (normal, globalized, shuffled, fixed):
+        assert torch.isfinite(analysis["z"]).all()
+    for modality in ("text", "visual"):
+        normal_bank = torch.stack(normal[f"context_gate_{modality}"], dim=1)
+        global_bank = torch.stack(globalized[f"context_gate_{modality}"], dim=1)
+        shuffled_bank = torch.stack(shuffled[f"context_gate_{modality}"], dim=1)
+        fixed_bank = torch.stack(fixed[f"context_gate_{modality}"], dim=1)
+        assert torch.allclose(global_bank.std(dim=0), torch.zeros(3), atol=1e-7)
+        assert torch.allclose(
+            torch.sort(normal_bank, dim=0).values,
+            torch.sort(shuffled_bank, dim=0).values,
+            atol=1e-7,
+        )
+        assert torch.allclose(fixed_bank, torch.full_like(fixed_bank, 0.9))
+
+
+def test_legacy_relation_order_bias_cleanup_switch_is_finite():
+    model = MGSCMAG(_cfg(adaptive=True, direct=True, legacy=False), DATA_INFO)
+    x, edge_index = _graph()
+    output = model.analysis_intervention(x, edge_index)
+    assert torch.isfinite(output["z"]).all()

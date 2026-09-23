@@ -46,11 +46,15 @@ fusion, classifier, and MRC protocols fixed.
 - **P2 — Direct interacted-state integration:** test only if P1 passes.
 - **Frozen:** the current strongest reference remains frozen throughout.
 
-Current stage status: **P2 pilot complete; frozen reference remains the reference model**.
+Current stage status: **M1 complete; P1 and P2 formally qualified on five NC
+datasets; frozen reference remains the reference model**.
 
-Decision record: M1 Gate A **PASS**; P1 **PASS** on the five-NC pilot; P2
-completed descriptively on the same five NC datasets. Sports-LP was excluded
-from this round by scope decision.
+Decision record: M1 Gate A **PASS**; P1 **PASS** on the five-NC formal matrix;
+P2 is retained as a viable candidate based on the five-NC formal matrix and
+inference interventions, without claiming universal improvement. Sports-LP was
+excluded from this round by scope decision. The controlled P2-clean relation
+bias diagnostic is viable by accuracy but is not the default because Grocery
+Macro-F1 drops.
 
 ## Integrity constraints
 

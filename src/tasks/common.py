@@ -48,6 +48,9 @@ AUX_INFO_KEYS = (
     "max_response_correction_ratio",
     "mean_response_correction_cosine",
     "mean_gradient_norm",
+    "controller_gradient_norm",
+    "basis_gradient_norm",
+    "lambda_gradient_norm",
 )
 
 

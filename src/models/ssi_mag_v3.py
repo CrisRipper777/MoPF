@@ -221,12 +221,14 @@ class SSIMAGV3(nn.Module):
         )
         self.semantic_bias_text = nn.Parameter(torch.zeros(self.max_order))
         self.semantic_bias_visual = nn.Parameter(torch.zeros(self.max_order))
-        self.semantic_rho_p_text = nn.Parameter(torch.zeros(self.max_order))
-        self.semantic_rho_p_visual = nn.Parameter(torch.zeros(self.max_order))
-        self.semantic_rho_d_text = nn.Parameter(torch.zeros(self.max_order))
-        self.semantic_rho_d_visual = nn.Parameter(torch.zeros(self.max_order))
-        self.semantic_rho_c_text = nn.Parameter(torch.zeros(self.max_order))
-        self.semantic_rho_c_visual = nn.Parameter(torch.zeros(self.max_order))
+        # Factorized semantic-reference correction: one hop prior vector and
+        # three modality-specific scalar corrections.
+        self.semantic_rho_p_text = nn.Parameter(torch.zeros(()))
+        self.semantic_rho_p_visual = nn.Parameter(torch.zeros(()))
+        self.semantic_rho_d_text = nn.Parameter(torch.zeros(()))
+        self.semantic_rho_d_visual = nn.Parameter(torch.zeros(()))
+        self.semantic_rho_c_text = nn.Parameter(torch.zeros(()))
+        self.semantic_rho_c_visual = nn.Parameter(torch.zeros(()))
 
         self.context_delta_norm_text = nn.LayerNorm(self.hidden_dim)
         self.context_delta_norm_visual = nn.LayerNorm(self.hidden_dim)
@@ -499,12 +501,12 @@ class SSIMAGV3(nn.Module):
             else:
                 alpha = torch.sigmoid(
                     torch.as_tensor(logit_alpha0, dtype=h0.dtype, device=h0.device)
-                    - biases[order - 1]
-                    - rho_p[order - 1] * p
-                    - rho_d[order - 1] * d
-                    - rho_c[order - 1] * local_adaptation
+                    + biases[order - 1]
+                    + rho_p * p
+                    + rho_d * d
+                    + rho_c * local_adaptation
                 )
-            s = (1.0 - alpha).unsqueeze(-1) * q - alpha.unsqueeze(-1) * h0
+            s = (1.0 - alpha).unsqueeze(-1) * q + alpha.unsqueeze(-1) * h0
             propagated.append(q)
             changes.append(d)
             alphas.append(alpha)
@@ -534,9 +536,8 @@ class SSIMAGV3(nn.Module):
             delta_gate = torch.zeros_like(delta_gate)
         deltas = [torch.zeros_like(states[0])]
         tokens = [
-            F.layer_norm(
-                states[0], (self.hidden_dim,)
-            ) - order_embedding[0].unsqueeze(0)
+            F.layer_norm(states[0], (self.hidden_dim,))
+            + order_embedding[0].unsqueeze(0)
         ]
         for order in range(1, len(states)):
             delta = delta_norm(states[order] - states[order - 1])
@@ -544,8 +545,8 @@ class SSIMAGV3(nn.Module):
                 delta = torch.zeros_like(delta)
             token = (
                 F.layer_norm(states[order], (self.hidden_dim,))
-                - delta_gate * delta_proj(delta)
-                - order_embedding[order].unsqueeze(0)
+                + delta_gate * delta_proj(delta)
+                + order_embedding[order].unsqueeze(0)
             )
             deltas.append(delta)
             tokens.append(token)
@@ -559,7 +560,7 @@ class SSIMAGV3(nn.Module):
         *,
         interaction_off: bool,
         capture_attention: bool,
-    ) -> tuple[list[torch.Tensor], torch.Tensor, torch.Tensor]:
+    ) -> tuple[list[torch.Tensor], torch.Tensor, torch.Tensor, torch.Tensor]:
         state_bank = torch.stack(states, dim=1)
         token_bank = torch.stack(tokens, dim=1)
         layer = self.hop_layers_text[0] if modality == "text" else self.hop_layers_visual[0]
@@ -578,11 +579,12 @@ class SSIMAGV3(nn.Module):
         if interaction_off:
             s_tilde_bank = state_bank
         else:
-            s_tilde_bank = state_bank - gate * output_bank
+            s_tilde_bank = state_bank + gate * output_bank
         return (
             [s_tilde_bank[:, order, :] for order in range(s_tilde_bank.size(1))],
             attention,
             gate,
+            output_bank,
         )
 
     def _relation_profile(self, modality: str) -> torch.Tensor:
@@ -645,10 +647,19 @@ class SSIMAGV3(nn.Module):
             * relation_profile.unsqueeze(0)
         )
         delta_content = self._node_content_score(states, modality)
-        delta = delta_content - reference_residual - relation_residual
+        delta = delta_content + reference_residual + relation_residual
         gamma = self.gamma_global.to(dtype=states[0].dtype).unsqueeze(0)
         delta_gamma = getattr(self, f"delta_gamma_{modality}").unsqueeze(0)
-        eta_adaptive = gamma - delta_gamma - delta
+        # Keep the expanded signed formula explicit for analysis and exact
+        # formula-level reconstruction: eta = gamma + DeltaGamma + delta_content
+        # + reference_residual + relation_residual.
+        eta_adaptive = (
+            gamma
+            + delta_gamma
+            + delta_content
+            + reference_residual
+            + relation_residual
+        )
         if uniform_context:
             eta = torch.full_like(eta_adaptive, 1.0 / float(len(states)))
         elif terminal_context:
@@ -702,10 +713,10 @@ class SSIMAGV3(nn.Module):
             semantic["states"], modality, disable_change=disable_change
         )
         interaction_off = (
-            self.ablation == "no_cross_hop_interaction"
+            self.ablation in {"no_cross_hop_interaction", "terminal_context"}
             or interaction_intervention == "off"
         )
-        s_tilde, attention, interaction_gate = self._cross_hop_interaction(
+        s_tilde, attention, interaction_gate, interaction_output = self._cross_hop_interaction(
             semantic["states"],
             tokens,
             modality,
@@ -732,6 +743,7 @@ class SSIMAGV3(nn.Module):
             "delta_gate": delta_gate,
             "attention": attention if capture_attention else None,
             "interaction_gate": interaction_gate,
+            "interaction_output": interaction_output,
             "s_tilde": s_tilde,
             "filtering": filtering,
             "z": z,
@@ -887,6 +899,8 @@ class SSIMAGV3(nn.Module):
         result: dict[str, Any] = {
             "physical_edge_index": components["physical_edge_index"],
             "ablation": self.ablation,
+            "h0_text": components["h0_text"],
+            "h0_visual": components["h0_visual"],
             "z_text": components["z_text"],
             "z_visual": components["z_visual"],
             "z_text_refined": components["z_text_refined"],
@@ -927,6 +941,7 @@ class SSIMAGV3(nn.Module):
                     )["max"],
                     f"local_adaptation_{modality}": branch["local_adaptation"],
                     f"p_{modality}": semantic["p"],
+                    f"d_{modality}": semantic["changes"],
                     f"gamma_{modality}": self.gamma_global,
                     f"delta_gamma_{modality}": getattr(self, f"delta_gamma_{modality}"),
                     f"delta_content_{modality}": filtering["delta_content"],
@@ -938,6 +953,8 @@ class SSIMAGV3(nn.Module):
                     f"effective_order_{modality}": self._effective_order(filtering["eta"]),
                     f"effective_radius_{modality}": self._effective_order(filtering["eta"]),
                     f"attention_{modality}": branch["attention"],
+                    f"tokens_{modality}": branch["tokens"],
+                    f"interaction_output_{modality}": branch["interaction_output"],
                     f"delta_gate_{modality}": branch["delta_gate"],
                     f"interaction_gate_{modality}": branch["interaction_gate"],
                     f"relation_profile_{modality}": filtering["relation_profile"],

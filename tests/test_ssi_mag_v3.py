@@ -97,6 +97,53 @@ def test_zero_initialized_semantic_reference_parameters_give_alpha_point_one() -
             torch.testing.assert_close(alpha, torch.full_like(alpha, 0.1), atol=1e-7, rtol=0.0)
 
 
+def test_nonzero_semantic_reference_parameters_follow_plus_logit_formula() -> None:
+    x, edge_index = _inputs()
+    model = _model()
+    with torch.no_grad():
+        model.semantic_bias_text.copy_(torch.tensor([0.2, -0.1, 0.05]))
+        model.semantic_rho_p_text.fill_(0.3)
+        model.semantic_rho_d_text.fill_(-0.2)
+        model.semantic_rho_c_text.fill_(0.4)
+    analysis = model.analysis(x, edge_index)
+    logit_alpha0 = torch.logit(torch.tensor(0.1))
+    for order, (alpha, d) in enumerate(
+        zip(analysis["alpha_text"], analysis["d_text"], strict=True)
+    ):
+        expected = torch.sigmoid(
+            logit_alpha0
+            + model.semantic_bias_text[order]
+            + model.semantic_rho_p_text * analysis["p_text"]
+            + model.semantic_rho_d_text * d
+            + model.semantic_rho_c_text * analysis["local_adaptation_text"]
+        )
+        torch.testing.assert_close(alpha, expected, rtol=0.0, atol=0.0)
+
+
+def test_initial_semantic_states_use_plus_reference_formula() -> None:
+    x, edge_index = _inputs()
+    model = _model()
+    analysis = model.analysis(x, edge_index)
+    for modality in ("text", "visual"):
+        h0 = analysis[f"h0_{modality}"]
+        for q, s, alpha in zip(
+            analysis[f"Q_{modality}"],
+            analysis[f"S_{modality}"][1:],
+            analysis[f"alpha_{modality}"],
+            strict=True,
+        ):
+            expected = (1.0 - alpha).unsqueeze(-1) * q + alpha.unsqueeze(-1) * h0
+            torch.testing.assert_close(s, expected, rtol=0.0, atol=0.0)
+
+
+def test_semantic_reference_has_hop_bias_vector_and_scalar_modality_rhos() -> None:
+    model = _model()
+    for modality in ("text", "visual"):
+        assert getattr(model, f"semantic_bias_{modality}").shape == (3,)
+        for correction in ("p", "d", "c"):
+            assert getattr(model, f"semantic_rho_{correction}_{modality}").shape == torch.Size([])
+
+
 def test_isolated_nodes_have_zero_finite_local_adaptation() -> None:
     x, edge_index = _inputs()
     model = _model()
@@ -136,6 +183,86 @@ def test_interaction_off_is_exactly_identity_for_context_content() -> None:
             analysis[f"S_tilde_{modality}"], analysis[f"S_{modality}"], strict=True
         ):
             assert torch.equal(s_tilde, state)
+
+
+def test_context_tokens_use_plus_delta_and_order_embedding_formula() -> None:
+    x, edge_index = _inputs()
+    model = _model()
+    analysis = model.analysis(x, edge_index)
+    for modality in ("text", "visual"):
+        delta_proj = getattr(model, f"context_delta_proj_{modality}")
+        order_embedding = getattr(model, f"hop_order_embedding_{modality}")
+        gate = analysis[f"delta_gate_{modality}"]
+        for order, (state, delta, token) in enumerate(
+            zip(
+                analysis[f"S_{modality}"],
+                analysis[f"D_{modality}"],
+                analysis[f"tokens_{modality}"],
+                strict=True,
+            )
+        ):
+            expected = (
+                torch.nn.functional.layer_norm(state, (model.hidden_dim,))
+                + gate * delta_proj(delta)
+                + order_embedding[order]
+            )
+            torch.testing.assert_close(token, expected, rtol=0.0, atol=0.0)
+
+
+def test_no_context_change_keeps_s_branch_and_order_embedding_only() -> None:
+    x, edge_index = _inputs()
+    model = _model("no_context_change")
+    analysis = model.analysis(x, edge_index)
+    for modality in ("text", "visual"):
+        order_embedding = getattr(model, f"hop_order_embedding_{modality}")
+        for order, (state, delta, token) in enumerate(
+            zip(
+                analysis[f"S_{modality}"],
+                analysis[f"D_{modality}"],
+                analysis[f"tokens_{modality}"],
+                strict=True,
+            )
+        ):
+            assert torch.equal(delta, torch.zeros_like(delta))
+            expected = torch.nn.functional.layer_norm(state, (model.hidden_dim,)) + order_embedding[order]
+            torch.testing.assert_close(token, expected, rtol=0.0, atol=0.0)
+
+
+def test_cross_hop_residual_reconstructs_s_plus_gate_times_output() -> None:
+    x, edge_index = _inputs()
+    model = _model()
+    analysis = model.analysis(x, edge_index)
+    for modality in ("text", "visual"):
+        states = torch.stack(analysis[f"S_{modality}"], dim=1)
+        expected = states + analysis[f"interaction_gate_{modality}"] * analysis[f"interaction_output_{modality}"]
+        actual = torch.stack(analysis[f"S_tilde_{modality}"], dim=1)
+        torch.testing.assert_close(actual, expected, rtol=0.0, atol=0.0)
+
+
+def test_signed_filtering_eta_reconstructs_with_plus_residuals() -> None:
+    x, edge_index = _inputs()
+    model = _model()
+    analysis = model.analysis(x, edge_index)
+    for modality in ("text", "visual"):
+        expected = (
+            analysis[f"gamma_{modality}"].unsqueeze(0)
+            + analysis[f"delta_gamma_{modality}"].unsqueeze(0)
+            + analysis[f"delta_content_{modality}"]
+            + analysis[f"reference_residual_{modality}"]
+            + analysis[f"relation_filter_residual_{modality}"]
+        )
+        torch.testing.assert_close(analysis[f"eta_adaptive_{modality}"], expected, rtol=0.0, atol=0.0)
+        torch.testing.assert_close(analysis[f"eta_{modality}"], expected, rtol=0.0, atol=0.0)
+
+
+def test_terminal_context_is_exactly_the_stage_one_terminal_state() -> None:
+    x, edge_index = _inputs()
+    model = _model("terminal_context")
+    analysis = model.analysis(x, edge_index)
+    for modality in ("text", "visual"):
+        assert torch.equal(analysis[f"z_{modality}"], analysis[f"S_{modality}"][-1])
+        assert torch.equal(analysis[f"S_tilde_{modality}"][-1], analysis[f"S_{modality}"][-1])
+        assert analysis[f"interaction_gate_{modality}"].item() == 0.0
 
 
 def test_final_composition_uses_interacted_context_not_original_context() -> None:

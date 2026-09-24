@@ -51,17 +51,17 @@ Interpretation boundary: these are descriptive development-control comparisons, 
 
 ## 4. R2 mechanism evidence: B versus V3
 
-The analyzer reports alpha mean/std, corrected range ratio `(q90-q10)/(q75-q25+eps)`, raw `p`, normalized `term_p`, and `d` per modality/hop. Raw p scale is descriptive only.
+The analyzer reports alpha mean/std, corrected range ratio `(q90-q10)/(abs(mean(alpha))+eps)`, raw `p`, normalized `term_p`, and `d` per modality/hop. Raw p scale is descriptive only.
 
 | Variant | Modality | alpha mean h1/h2/h3 | alpha std h1/h2/h3 | corrected range ratio h1/h2/h3 | term_p node std h1/h2/h3 |
 |---|---|---|---|---|---|
-| V3 | text | 0.104445/0.104963/0.097461 | 0.001771/0.001773/0.001657 | 1.846128/1.844157/1.848681 | 0.018074/0.018074/0.018074 |
-| V3 | visual | 0.101088/0.100804/0.097104 | 0.002818/0.002822/0.002684 | 1.508504/1.509120/1.510547 | 0.030846/0.030846/0.030846 |
-| B | text | 0.113808/0.114443/0.106336 | 0.008075/0.008124/0.007530 | 1.851800/1.848940/1.847931 | 0.079946/0.079946/0.079946 |
-| B | visual | 0.103818/0.103395/0.099784 | 0.012470/0.012473/0.011870 | 1.869683/1.868851/1.869621 | 0.128653/0.128653/0.128653 |
+| V3 | text | 0.104445/0.104963/0.097461 | 0.001771/0.001773/0.001657 | 0.044027/0.043924/0.044547 | 0.018074/0.018074/0.018074 |
+| V3 | visual | 0.101088/0.100804/0.097104 | 0.002818/0.002822/0.002684 | 0.071634/0.071874/0.072327 | 0.030846/0.030846/0.030846 |
+| B | text | 0.113808/0.114443/0.106336 | 0.008075/0.008124/0.007530 | 0.187872/0.187686/0.189714 | 0.079946/0.079946/0.079946 |
+| B | visual | 0.103818/0.103395/0.099784 | 0.012470/0.012473/0.011870 | 0.310374/0.310486/0.312733 | 0.128653/0.128653/0.128653 |
 
 - Alpha saturation: for both V3 and B, every run/hop/modality has fraction `<0.05 = 0` and fraction `>0.95 = 0`; no 0/1 saturation was observed.
-- B has visibly larger alpha node dispersion than V3 (mean alpha std across run rows: `0.010090` versus `0.002254`) and larger term_p node std (`0.104299` versus `0.024460`).
+- B has visibly larger alpha node dispersion than V3 (mean alpha std across run rows: `0.010090` versus `0.002254`) and larger term_p node std (`0.104299` versus `0.024460`). The corrected range ratio is now `(q90-q10)/(abs(mean(alpha))+eps)`; its run-row mean is `0.249811` for B versus `0.058055` for V3.
 - Cross-seed mean Pearson/Spearman for alpha: V3 text `0.563/0.584`, visual `0.603/0.620`; B text `0.411/0.413`, visual `0.726/0.706`. For term_p: V3 text `0.419/0.459`, visual `0.599/0.618`; B text `0.406/0.407`, visual `0.725/0.704`. These are stability descriptors, not performance criteria.
 - Fact-level answer for R2: B-V3 is accompanied by stronger learned node-level alpha/term_p dispersion without saturation. The performance delta is reported separately above.
 
@@ -87,7 +87,7 @@ Raw old/new scorer values are not ranked directly because the mechanisms have di
 
 ## 6. Reference-residual evidence: AB versus V3.1
 
-For AB, `reference_residual = s_ref * centered([1, alpha_1, alpha_2, alpha_3])`. The CSV reports per-hop node statistics and `Cov(term, eta)/Var(eta)` for content/reference/relation; the three-term sum is approximately 1 for nonzero eta variance.
+For AB, `reference_residual = s_ref * centered([1, alpha_1, alpha_2, alpha_3])`. For fixed modality/hop, gamma + DeltaGamma is node-constant. The CSV reports per-hop node statistics and `Cov(term, eta)/Var(eta)` for content/reference/relation; a numeric assertion checks that the three-term sum is 1 within `1e-4` whenever Var(eta)>eps.
 
 | Modality | Hop | reference std | reference abs mean | reference covariance contribution | content contribution | relation contribution | 3-term sum |
 |---|---:|---:|---:|---:|---:|---:|---:|

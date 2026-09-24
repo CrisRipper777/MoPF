@@ -40,5 +40,7 @@
     "Delta_R2": "B - V3",
     "Delta_R1": "AB - B",
     "Delta_remove_ref": "V3.1 - AB"
-  }
+  },
+  "covariance_assertion_tolerance": 0.0001,
+  "covariance_assertion_failures": 0
 }

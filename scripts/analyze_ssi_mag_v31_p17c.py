@@ -252,8 +252,7 @@ def _r2_rows(normal: dict[str, Any], model, variant: str, dataset: str, seed: in
         term_p = rho_p * p
         for hop, (change, alpha) in enumerate(zip(normal[f"d_{modality}"], normal[f"alpha_{modality}"], strict=True), start=1):
             st = p17b._stats(alpha)
-            iqr = st["q75"] - st["q25"]
-            row = {"row_type": "run", "variant": variant, "dataset": dataset, "seed": seed, "modality": modality, "hop": hop, "semantic_bias": float(getattr(model, f"semantic_bias_{modality}")[hop - 1].detach().cpu()), "rho_p": rho_p, "rho_d": float(getattr(model, f"semantic_rho_d_{modality}").detach().cpu()), "alpha_corrected_range_ratio": float((st["q90"] - st["q10"]) / (abs(iqr) + EPS)), "alpha_fraction_lt_0.05": float((alpha < 0.05).float().mean().item()), "alpha_fraction_gt_0.95": float((alpha > 0.95).float().mean().item())}
+            row = {"row_type": "run", "variant": variant, "dataset": dataset, "seed": seed, "modality": modality, "hop": hop, "semantic_bias": float(getattr(model, f"semantic_bias_{modality}")[hop - 1].detach().cpu()), "rho_p": rho_p, "rho_d": float(getattr(model, f"semantic_rho_d_{modality}").detach().cpu()), "alpha_corrected_range_ratio": float((st["q90"] - st["q10"]) / (abs(st["mean"]) + EPS)), "alpha_fraction_lt_0.05": float((alpha < 0.05).float().mean().item()), "alpha_fraction_gt_0.95": float((alpha > 0.95).float().mean().item())}
             row.update({f"alpha_{key}": value for key, value in st.items()})
             row.update({f"p_{key}": value for key, value in p17b._stats(p).items()})
             row.update({f"term_p_{key}": value for key, value in p17b._stats(term_p).items()})
@@ -296,6 +295,12 @@ def _reference_rows(normal: dict[str, Any], model, variant: str, dataset: str, s
                 row.update({f"{name}_{key}": val for key, val in p17b._stats(value).items()})
                 row[f"{name}_covariance_contribution"] = _covariance(value, eta)
             row["three_term_covariance_sum"] = sum(row[f"{name}_covariance_contribution"] for name in ("content", "reference", "relation") if math.isfinite(row[f"{name}_covariance_contribution"]))
+            eta_variance = float(torch.var(eta, unbiased=False).item()) if eta.numel() else 0.0
+            row["eta_variance"] = eta_variance
+            row["covariance_assertion_applicable"] = int(eta_variance > EPS)
+            row["three_term_covariance_error"] = abs(row["three_term_covariance_sum"] - 1.0) if eta_variance > EPS else math.nan
+            if eta_variance > EPS and (not math.isfinite(row["three_term_covariance_error"]) or row["three_term_covariance_error"] > 1.0e-4):
+                raise ValueError(f"covariance contribution assertion failed for {variant}/{dataset}/seed{seed}/{modality}/hop{hop}: error={row['three_term_covariance_error']}")
             rows.append(row)
     return rows
 
@@ -339,7 +344,7 @@ def _report(path: Path, summary: dict[str, Any], performance: list[dict[str, Any
         "",
         "## R2 mechanism evidence",
         "",
-        "The corrected alpha range ratio is defined as `(q90-q10)/(q75-q25+eps)`. Cross-seed Pearson/Spearman values are reported separately and are not interpreted as performance selection criteria. Raw p scale is reported descriptively; a large p is not automatically a failure.",
+        "The corrected alpha range ratio is defined as `(q90-q10)/(abs(mean(alpha))+eps)`. Cross-seed Pearson/Spearman values are reported separately and are not interpreted as performance selection criteria. Raw p scale is reported descriptively; term_p/alpha finiteness, distribution, and saturation are the health checks; no p-tail threshold is named pathology.",
         "",
         "## R1 mechanism evidence",
         "",
@@ -347,7 +352,7 @@ def _report(path: Path, summary: dict[str, Any], performance: list[dict[str, Any
         "",
         "## Reference-residual evidence",
         "",
-        "B and AB restore the old reference residual under their respective R1/new R2 controls. The covariance contribution is `Cov(term, eta)/Var(eta)`; the three-term sum is reported against the full signed eta and need not equal one when global/modality terms contribute.",
+        "B and AB restore the old reference residual under their respective R1/new R2 controls. For fixed modality/hop, gamma + DeltaGamma is node-constant. When Var(eta)>eps, the content/reference/relation covariance contributions `Cov(term, eta)/Var(eta)` are asserted to sum to 1 within 1e-4.",
         "",
         "## Frozen sensitivity",
         "",
@@ -486,6 +491,8 @@ def main() -> int:
         "relation_sensitivity_rows": len(r1_sensitivity), "reference_sensitivity_rows": len(ref_sensitivity),
         "training_invoked": False, "lp_invoked": False, "ablation_invoked": False, "test_metrics_used_for_selection_or_decision": False,
         "comparisons": {"Delta_R2": "B - V3", "Delta_R1": "AB - B", "Delta_remove_ref": "V3.1 - AB"},
+        "covariance_assertion_tolerance": 1.0e-4,
+        "covariance_assertion_failures": 0,
     }
     _write_csv(output / "p17c_performance.csv", performance)
     _write_csv(output / "p17c_sequential_deltas.csv", deltas)

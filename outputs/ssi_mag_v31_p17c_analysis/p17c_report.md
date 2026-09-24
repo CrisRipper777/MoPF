@@ -19,7 +19,7 @@ Definitions: `Delta_R2 = B - V3`, `Delta_R1 = AB - B`, `Delta_remove_ref = V3.1 
 
 ## R2 mechanism evidence
 
-The corrected alpha range ratio is defined as `(q90-q10)/(q75-q25+eps)`. Cross-seed Pearson/Spearman values are reported separately and are not interpreted as performance selection criteria. Raw p scale is reported descriptively; a large p is not automatically a failure.
+The corrected alpha range ratio is defined as `(q90-q10)/(abs(mean(alpha))+eps)`. Cross-seed Pearson/Spearman values are reported separately and are not interpreted as performance selection criteria. Raw p scale is reported descriptively; term_p/alpha finiteness, distribution, and saturation are the health checks; no p-tail threshold is named pathology.
 
 ## R1 mechanism evidence
 
@@ -27,7 +27,7 @@ Old and new relation scores are on different raw scales and are not ranked by ab
 
 ## Reference-residual evidence
 
-B and AB restore the old reference residual under their respective R1/new R2 controls. The covariance contribution is `Cov(term, eta)/Var(eta)`; the three-term sum is reported against the full signed eta and need not equal one when global/modality terms contribute.
+B and AB restore the old reference residual under their respective R1/new R2 controls. For fixed modality/hop, gamma + DeltaGamma is node-constant. When Var(eta)>eps, the content/reference/relation covariance contributions `Cov(term, eta)/Var(eta)` are asserted to sum to 1 within 1e-4.
 
 ## Frozen sensitivity
 

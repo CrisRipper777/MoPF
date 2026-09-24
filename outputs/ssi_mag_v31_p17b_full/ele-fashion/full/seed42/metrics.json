@@ -1,0 +1,35 @@
+{
+  "task": "nc",
+  "dataset": "ele-fashion",
+  "model": "ssi_mag_v31",
+  "ablation": "full",
+  "seed": 42,
+  "selection_metric": "val_acc",
+  "checkpoint_selection": "best_val_accuracy",
+  "best_epoch": 114,
+  "runtime_seconds": 171.74327518814243,
+  "peak_gpu_memory_mib": 17545.14501953125,
+  "checkpoint": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p17b_full/ele-fashion/full/seed42/best.pt",
+  "checkpoint_metadata": {
+    "selection": "best_val_accuracy",
+    "best_epoch": 114
+  },
+  "metrics": {
+    "val_acc": {
+      "mean": 0.8819679021835327,
+      "std": 0.0
+    },
+    "val_macro_f1": {
+      "mean": 0.7659040213922984,
+      "std": 0.0
+    },
+    "test_acc": {
+      "mean": 0.8810433149337769,
+      "std": 0.0
+    },
+    "test_macro_f1": {
+      "mean": 0.7770307136693763,
+      "std": 0.0
+    }
+  }
+}

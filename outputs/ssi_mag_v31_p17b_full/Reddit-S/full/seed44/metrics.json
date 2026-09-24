@@ -1,0 +1,35 @@
+{
+  "task": "nc",
+  "dataset": "Reddit-S",
+  "model": "ssi_mag_v31",
+  "ablation": "full",
+  "seed": 44,
+  "selection_metric": "val_acc",
+  "checkpoint_selection": "best_val_accuracy",
+  "best_epoch": 61,
+  "runtime_seconds": 33.3172435448505,
+  "peak_gpu_memory_mib": 4374.5927734375,
+  "checkpoint": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p17b_full/Reddit-S/full/seed44/best.pt",
+  "checkpoint_metadata": {
+    "selection": "best_val_accuracy",
+    "best_epoch": 61
+  },
+  "metrics": {
+    "val_acc": {
+      "mean": 0.9660270810127258,
+      "std": 0.0
+    },
+    "val_macro_f1": {
+      "mean": 0.9223743232726715,
+      "std": 0.0
+    },
+    "test_acc": {
+      "mean": 0.9694872498512268,
+      "std": 0.0
+    },
+    "test_macro_f1": {
+      "mean": 0.9295444687068237,
+      "std": 0.0
+    }
+  }
+}

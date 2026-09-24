@@ -1,0 +1,191 @@
+dataset,hop,modality,note,quantity,v31_mean,v31_population_std,v3_mean,v3_population_std
+Movies,,text,same physical support and gcn_norm; descriptive,normalized_operator_relative_l1,0.0012782267572203345,6.638977552927988e-05,0.018357294697981655,0.0024492529113987207
+Movies,,text,scorer definition changed; beta alone is not a utility ranking,beta,0.052255953351656594,0.00012810670531959617,0.05239052946368853,0.0006943091635985577
+Movies,,text,same c_i definition family,local_adaptation_c_mean,0.004609003221366336,0.0002391798956392359,0.04571612551808357,0.0038840665058934064
+Movies,1,text,same semantic-reference quantity,alpha_mean,0.1534196133119062,0.005615866683985315,0.10716572652260463,0.0011219964187584497
+Movies,1,text,same semantic-reference quantity,alpha_std,0.008261501183073979,0.0008749986018463408,0.0003745515035310139,7.368642585685602e-05
+Movies,0,text,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Movies,2,text,same semantic-reference quantity,alpha_mean,0.1549019835746632,0.005909453913901018,0.10938890526692073,0.0013573744908856574
+Movies,2,text,same semantic-reference quantity,alpha_std,0.008334564849717785,0.0009014734684228369,0.00037256065600862104,7.25106890780611e-05
+Movies,1,text,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.6666666666666666,0.4714045207910317
+Movies,3,text,same semantic-reference quantity,alpha_mean,0.1444837032161565,0.004864973509656233,0.09986051668723424,0.0002774990840479656
+Movies,3,text,same semantic-reference quantity,alpha_std,0.007875594853349094,0.0008200532681625967,0.00036765739787369967,6.770570922566122e-05
+Movies,2,text,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Movies,,text,P1.5a corrected nodewise metric,attention_normalized_entropy,0.3467281474429842,0.014253980970744906,0.301924725373586,0.04728318977284675
+Movies,,text,V3 column is older row-diversity proxy; interpret descriptively,attention_node_heterogeneity,0.4509119466359306,0.027534213468302694,0.05219036961595217,0.008831733302635989
+Movies,,text,learned gate,context_change_gate,0.13127621014912924,0.004347477737676044,0.14005214969317117,0.0009908830542280941
+Movies,,text,learned gate,cross_hop_interaction_gate,0.0996834288040797,0.0019120013520034346,0.09939845403035481,0.0012420401607413714
+Movies,,text,signed effective order,effective_order_mean,1.541223430356591,0.012164295840949963,1.4570440451304119,0.013895221665002904
+Movies,,text,frozen sensitivity; V3.1 row is duplicated by modality,relation_off_fused_relative_l2,nan,nan,0.006294634193181992,0.0018163986845835256
+Movies,,text,frozen sensitivity; V3.1 row is duplicated by modality,interaction_off_fused_relative_l2,nan,nan,0.21684763332207999,0.021933945776129612
+Movies,,visual,same physical support and gcn_norm; descriptive,normalized_operator_relative_l1,0.0009445341665969076,0.0001351059124074037,0.012352496163565955,0.004362132856934531
+Movies,,visual,scorer definition changed; beta alone is not a utility ranking,beta,0.05166879420479139,0.0003155245592086277,0.051467434813578926,0.0006275690245615742
+Movies,,visual,same c_i definition family,local_adaptation_c_mean,0.0016210746810286884,0.00014752342632705497,0.024371931018928688,0.007061722506976576
+Movies,1,visual,same semantic-reference quantity,alpha_mean,0.10297578591862318,0.0014030755880425128,0.10225377231836319,0.0008932243460174892
+Movies,1,visual,same semantic-reference quantity,alpha_std,0.007395794150650284,0.003519529964953165,0.0027577398189653954,0.00054356170021662
+Movies,0,visual,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Movies,2,visual,same semantic-reference quantity,alpha_mean,0.10151098564538868,0.0016875106128176442,0.10011811554431915,0.0007859448494703411
+Movies,2,visual,same semantic-reference quantity,alpha_std,0.0073109548360367265,0.0034863727028434464,0.0027062219257156053,0.0005310973434672638
+Movies,1,visual,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Movies,3,visual,same semantic-reference quantity,alpha_mean,0.09806989079313883,0.0017895426713027598,0.09672908236583073,0.0008043241661234303
+Movies,3,visual,same semantic-reference quantity,alpha_std,0.007085612953474116,0.003370695880972708,0.002618558860073487,0.00048732620767387734
+Movies,2,visual,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Movies,,visual,P1.5a corrected nodewise metric,attention_normalized_entropy,0.6511290359672349,0.01786348599025037,0.6336952845255533,0.09628583814819365
+Movies,,visual,V3 column is older row-diversity proxy; interpret descriptively,attention_node_heterogeneity,0.3740962164488324,0.01867962422793897,0.19991250336170197,0.022252122469388264
+Movies,,visual,learned gate,context_change_gate,0.15559563537438711,0.006008614015576722,0.170787384112676,0.018253997917089624
+Movies,,visual,learned gate,cross_hop_interaction_gate,0.10365299632151921,0.005289428813223022,0.12123110890388489,0.007593720933656009
+Movies,,visual,signed effective order,effective_order_mean,1.5888939382185443,0.0208846892992417,1.5421161254247029,0.0060915171180126616
+Movies,,visual,frozen sensitivity; V3.1 row is duplicated by modality,relation_off_fused_relative_l2,nan,nan,0.006294634193181992,0.0018163986845835256
+Movies,,visual,frozen sensitivity; V3.1 row is duplicated by modality,interaction_off_fused_relative_l2,nan,nan,0.21684763332207999,0.021933945776129612
+Toys,,text,same physical support and gcn_norm; descriptive,normalized_operator_relative_l1,0.0006059077987995306,0.00018262813319672093,0.015000699226815815,0.0013448985562695003
+Toys,,text,scorer definition changed; beta alone is not a utility ranking,beta,0.050313940892616905,0.0005350334583959326,0.05167334899306297,1.9721972767267748e-05
+Toys,,text,same c_i definition family,local_adaptation_c_mean,0.0013744229577238403,0.00012221457263621586,0.033596876387794815,0.003995648815901738
+Toys,1,text,same semantic-reference quantity,alpha_mean,0.10827965209946268,0.007427261332390512,0.10299595693747203,0.0008147709623042643
+Toys,1,text,same semantic-reference quantity,alpha_std,0.006609719765974986,0.0035289993157837933,0.0017759496986400336,0.0010222370162718088
+Toys,0,text,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Toys,2,text,same semantic-reference quantity,alpha_mean,0.10944277747302679,0.007483476950324482,0.10405984024206798,0.0008681513314050481
+Toys,2,text,same semantic-reference quantity,alpha_std,0.006668218366249346,0.0035545442943059435,0.0017950176843442023,0.0010390065230315919
+Toys,1,text,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.27343157927195233,0.38669064778748896
+Toys,3,text,same semantic-reference quantity,alpha_mean,0.10696474838006742,0.007900749142697637,0.10084012399117152,0.00024009959248672333
+Toys,3,text,same semantic-reference quantity,alpha_std,0.006547918996400663,0.0035222919284832906,0.0017517562567566831,0.001011605228701687
+Toys,2,text,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Toys,,text,P1.5a corrected nodewise metric,attention_normalized_entropy,0.5596801728831534,0.08389014358778915,0.48746275901794434,0.06321144441526952
+Toys,,text,V3 column is older row-diversity proxy; interpret descriptively,attention_node_heterogeneity,0.3751315748817621,0.05180550345146783,0.12548357248306274,0.013158363823549546
+Toys,,text,learned gate,context_change_gate,0.1454596867163976,0.011475425029947825,0.1472970445950826,0.003535108764212734
+Toys,,text,learned gate,cross_hop_interaction_gate,0.09989588956038158,0.003240960824782291,0.10228961457808812,0.00495223959882234
+Toys,,text,signed effective order,effective_order_mean,1.6046342695297957,0.04080553806393988,1.4850345055262248,0.01827806947205363
+Toys,,text,frozen sensitivity; V3.1 row is duplicated by modality,relation_off_fused_relative_l2,nan,nan,0.0036014028203984103,0.00015016103562495234
+Toys,,text,frozen sensitivity; V3.1 row is duplicated by modality,interaction_off_fused_relative_l2,nan,nan,0.16233256459236145,0.009502112126492053
+Toys,,visual,same physical support and gcn_norm; descriptive,normalized_operator_relative_l1,0.000726625264541958,0.0002529812583705603,0.0130660143994753,0.00011276116921220943
+Toys,,visual,scorer definition changed; beta alone is not a utility ranking,beta,0.05138600990176201,0.0005593209746834105,0.050746566305557884,0.0004867047285326681
+Toys,,visual,same c_i definition family,local_adaptation_c_mean,0.0021519622962029015,0.0007805808824627653,0.03399402772386869,0.0014152135183136886
+Toys,1,visual,same semantic-reference quantity,alpha_mean,0.09534521883185132,0.0009419028748497861,0.09659355878829956,0.0001388869373866633
+Toys,1,visual,same semantic-reference quantity,alpha_std,0.0052005055997112705,0.0006722614946096944,0.0017053150804713368,2.859243144505398e-06
+Toys,0,visual,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Toys,2,visual,same semantic-reference quantity,alpha_mean,0.09561636682314469,0.0011337462618478261,0.09674357871214549,0.0001956000712995324
+Toys,2,visual,same semantic-reference quantity,alpha_std,0.005216875609974418,0.0006849205138922212,0.0017077626738076408,3.811566270094624e-06
+Toys,1,visual,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Toys,3,visual,same semantic-reference quantity,alpha_mean,0.09569045280782824,0.0014041637355727745,0.09906773020823796,0.0006602488235556219
+Toys,3,visual,same semantic-reference quantity,alpha_std,0.005225073502379146,0.0007001967359339088,0.0017466404242441058,7.350162965745524e-06
+Toys,2,visual,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Toys,,visual,P1.5a corrected nodewise metric,attention_normalized_entropy,0.6730810312089052,0.07827143469971987,0.5778861045837402,0.023624574659940056
+Toys,,visual,V3 column is older row-diversity proxy; interpret descriptively,attention_node_heterogeneity,0.3015399270878196,0.04398988822200526,0.1739987830320994,0.012898332343186013
+Toys,,visual,learned gate,context_change_gate,0.14440007507801056,0.012454342763463506,0.1573231170574824,0.002281112320884485
+Toys,,visual,learned gate,cross_hop_interaction_gate,0.12421266734600067,0.006018571209342197,0.1294968475898107,0.006877384581070773
+Toys,,visual,signed effective order,effective_order_mean,1.8691743335718503,0.016482349603545398,1.7538787523905437,0.0069103535152940775
+Toys,,visual,frozen sensitivity; V3.1 row is duplicated by modality,relation_off_fused_relative_l2,nan,nan,0.0036014028203984103,0.00015016103562495234
+Toys,,visual,frozen sensitivity; V3.1 row is duplicated by modality,interaction_off_fused_relative_l2,nan,nan,0.16233256459236145,0.009502112126492053
+Grocery,,text,same physical support and gcn_norm; descriptive,normalized_operator_relative_l1,0.0013398731276794982,0.00028779130610503257,0.019423832879184172,0.0010842857084550352
+Grocery,,text,scorer definition changed; beta alone is not a utility ranking,beta,0.05273967608809471,0.0006287899455667742,0.05297809218366941,0.00027717862363348675
+Grocery,,text,same c_i definition family,local_adaptation_c_mean,0.0020149112032917904,0.0005160963141030112,0.03942972545822462,0.0022658705359997248
+Grocery,1,text,same semantic-reference quantity,alpha_mean,0.13200132435454684,0.0027575061839974105,0.10468233128388722,0.0011334860402480483
+Grocery,1,text,same semantic-reference quantity,alpha_std,0.014790934898614537,0.0020888112134620903,0.0018829666078090668,0.0019058660614051197
+Grocery,0,text,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Grocery,2,text,same semantic-reference quantity,alpha_mean,0.1319783457366256,0.003063060148416573,0.10450457284847896,0.0011497833487912
+Grocery,2,text,same semantic-reference quantity,alpha_std,0.014780468021312193,0.002127680249246293,0.0018578055896796286,0.0019158412582187866
+Grocery,1,text,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Grocery,3,text,same semantic-reference quantity,alpha_mean,0.12198826652624588,0.003164241850046525,0.09612044443686803,0.0005106024420155912
+Grocery,3,text,same semantic-reference quantity,alpha_std,0.013799819205831754,0.00195766449350979,0.0017196711366220068,0.0017555945761304123
+Grocery,2,text,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Grocery,,text,P1.5a corrected nodewise metric,attention_normalized_entropy,0.3357393521880083,0.08638567006464122,0.41227813561757404,0.02918433975841353
+Grocery,,text,V3 column is older row-diversity proxy; interpret descriptively,attention_node_heterogeneity,0.48657458084904764,0.028050685350314276,0.1565434237321218,0.017785735423472507
+Grocery,,text,learned gate,context_change_gate,0.15978512167930603,0.008073904756363928,0.16413755218187967,0.006303836484237085
+Grocery,,text,learned gate,cross_hop_interaction_gate,0.11601319909095764,0.008883587350592251,0.1238134354352951,0.002785584350403354
+Grocery,,text,signed effective order,effective_order_mean,1.5334535634185797,0.007635538414838321,1.482405384381612,0.018942809716248985
+Grocery,,text,frozen sensitivity; V3.1 row is duplicated by modality,relation_off_fused_relative_l2,nan,nan,0.00514800085996588,0.00043749128228391475
+Grocery,,text,frozen sensitivity; V3.1 row is duplicated by modality,interaction_off_fused_relative_l2,nan,nan,0.25975603858629864,0.014150775962019456
+Grocery,,visual,same physical support and gcn_norm; descriptive,normalized_operator_relative_l1,0.0013743712417765644,0.00023307475653888015,0.013206532089523914,0.0013986533271311656
+Grocery,,visual,scorer definition changed; beta alone is not a utility ranking,beta,0.05266104390223821,0.0006639904428304179,0.05120513712366422,0.0010724796538840115
+Grocery,,visual,same c_i definition family,local_adaptation_c_mean,0.0026122350452253036,0.0003987615554044164,0.03499106876552105,0.006241250531065879
+Grocery,1,visual,same semantic-reference quantity,alpha_mean,0.09397941961535984,0.0016240258207738034,0.09733445197343826,0.0006136447899852545
+Grocery,1,visual,same semantic-reference quantity,alpha_std,0.010784757491101409,0.0020805639943412215,0.002437579290320476,9.72146574845127e-05
+Grocery,0,visual,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Grocery,2,visual,same semantic-reference quantity,alpha_mean,0.09395608090131603,0.0017173623410810706,0.09723830223083496,0.0006224114935765377
+Grocery,2,visual,same semantic-reference quantity,alpha_std,0.010782013935110404,0.0020904377149920214,0.002430528091887633,9.882947732691039e-05
+Grocery,1,visual,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Grocery,3,visual,same semantic-reference quantity,alpha_mean,0.09398583964925467,0.00158896499912618,0.0974661186337471,0.0006016986821053101
+Grocery,3,visual,same semantic-reference quantity,alpha_std,0.010783023475270567,0.0020833678332688207,0.0024336872156709433,9.169693015845476e-05
+Grocery,2,visual,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Grocery,,visual,P1.5a corrected nodewise metric,attention_normalized_entropy,0.4526491226291185,0.017649008895937263,0.38893521825472516,0.045507990024524235
+Grocery,,visual,V3 column is older row-diversity proxy; interpret descriptively,attention_node_heterogeneity,0.37861663967159803,0.043894766145276584,0.19947388768196106,0.01842235000829998
+Grocery,,visual,learned gate,context_change_gate,0.17171906431516012,0.011698480365743317,0.17733952403068542,0.0034951859225538394
+Grocery,,visual,learned gate,cross_hop_interaction_gate,0.12469970186551411,0.004011627198522501,0.12928245961666107,0.0016266117915116512
+Grocery,,visual,signed effective order,effective_order_mean,1.7587781506073263,0.013902674711897956,1.6344621578852336,0.007915506026785776
+Grocery,,visual,frozen sensitivity; V3.1 row is duplicated by modality,relation_off_fused_relative_l2,nan,nan,0.00514800085996588,0.00043749128228391475
+Grocery,,visual,frozen sensitivity; V3.1 row is duplicated by modality,interaction_off_fused_relative_l2,nan,nan,0.25975603858629864,0.014150775962019456
+ele-fashion,,text,same physical support and gcn_norm; descriptive,normalized_operator_relative_l1,0.0010527045358324806,8.341874509895039e-05,0.015983103226115975,0.0029976915426990717
+ele-fashion,,text,scorer definition changed; beta alone is not a utility ranking,beta,0.05591357871890068,5.740412282836704e-05,0.05433060601353645,0.00046844142608576205
+ele-fashion,,text,same c_i definition family,local_adaptation_c_mean,0.0017828396832163206,0.00012536889075585376,0.03388662822544575,0.005823414196379366
+ele-fashion,1,text,same semantic-reference quantity,alpha_mean,0.1091894149597475,0.001223916373120519,0.10277340809504192,0.0009431499981970549
+ele-fashion,1,text,same semantic-reference quantity,alpha_std,0.011563891201165999,0.0008018613695609918,0.003030990638459722,0.0002936354278060972
+ele-fashion,0,text,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+ele-fashion,2,text,same semantic-reference quantity,alpha_mean,0.11049691946223723,0.001360775776649896,0.10435184339682262,0.0007247277064465289
+ele-fashion,2,text,same semantic-reference quantity,alpha_std,0.011684860581647452,0.0007922663474268978,0.0030811145746459565,0.00030177817673044803
+ele-fashion,1,text,signed filtering behavior,eta_negative_fraction,0.3489931623140971,0.048889618106652134,0.38904117544492084,0.13532793684286484
+ele-fashion,3,text,same semantic-reference quantity,alpha_mean,0.09941066324463728,0.0010015554195678719,0.09451277554035187,0.0005314819756113894
+ele-fashion,3,text,same semantic-reference quantity,alpha_std,0.010654776977200749,0.0007088064539425273,0.0028256540341923633,0.00029619259686481183
+ele-fashion,2,text,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+ele-fashion,,text,P1.5a corrected nodewise metric,attention_normalized_entropy,0.5291762345162333,0.016768334337636245,0.5047624607880911,0.03778571012684588
+ele-fashion,,text,V3 column is older row-diversity proxy; interpret descriptively,attention_node_heterogeneity,0.43503240516400044,0.006407088602955976,0.25224293271700543,0.04439814371046992
+ele-fashion,,text,learned gate,context_change_gate,0.17274743815263113,0.005297199433600902,0.1985217829545339,0.014655252303626602
+ele-fashion,,text,learned gate,cross_hop_interaction_gate,0.15405090153217316,0.0035088753024515107,0.14293167491753897,0.0026158805943176707
+ele-fashion,,text,signed effective order,effective_order_mean,1.5406777949879256,0.005293018982268343,1.4366676012674968,0.004299990730509264
+ele-fashion,,text,frozen sensitivity; V3.1 row is duplicated by modality,relation_off_fused_relative_l2,nan,nan,0.007294290543844302,0.0008449070150546151
+ele-fashion,,text,frozen sensitivity; V3.1 row is duplicated by modality,interaction_off_fused_relative_l2,nan,nan,0.18767947455247244,0.015237459023174343
+ele-fashion,,visual,same physical support and gcn_norm; descriptive,normalized_operator_relative_l1,0.002237185526707781,0.00024813728608942716,0.019527801396536388,0.0002219828022762538
+ele-fashion,,visual,scorer definition changed; beta alone is not a utility ranking,beta,0.054240999122460685,0.0005852547112369052,0.0540457566579183,0.0004073708024749544
+ele-fashion,,visual,same c_i definition family,local_adaptation_c_mean,0.005674408724787568,0.0005215706282255239,0.042423480500777565,0.0003364098096575276
+ele-fashion,1,visual,same semantic-reference quantity,alpha_mean,0.14822026065718105,0.011742534103298095,0.10552218059698741,0.00025880849450927524
+ele-fashion,1,visual,same semantic-reference quantity,alpha_std,0.027789181400156026,0.013523567169481098,0.004827443355073531,0.0006507487017264515
+ele-fashion,0,visual,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+ele-fashion,2,visual,same semantic-reference quantity,alpha_mean,0.1487741053720113,0.011180012082361891,0.107009656727314,0.0008524719145383902
+ele-fashion,2,visual,same semantic-reference quantity,alpha_std,0.02786609861603762,0.013443362995311875,0.00492480614533027,0.0006586575395991643
+ele-fashion,1,visual,signed filtering behavior,eta_negative_fraction,0.05874912440776825,0.08308380851501009,0.3198453485965729,0.02458139072935165
+ele-fashion,3,visual,same semantic-reference quantity,alpha_mean,0.1296003625945936,0.008475164611111528,0.09399845947821935,0.001015082031879049
+ele-fashion,3,visual,same semantic-reference quantity,alpha_std,0.024774127599207368,0.01180031489251621,0.00438336639975508,0.0005523620667270463
+ele-fashion,2,visual,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+ele-fashion,,visual,P1.5a corrected nodewise metric,attention_normalized_entropy,0.34800744654910326,0.027883854714720883,0.34720519185066223,0.04197478931139601
+ele-fashion,,visual,V3 column is older row-diversity proxy; interpret descriptively,attention_node_heterogeneity,0.4768009330608245,0.026709547014805445,0.15943714727958044,0.05131085791439428
+ele-fashion,,visual,learned gate,context_change_gate,0.16544289886951447,0.010661268581136979,0.1740984320640564,0.0028427173354840358
+ele-fashion,,visual,learned gate,cross_hop_interaction_gate,0.12160618354876836,0.004241688561045098,0.121090829372406,0.009396407987848738
+ele-fashion,,visual,signed effective order,effective_order_mean,1.536068122122207,0.018614950228219615,1.4190222422281902,0.009233864710460548
+ele-fashion,,visual,frozen sensitivity; V3.1 row is duplicated by modality,relation_off_fused_relative_l2,nan,nan,0.007294290543844302,0.0008449070150546151
+ele-fashion,,visual,frozen sensitivity; V3.1 row is duplicated by modality,interaction_off_fused_relative_l2,nan,nan,0.18767947455247244,0.015237459023174343
+Reddit-S,,text,same physical support and gcn_norm; descriptive,normalized_operator_relative_l1,0.001275208081184816,0.0005398410611177526,0.010559281400897513,0.0022580257309645652
+Reddit-S,,text,scorer definition changed; beta alone is not a utility ranking,beta,0.05299715946118037,0.0008416617632570697,0.05144378791252772,0.0011851303808096487
+Reddit-S,,text,same c_i definition family,local_adaptation_c_mean,0.003461775028148884,0.0020884827549304315,0.02483193265895049,0.0055947790192500705
+Reddit-S,1,text,same semantic-reference quantity,alpha_mean,0.11801668266459082,0.001394638793632838,0.10460875431696574,0.0015221487196435011
+Reddit-S,1,text,same semantic-reference quantity,alpha_std,0.010508753613822716,0.0033122938278739066,0.0017910408253859107,0.0015302838743537872
+Reddit-S,0,text,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Reddit-S,2,text,same semantic-reference quantity,alpha_mean,0.1138323472670501,0.0009935677958622204,0.1025096798936526,0.0013566883434941205
+Reddit-S,2,text,same semantic-reference quantity,alpha_std,0.010167633070996433,0.0031437588886580586,0.001758119135047309,0.0015000639000629335
+Reddit-S,1,text,signed filtering behavior,eta_negative_fraction,0.05494736135005951,0.07770730363786937,0.09072605768839519,0.12830602124357227
+Reddit-S,3,text,same semantic-reference quantity,alpha_mean,0.10450290603037622,0.0011078332113954531,0.09596873819828033,0.001734949117009478
+Reddit-S,3,text,same semantic-reference quantity,alpha_std,0.009427033148090777,0.002888536848820547,0.0016197298731034,0.0013528405375399233
+Reddit-S,2,text,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Reddit-S,,text,P1.5a corrected nodewise metric,attention_normalized_entropy,0.6638870248481068,0.06014977994763698,0.7305973172187805,0.03618198603558554
+Reddit-S,,text,V3 column is older row-diversity proxy; interpret descriptively,attention_node_heterogeneity,0.35383538652636126,0.03634403582121486,0.09339831272761027,0.010257821081534883
+Reddit-S,,text,learned gate,context_change_gate,0.17967272798220316,0.014954598725392688,0.16095236937204996,0.0270635612041922
+Reddit-S,,text,learned gate,cross_hop_interaction_gate,0.11028948177893956,0.010279701151894867,0.10176898042360942,0.011535134113137306
+Reddit-S,,text,signed effective order,effective_order_mean,1.546908620984796,0.026821061458248283,1.4875092506408691,0.0011469470632898952
+Reddit-S,,text,frozen sensitivity; V3.1 row is duplicated by modality,relation_off_fused_relative_l2,nan,nan,0.006183575605973601,0.003433531460271489
+Reddit-S,,text,frozen sensitivity; V3.1 row is duplicated by modality,interaction_off_fused_relative_l2,nan,nan,0.10334248840808868,0.014575096294831518
+Reddit-S,,visual,same physical support and gcn_norm; descriptive,normalized_operator_relative_l1,0.0004881823388766038,5.562269120955244e-05,0.009720694646740377,0.0025235159517932445
+Reddit-S,,visual,scorer definition changed; beta alone is not a utility ranking,beta,0.05252107232809067,0.00037771825341144404,0.05143662293752035,0.0006460709228882682
+Reddit-S,,visual,same c_i definition family,local_adaptation_c_mean,0.0008149734325218764,8.527917181368715e-05,0.0222352792819341,0.006475491854441763
+Reddit-S,1,visual,same semantic-reference quantity,alpha_mean,0.11271493611868623,0.0002286012908269639,0.10373607526222865,0.00046455752054420756
+Reddit-S,1,visual,same semantic-reference quantity,alpha_std,0.011459427919001675,0.00039213771144913715,0.002360139973461628,0.0007064477610324485
+Reddit-S,0,visual,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Reddit-S,2,visual,same semantic-reference quantity,alpha_mean,0.11120690723942768,0.0006123524075407274,0.1029093141357104,0.0003362618004522079
+Reddit-S,2,visual,same semantic-reference quantity,alpha_std,0.011324472233769199,0.0004038303236110907,0.0023418992835407457,0.0006938057584479248
+Reddit-S,1,visual,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Reddit-S,3,visual,same semantic-reference quantity,alpha_mean,0.10387708402072882,0.001305659059651809,0.09826052685578664,0.0012719396250752732
+Reddit-S,3,visual,same semantic-reference quantity,alpha_std,0.010665034257260635,0.0004414761293041648,0.002239197609014809,0.00063446304118199
+Reddit-S,2,visual,signed filtering behavior,eta_negative_fraction,0.0,0.0,0.0,0.0
+Reddit-S,,visual,P1.5a corrected nodewise metric,attention_normalized_entropy,0.8014966775820213,0.007588090256650696,0.8279530008633932,0.021899443941123763
+Reddit-S,,visual,V3 column is older row-diversity proxy; interpret descriptively,attention_node_heterogeneity,0.2473082032181552,0.006789944392738888,0.07741488019625346,0.016524247929528047
+Reddit-S,,visual,learned gate,context_change_gate,0.1654535581668218,0.014563557702932406,0.15242095788319907,0.02098009463227421
+Reddit-S,,visual,learned gate,cross_hop_interaction_gate,0.1387569010257721,0.0035908351630097677,0.13356339683135351,0.014465405489904602
+Reddit-S,,visual,signed effective order,effective_order_mean,1.5697216584995377,0.014742418731495054,1.5078730583190918,0.009950506966980112
+Reddit-S,,visual,frozen sensitivity; V3.1 row is duplicated by modality,relation_off_fused_relative_l2,nan,nan,0.006183575605973601,0.003433531460271489
+Reddit-S,,visual,frozen sensitivity; V3.1 row is duplicated by modality,interaction_off_fused_relative_l2,nan,nan,0.10334248840808868,0.014575096294831518

@@ -1,0 +1,35 @@
+{
+  "task": "nc",
+  "dataset": "Toys",
+  "model": "ssi_mag_v31",
+  "ablation": "full",
+  "seed": 44,
+  "selection_metric": "val_acc",
+  "checkpoint_selection": "best_val_accuracy",
+  "best_epoch": 38,
+  "runtime_seconds": 29.32559659704566,
+  "peak_gpu_memory_mib": 3971.83984375,
+  "checkpoint": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p17b_full/Toys/full/seed44/best.pt",
+  "checkpoint_metadata": {
+    "selection": "best_val_accuracy",
+    "best_epoch": 38
+  },
+  "metrics": {
+    "val_acc": {
+      "mean": 0.8045421838760376,
+      "std": 0.0
+    },
+    "val_macro_f1": {
+      "mean": 0.7717184548200531,
+      "std": 0.0
+    },
+    "test_acc": {
+      "mean": 0.7997100949287415,
+      "std": 0.0
+    },
+    "test_macro_f1": {
+      "mean": 0.7704186403262564,
+      "std": 0.0
+    }
+  }
+}

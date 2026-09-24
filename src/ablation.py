@@ -46,6 +46,21 @@ ABLATION_SPECS: dict[str, AblationSpec] = {
         "raw_relation", True, True, True, True, True, True,
         relation_calibration=False, edge_weight_override="raw_uniform",
     ),
+    # P3 final-S controls. These names are intentionally additive: historical
+    # P2/P1 names and their manifests remain unchanged.
+    "no_semantic_conductance": AblationSpec(
+        "no_semantic_conductance", True, True, True, True, True, True,
+        relation_calibration=False, edge_weight_override="raw_uniform",
+    ),
+    "fixed_restart": AblationSpec(
+        "fixed_restart", True, True, True, True, True, True,
+    ),
+    "terminal_context_only": AblationSpec(
+        "terminal_context_only", True, True, True, True, True, True,
+    ),
+    "global_response_only": AblationSpec(
+        "global_response_only", True, True, True, True, True, True,
+    ),
     "fixed_reference": AblationSpec(
         "fixed_reference", True, True, True, True, True, True,
         composition_mode="adaptive",

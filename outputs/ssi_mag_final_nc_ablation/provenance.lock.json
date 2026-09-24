@@ -1,0 +1,40 @@
+{
+  "schema": "ssi_mag_final_nc_ablation_provenance_v2",
+  "git_commit": "c3aa85a8221794af0b9f8830d1f910c6e0fdd482",
+  "branch": "V3",
+  "model": "ssi_mag_final_ablation",
+  "model_source": "src/models/ssi_mag_final_ablation.py",
+  "model_sha256": "6cdd8c6a6eb6f7e1d9993feef06f30988e7e6cb93bda469aea39d8ec8c2171a9",
+  "config_source": "configs/model/ssi_mag_final_ablation.yaml",
+  "config_sha256": "fa3ea989e5d77c3bcb0aea6e7d3d41540c8602972fceeab25214bc3d2f524595",
+  "task": "nc",
+  "protocol": "unified_full_graph_nc_v1",
+  "datasets": [
+    "Movies",
+    "Toys",
+    "Grocery",
+    "ele-fashion",
+    "Reddit-S"
+  ],
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "variants": [
+    "full",
+    "no_relation_modulation",
+    "fixed_semantic_reference",
+    "last_context_only",
+    "no_context_change",
+    "no_cross_hop_interaction",
+    "global_filter_only",
+    "no_formation_conditioning"
+  ],
+  "planned_jobs": 120,
+  "lp_jobs": 0,
+  "selection_metric": "val_acc",
+  "test_used_for_selection": false,
+  "dry_run": false,
+  "training_started": false
+}

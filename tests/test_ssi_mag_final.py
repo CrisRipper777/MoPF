@@ -69,6 +69,55 @@ def test_canonical_state_mapping_and_all_analysis_interventions_are_equivalent()
     assert not hasattr(canonical, "_active_alphas")
 
 
+def test_relation_off_nonzero_scorer_matches_u_and_canonical_exactly():
+    x, edge_index = _inputs()
+    torch.manual_seed(37)
+    pilot = SSIMAGV31R1U(_cfg(), _info())
+    canonical = SSIMAGFinal(_cfg(), _info())
+    with torch.no_grad():
+        pilot.relation_scorer_text.weight.copy_(torch.tensor([[0.21, -0.17, 0.13]]))
+        pilot.relation_scorer_text.bias.fill_(0.07)
+        pilot.relation_scorer_visual.weight.copy_(torch.tensor([[-0.19, 0.11, 0.23]]))
+        pilot.relation_scorer_visual.bias.fill_(-0.04)
+    canonical.load_state_dict(pilot.state_dict(), strict=True)
+    left = pilot.analysis_intervention(x, edge_index, relation="off")
+    right = canonical.analysis_intervention(x, edge_index, relation="off")
+    for modality in ("text", "visual"):
+        nonself = left["physical_edge_index"][0] != left["physical_edge_index"][1]
+        torch.testing.assert_close(left[f"relation_weight_{modality}"], torch.ones_like(left[f"relation_weight_{modality}"]))
+        torch.testing.assert_close(right[f"c_{modality}"], torch.zeros_like(right[f"c_{modality}"]))
+        for key in ("c", "normalized_edge_weight", "alpha", "Q", "S", "S_tilde", "eta", "z"):
+            a, b = left[f"{key}_{modality}"], right[f"{key}_{modality}"]
+            if isinstance(a, list):
+                for aa, bb in zip(a, b, strict=True):
+                    torch.testing.assert_close(aa, bb, rtol=0.0, atol=0.0)
+            else:
+                torch.testing.assert_close(a, b, rtol=0.0, atol=0.0)
+    torch.testing.assert_close(left["z"], right["z"], rtol=0.0, atol=0.0)
+
+
+def test_full_ablation_is_exactly_canonical_final():
+    x, edge_index = _inputs()
+    torch.manual_seed(41)
+    canonical = SSIMAGFinal(_cfg(), _info())
+    ablation = SSIMAGFinalAblation(_cfg("full"), _info())
+    ablation.load_state_dict(canonical.state_dict(), strict=True)
+    left = canonical.analysis(x, edge_index)
+    right = ablation.analysis(x, edge_index)
+    for key in ("z_text", "z_visual", "z", "c_text", "c_visual", "alpha_text", "alpha_visual", "Q_text", "Q_visual", "S_text", "S_visual", "S_tilde_text", "S_tilde_visual", "eta_text", "eta_visual"):
+        a, b = left[key], right[key]
+        if isinstance(a, list):
+            for aa, bb in zip(a, b, strict=True):
+                torch.testing.assert_close(aa, bb, rtol=0.0, atol=0.0)
+        else:
+            torch.testing.assert_close(a, b, rtol=0.0, atol=0.0)
+    canonical.eval()
+    ablation.eval()
+    z_left = canonical(x, edge_index)[0]
+    z_right = ablation(x, edge_index)[0]
+    torch.testing.assert_close(z_left, z_right, rtol=0.0, atol=0.0)
+
+
 def test_canonical_forward_backward_and_analysis_are_finite():
     x, edge_index = _inputs()
     model = SSIMAGFinal(_cfg(), _info())

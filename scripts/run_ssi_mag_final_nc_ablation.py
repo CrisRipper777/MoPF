@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Resume-safe planner/launcher for the frozen final NC ablation matrix.
+"""Resume-safe formal Full + seven NC ablation launcher.
 
-P1.9 only executes this launcher in ``--dry-run`` mode. The implementation is
-kept resume-safe for the pre-registered future matrix: 7 ablations x 5 NC
-datasets x 3 seeds = 105 jobs, with no LP branch.
+Dry-run writes only ``provenance.plan.json``. A non-dry-run first verifies a
+clean, synchronized V3 worktree and then creates an immutable
+``provenance.lock.json`` before launching 120 NC jobs. No LP branch exists.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ ROOT = Path(__file__).resolve().parents[1]
 DATASETS = ["Movies", "Toys", "Grocery", "ele-fashion", "Reddit-S"]
 SEEDS = [42, 43, 44]
 ABLATIONS = [
+    "full",
     "no_relation_modulation",
     "fixed_semantic_reference",
     "last_context_only",
@@ -36,6 +37,7 @@ MODEL = "ssi_mag_final_ablation"
 CONFIG = ROOT / "configs/model/ssi_mag_final_ablation.yaml"
 MODEL_SOURCE = ROOT / "src/models/ssi_mag_final_ablation.py"
 PROTOCOL = "unified_full_graph_nc_v1"
+OUTPUT_DEFAULT = "outputs/ssi_mag_final_nc_ablation"
 
 
 @dataclass(frozen=True)
@@ -52,9 +54,9 @@ def _args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--datasets", nargs="+", choices=DATASETS, default=DATASETS)
     parser.add_argument("--seeds", nargs="+", type=int, default=SEEDS)
-    parser.add_argument("--ablations", nargs="+", choices=ABLATIONS, default=ABLATIONS)
+    parser.add_argument("--ablations", "--variants", dest="ablations", nargs="+", choices=ABLATIONS, default=ABLATIONS)
     parser.add_argument("--device", default="cuda:0")
-    parser.add_argument("--output-root", default="outputs/ssi_mag_final_nc_ablation")
+    parser.add_argument("--output-root", default=OUTPUT_DEFAULT)
     parser.add_argument("--dry-run", action="store_true")
     return parser.parse_args()
 
@@ -71,8 +73,7 @@ def _jobs(output: Path, datasets: list[str], seeds: list[int], ablations: list[s
         for dataset in datasets:
             for seed in seeds:
                 index += 1
-                run = output / dataset / ablation / f"seed{seed}"
-                jobs.append(Job(index, dataset, seed, ablation, device, str(run)))
+                jobs.append(Job(index, dataset, seed, ablation, device, str(output / dataset / ablation / f"seed{seed}")))
     return jobs
 
 
@@ -96,9 +97,9 @@ def _sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _commit() -> str:
+def _git(*args: str) -> str:
     try:
-        return subprocess.run(["git", "rev-parse", "HEAD"], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
+        return subprocess.run(["git", *args], cwd=ROOT, check=True, capture_output=True, text=True).stdout.strip()
     except (OSError, subprocess.CalledProcessError):
         return "unknown"
 
@@ -108,10 +109,11 @@ def _dump(path: Path, value: Any) -> None:
     path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
 
 
-def _provenance(commit: str, datasets: list[str], seeds: list[int], ablations: list[str], dry_run: bool) -> dict[str, Any]:
+def _provenance(commit: str, datasets: list[str], seeds: list[int], variants: list[str], *, dry_run: bool) -> dict[str, Any]:
     return {
-        "schema": "ssi_mag_final_nc_ablation_provenance_v1",
+        "schema": "ssi_mag_final_nc_ablation_provenance_v2",
         "git_commit": commit,
+        "branch": _git("branch", "--show-current"),
         "model": MODEL,
         "model_source": str(MODEL_SOURCE.relative_to(ROOT)),
         "model_sha256": _sha256(MODEL_SOURCE),
@@ -121,13 +123,13 @@ def _provenance(commit: str, datasets: list[str], seeds: list[int], ablations: l
         "protocol": PROTOCOL,
         "datasets": list(datasets),
         "seeds": [int(seed) for seed in seeds],
-        "ablations": list(ablations),
-        "planned_jobs": len(datasets) * len(seeds) * len(ablations),
+        "variants": list(variants),
+        "planned_jobs": len(datasets) * len(seeds) * len(variants),
         "lp_jobs": 0,
         "selection_metric": "val_acc",
         "test_used_for_selection": False,
         "dry_run": bool(dry_run),
-        "training_started": False if dry_run else None,
+        "training_started": False,
     }
 
 
@@ -156,48 +158,75 @@ def _complete(job: Job) -> tuple[bool, str]:
     return True, "complete"
 
 
-def main() -> int:
-    args = _args()
-    output = _root(args.output_root)
-    jobs = _jobs(output, list(args.datasets), list(args.seeds), list(args.ablations), args.device)
-    commit = _commit()
-    provenance = _provenance(commit, list(args.datasets), list(args.seeds), list(args.ablations), bool(args.dry_run))
-    output.mkdir(parents=True, exist_ok=True)
+def _assert_clean_synced() -> None:
+    if _git("status", "--porcelain"):
+        raise RuntimeError("formal training requires a clean working tree")
+    if _git("branch", "--show-current") != "V3":
+        raise RuntimeError("formal training requires branch V3")
+    head, remote = _git("rev-parse", "HEAD"), _git("rev-parse", "origin/V3")
+    if head == "unknown" or remote == "unknown" or head != remote:
+        raise RuntimeError(f"formal training requires HEAD == origin/V3, got {head} vs {remote}")
+
+
+def _plan_manifest(args: argparse.Namespace, jobs: list[Job], provenance: dict[str, Any], plan_path: Path, lock_path: Path | None) -> dict[str, Any]:
+    return {
+        "launcher": "run_ssi_mag_final_nc_ablation.py",
+        "created_at_utc": datetime.now(timezone.utc).isoformat(),
+        "git_commit": provenance["git_commit"],
+        "branch": provenance["branch"],
+        "task": "nc", "model": MODEL, "protocol": PROTOCOL,
+        "datasets": list(args.datasets), "seeds": list(args.seeds), "ablations": list(args.ablations),
+        "device": args.device, "dry_run": bool(args.dry_run), "lp_jobs": 0,
+        "selection_metric": "val_acc", "checkpoint_selection": "best_val_accuracy",
+        "test_used_for_selection": False,
+        "provenance_plan": str(plan_path),
+        "provenance_lock": str(lock_path) if lock_path else None,
+        "formal_provenance": provenance if not args.dry_run else None,
+        "jobs": [{**asdict(job), "command": shlex.join(_command(job)), "status": "planned" if args.dry_run else "pending"} for job in jobs],
+    }
+
+
+def _prepare_dry_run(output: Path, args: argparse.Namespace, jobs: list[Job], provenance: dict[str, Any]) -> Path:
+    lock = output / "provenance.lock.json"
+    completed = any(_complete(job)[0] for job in jobs)
+    if lock.is_file():
+        stored = json.loads(lock.read_text())
+        if completed or not stored.get("dry_run", False):
+            raise RuntimeError("formal/completed root cannot be replaced by a dry-run plan")
+        lock.rename(output / "provenance.lock.legacy-dry-run.json")
+    plan = output / "provenance.plan.json"
+    _dump(plan, provenance)
+    _dump(output / "manifest.json", _plan_manifest(args, jobs, provenance, plan, None))
+    return plan
+
+
+def _prepare_formal_lock(output: Path, args: argparse.Namespace, jobs: list[Job], provenance: dict[str, Any]) -> Path:
+    _assert_clean_synced()
     lock = output / "provenance.lock.json"
     if lock.is_file():
         stored = json.loads(lock.read_text())
         if stored != provenance:
-            # A previous P1.9 dry-run may have used the canonical Full config
-            # before the dedicated ablation config was added. It is safe to
-            # refresh that lock only when it is still a dry-run and no run has
-            # completed; formal/resume locks remain immutable.
-            completed = any(_complete(job)[0] for job in jobs)
-            if not (args.dry_run and stored.get("dry_run") and not completed):
-                raise RuntimeError("provenance lock mismatch; refusing resume")
-            _dump(lock, provenance)
-            lock_status = "refreshed_dry_run"
-        else:
-            lock_status = "validated_existing"
+            raise RuntimeError("provenance lock mismatch; refusing resume")
     else:
+        if any(_complete(job)[0] for job in jobs):
+            raise RuntimeError("completed artifacts exist without immutable provenance.lock.json")
         _dump(lock, provenance)
-        lock_status = "created"
-    manifest = {
-        "launcher": "run_ssi_mag_final_nc_ablation.py",
-        "created_at_utc": datetime.now(timezone.utc).isoformat(),
-        "git_commit": commit,
-        "task": "nc", "model": MODEL, "protocol": PROTOCOL,
-        "datasets": list(args.datasets), "seeds": list(args.seeds),
-        "ablations": list(args.ablations), "device": args.device,
-        "dry_run": bool(args.dry_run), "lp_jobs": 0,
-        "selection_metric": "val_acc", "checkpoint_selection": "best_val_accuracy",
-        "test_used_for_selection": False, "provenance_lock": str(lock),
-        "provenance_lock_status": lock_status, "formal_provenance": provenance,
-        "jobs": [{**asdict(job), "command": shlex.join(_command(job)), "status": "planned" if args.dry_run else "pending"} for job in jobs],
-    }
-    _dump(output / "manifest.json", manifest)
+    _dump(output / "manifest.json", _plan_manifest(args, jobs, provenance, output / "provenance.plan.json", lock))
+    return lock
+
+
+def main() -> int:
+    args = _args()
+    output = _root(args.output_root)
+    jobs = _jobs(output, list(args.datasets), list(args.seeds), list(args.ablations), args.device)
+    commit = _git("rev-parse", "HEAD")
+    provenance = _provenance(commit, list(args.datasets), list(args.seeds), list(args.ablations), dry_run=bool(args.dry_run))
+    output.mkdir(parents=True, exist_ok=True)
     if args.dry_run:
-        print(f"Dry-run planned {len(jobs)} NC jobs; LP jobs: 0; training started: false")
+        _prepare_dry_run(output, args, jobs, provenance)
+        print(f"Dry-run planned {len(jobs)} NC jobs; variants={len(args.ablations)}; LP jobs: 0; training started: false")
         return 0
+    lock = _prepare_formal_lock(output, args, jobs, provenance)
     failures: list[str] = []
     for job in jobs:
         complete, reason = _complete(job)
@@ -212,6 +241,8 @@ def main() -> int:
         ok, why = _complete(job)
         if not ok:
             failures.append(f"{job.dataset}/{job.ablation}/seed{job.seed}: {why}")
+    manifest = _plan_manifest(args, jobs, provenance, output / "provenance.plan.json", lock)
+    manifest["training_started"] = True
     manifest["jobs"] = [{**asdict(job), "command": shlex.join(_command(job)), "status": "complete" if _complete(job)[0] else "failed"} for job in jobs]
     manifest["completed_jobs"] = sum(item["status"] == "complete" for item in manifest["jobs"])
     manifest["failed_jobs"] = len(failures)

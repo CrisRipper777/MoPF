@@ -77,13 +77,16 @@ class SSIMAGFinal(SSIMAGV31R1U):
         interaction_intervention: str,
         capture_attention: bool,
     ) -> dict[str, Any]:
+        relation_off = relation_intervention == "off"
         relation = self._relation_edge_outputs(
-            h0, edge_index, modality, force_unit=relation_intervention == "off"
+            h0, edge_index, modality, force_unit=relation_off
         )
         local_adaptation = self._local_adaptation(
             edge_index, relation["relation_residual"], relation["beta"],
             relation["nonself_mask"], h0.size(0)
         )
+        if relation_off:
+            local_adaptation = torch.zeros_like(local_adaptation)
         norm_index, norm_weight = self._normalized_operator(
             edge_index, relation["relation_weight"], h0.size(0), h0.dtype
         )

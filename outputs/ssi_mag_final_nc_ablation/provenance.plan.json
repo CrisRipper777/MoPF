@@ -1,9 +1,10 @@
 {
-  "schema": "ssi_mag_final_nc_ablation_provenance_v1",
-  "git_commit": "02dc6d0ee2a84cd634b150e6bbb2740093963de7",
+  "schema": "ssi_mag_final_nc_ablation_provenance_v2",
+  "git_commit": "3fc8ffea5ef5bd3a06ce1103cc1e0ada7e35e5a1",
+  "branch": "V3",
   "model": "ssi_mag_final_ablation",
   "model_source": "src/models/ssi_mag_final_ablation.py",
-  "model_sha256": "6a5fe81119f79b76926e82c832614a59154f9142aa2d62fe5908bba1bf7d6707",
+  "model_sha256": "6cdd8c6a6eb6f7e1d9993feef06f30988e7e6cb93bda469aea39d8ec8c2171a9",
   "config_source": "configs/model/ssi_mag_final_ablation.yaml",
   "config_sha256": "fa3ea989e5d77c3bcb0aea6e7d3d41540c8602972fceeab25214bc3d2f524595",
   "task": "nc",
@@ -20,7 +21,8 @@
     43,
     44
   ],
-  "ablations": [
+  "variants": [
+    "full",
     "no_relation_modulation",
     "fixed_semantic_reference",
     "last_context_only",
@@ -29,7 +31,7 @@
     "global_filter_only",
     "no_formation_conditioning"
   ],
-  "planned_jobs": 105,
+  "planned_jobs": 120,
   "lp_jobs": 0,
   "selection_metric": "val_acc",
   "test_used_for_selection": false,

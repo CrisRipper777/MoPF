@@ -39,7 +39,7 @@ Self-loops have `a_ii=0`. The relation weight is used directly:
 
 `w_ij^m = exp(a_ij^m)`.
 
-There is no beta parameter. The normalized operator `P^m` is `gcn_norm` applied to the unchanged physical support and these weights. The local relation state is
+Final R1 has no beta parameter. The normalized operator `P^m` is `gcn_norm` applied to the unchanged physical support and these weights. The local relation state is
 
 `c_i^m = mean_{j in N_i, j != i} |a_ij^m|`,
 
@@ -85,11 +85,15 @@ The formation-conditioned signed coefficient is
 
 where `delta_content` reads `S_tilde`,
 
-`delta_ref = s_ref^m (a_i,k^m - mean_q a_i,q^m)`,
+`xi_i0^m = 1`, `xi_ik^m = alpha_ik^m` for `k>=1`, and
 
-and
+`xi_bar_ik^m = xi_ik^m - mean_q xi_iq^m`,
 
-`delta_rel = s_rel^m c_i^m beta_hat_rel,k^m`.
+`delta_ref = s_ref^m xi_bar_ik^m`.
+
+The centered and standardized relation-order profile is denoted `pi_k^m`, and
+
+`delta_rel = s_rel^m c_i^m pi_k^m`.
 
 Coefficients are signed and unbounded; no softmax is used. Final modality composition is strictly
 

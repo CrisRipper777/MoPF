@@ -117,6 +117,43 @@ def test_r1_endpoint_symmetry_and_self_loop_exclusion_from_mu_c() -> None:
     assert c[4].item() == 0.0 and c[5].item() == 0.0
     assert torch.isfinite(c).all()
 
+    self_mask = edge_index[0] == edge_index[1]
+    relation = model._relation_edge_outputs(h0, edge_index, "text")
+    assert self_mask.any()
+    assert torch.equal(
+        relation["relation_residual"][self_mask],
+        torch.zeros_like(relation["relation_residual"][self_mask]),
+    )
+    assert torch.equal(
+        relation["relation_weight"][self_mask],
+        torch.ones_like(relation["relation_weight"][self_mask]),
+    )
+
+
+def test_bidirectional_edges_match_single_undirected_neighborhood_mean() -> None:
+    x, _ = _inputs()
+    model = _model()
+    with torch.no_grad():
+        model.relation_scorer_text.weight.copy_(torch.tensor([[0.2, -0.1, 0.05]]))
+        model.relation_scorer_text.bias.fill_(0.03)
+    h0 = model.text_proj(x[:, :4])
+    single = torch.tensor([[0, 1], [1, 2]], dtype=torch.long)
+    bidirectional = torch.tensor([[0, 1, 1, 2], [1, 0, 2, 1]], dtype=torch.long)
+    single_stats = model._relation_descriptor(h0, single, "text")
+    bi_stats = model._relation_descriptor(h0, bidirectional, "text")
+    torch.testing.assert_close(bi_stats["relation_mu"], single_stats["relation_mu"], rtol=0.0, atol=0.0)
+    single_relation = model._relation_edge_outputs(h0, single, "text")
+    bi_relation = model._relation_edge_outputs(h0, bidirectional, "text")
+    single_c = model._local_adaptation(
+        single, single_relation["relation_residual"], single_relation["beta"],
+        single_relation["nonself_mask"], x.size(0)
+    )
+    bi_c = model._local_adaptation(
+        bidirectional, bi_relation["relation_residual"], bi_relation["beta"],
+        bi_relation["nonself_mask"], x.size(0)
+    )
+    torch.testing.assert_close(bi_c, single_c, rtol=0.0, atol=0.0)
+
 
 def test_initial_operator_matches_raw_unit_operator_and_relation_off() -> None:
     x, edge_index = _inputs()
@@ -252,6 +289,10 @@ def test_gradient_flow_and_zero_scorer_leaves_zero_after_optimizer_step() -> Non
     assert model.theta_beta_text.grad is not None
     assert torch.isfinite(model.theta_beta_text.grad).all()
     assert model.theta_beta_text.grad.abs().item() > 0.0
+    for parameter in (model.relation_proj_text.weight, model.semantic_prior_vector_text):
+        assert parameter.grad is not None
+        assert torch.isfinite(parameter.grad).all()
+        assert parameter.grad.abs().sum().item() > 0.0
 
 
 def test_text_visual_paths_are_independent_until_late_fusion() -> None:

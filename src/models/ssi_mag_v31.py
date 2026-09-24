@@ -420,6 +420,13 @@ class SSIMAGV31(nn.Module):
             )
             score_chunks.append(F.softsign(scorer(descriptor).squeeze(-1)))
         relation_score = torch.cat(score_chunks, dim=0)
+        # Explicit input self-loops are identity edges, not semantic relations.
+        # They remain in the physical support for gcn_norm, but cannot receive
+        # learned relation modulation.  This is intentionally after scoring so
+        # compatibility remains available to analysis while a_ii is exact zero.
+        relation_score = torch.where(
+            nonself_mask, relation_score, torch.zeros_like(relation_score)
+        )
         return {
             "relation_projection": relation_projection,
             "compatibility": compatibility,

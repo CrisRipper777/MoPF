@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import torch
 from omegaconf import OmegaConf
 
@@ -77,6 +79,14 @@ def _assert_finite_backward(model, x, edge_index):
     grads = [p.grad for p in model.parameters() if p.requires_grad]
     assert grads
     assert all(torch.isfinite(g).all() for g in grads if g is not None)
+
+
+def test_generic_yaml_keeps_fixed_k_as_an_integer():
+    root = Path(__file__).resolve().parents[1]
+    for name in ("ssi_mag_generic_ppr.yaml", "ssi_mag_generic_gpr.yaml"):
+        cfg = OmegaConf.load(root / "configs" / "model" / name)
+        assert cfg.max_order == 3
+        assert cfg.num_layers == 3
 
 
 def test_full_s_ablation_is_state_and_output_equivalent_to_frozen_s():

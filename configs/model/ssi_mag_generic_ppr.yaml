@@ -6,7 +6,7 @@ dropout: 0.2
 norm: layernorm
 
 max_order: 3
-num_layers: \${model.max_order}
+num_layers: 3
 diffusion_add_self_loops: true
 global_prior_restart: 0.15
 global_prior_order: 2

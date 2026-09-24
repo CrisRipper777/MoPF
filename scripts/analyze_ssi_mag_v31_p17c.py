@@ -102,7 +102,7 @@ def _run_dir(root: Path, dataset: str, seed: int, group: str) -> Path:
     return root / dataset / group / f"seed{seed}"
 
 
-def _load_run(root: Path, dataset: str, seed: int, group: str, device: torch.device):
+def _load_run(root: Path, dataset: str, seed: int, group: str, device: torch.device, expected_model: str, expected_control: str | None = None):
     run = _run_dir(root, dataset, seed, group)
     required = [run / name for name in ("best.pt", "complete.marker", "resolved_config.json")]
     missing = [str(path) for path in required if not path.is_file()]
@@ -114,6 +114,10 @@ def _load_run(root: Path, dataset: str, seed: int, group: str, device: torch.dev
     cfg = OmegaConf.create(json.loads((run / "resolved_config.json").read_text()))
     if str(cfg.task.name) != "nc" or str(cfg.ablation) != "full":
         raise ValueError(f"unexpected task/ablation in {run}")
+    if str(cfg.model.name) != expected_model:
+        raise ValueError(f"unexpected model identity in {run}: {cfg.model.name} != {expected_model}")
+    if expected_control is not None and str(getattr(cfg.model, "control", "")) != expected_control:
+        raise ValueError(f"unexpected control identity in {run}: {getattr(cfg.model, 'control', None)} != {expected_control}")
     data = load_mag_data(cfg, "nc", seed)
     info = {
         "input_dim": data.input_dim,
@@ -283,11 +287,11 @@ def _reference_rows(normal: dict[str, Any], model, variant: str, dataset: str, s
     rows = []
     for modality in MODALITIES:
         for hop in range(4):
-            ref = normal[f"reference_residual_{modality}"][hop] if f"reference_residual_{modality}" in normal else torch.zeros_like(normal[f"eta_{modality}"][:, hop])
+            ref = normal[f"reference_residual_{modality}"][:, hop] if f"reference_residual_{modality}" in normal else torch.zeros_like(normal[f"eta_{modality}"][:, hop])
             content = normal[f"delta_content_{modality}"][:, hop]
             relation = normal[f"relation_filter_residual_{modality}"][:, hop]
             eta = normal[f"eta_{modality}"][:, hop]
-            row = {"variant": variant, "dataset": dataset, "seed": seed, "modality": modality, "hop": hop, "reference_present": int(variant == "AB"), "reference_scale": float(getattr(model, f"reference_filter_scale_{modality}").detach().cpu()) if hasattr(model, f"reference_filter_scale_{modality}") else 0.0}
+            row = {"variant": variant, "dataset": dataset, "seed": seed, "modality": modality, "hop": hop, "reference_present": int(variant in {"V3", "B", "AB"}), "reference_scale": float(getattr(model, f"reference_filter_scale_{modality}").detach().cpu()) if hasattr(model, f"reference_filter_scale_{modality}") else 0.0}
             for name, value in (("reference", ref), ("content", content), ("relation", relation), ("eta", eta)):
                 row.update({f"{name}_{key}": val for key, val in p17b._stats(value).items()})
                 row[f"{name}_covariance_contribution"] = _covariance(value, eta)
@@ -343,7 +347,7 @@ def _report(path: Path, summary: dict[str, Any], performance: list[dict[str, Any
         "",
         "## Reference-residual evidence",
         "",
-        "AB restores the old reference residual under new R1/new R2. The covariance contribution is `Cov(term, eta)/Var(eta)`; the three-term sum is reported against the full signed eta and need not equal one when global/modality terms contribute.",
+        "B and AB restore the old reference residual under their respective R1/new R2 controls. The covariance contribution is `Cov(term, eta)/Var(eta)`; the three-term sum is reported against the full signed eta and need not equal one when global/modality terms contribute.",
         "",
         "## Frozen sensitivity",
         "",
@@ -399,9 +403,10 @@ def main() -> int:
 
     for dataset in datasets:
         for seed in seeds:
-            analyses: dict[str, tuple[Any, Any, Any, dict[str, Any], nn.Module]] = {}
             for label, root, group in (("B", input_root, "B"), ("AB", input_root, "AB"), ("V3", v3_root, "full"), ("V3.1", v31_root, "full")):
-                run, cfg, data, model, head = _load_run(root, dataset, seed, group, device)
+                expected_model = "ssi_mag_v31_controls" if label in {"B", "AB"} else ("ssi_mag_v3" if label == "V3" else "ssi_mag_v31")
+                expected_control = {"B": "r2_only", "AB": "r1_r2"}.get(label)
+                run, cfg, data, model, head = _load_run(root, dataset, seed, group, device, expected_model, expected_control)
                 x, edge_index = data.x.to(device), data.edge_index.to(device)
                 with torch.no_grad():
                     normal = model.analysis(x, edge_index)
@@ -418,7 +423,6 @@ def main() -> int:
                         attention_failures.append(f"{dataset}/seed{seed}/{label}/{modality}: {exc}")
                         raise
                 signatures[dataset].add(_data_signature(data))
-                analyses[label] = (cfg, data, model, normal, head)
                 if label in {"B", "AB"}:
                     finite_count += 1
                     loaded_controls += 1
@@ -428,8 +432,9 @@ def main() -> int:
                     part, vectors = _r2_rows(normal, model, label, dataset, seed)
                     r2_rows.extend(part)
                     for hop in (1, 2, 3):
+                        bucket = r2_vectors.setdefault((dataset, label, seed, hop), {})
                         for modality in MODALITIES:
-                            r2_vectors[(dataset, label, seed, hop)] = {modality: vectors[(modality, hop)]}
+                            bucket[modality] = vectors[(modality, hop)]
                     ref_rows.extend(_reference_rows(normal, model, label, dataset, seed))
                 elif label == "AB":
                     rows, sens = _r1_rows(model, normal, relation_off, head, data, label, dataset, seed)
@@ -443,8 +448,9 @@ def main() -> int:
                     part, vectors = _r2_rows(normal, model, label, dataset, seed)
                     r2_rows.extend(part)
                     for hop in (1, 2, 3):
+                        bucket = r2_vectors.setdefault((dataset, label, seed, hop), {})
                         for modality in MODALITIES:
-                            r2_vectors[(dataset, label, seed, hop)] = {modality: vectors[(modality, hop)]}
+                            bucket[modality] = vectors[(modality, hop)]
                     ref_rows.extend(_reference_rows(normal, model, label, dataset, seed))
                 else:
                     ref_rows.extend(_reference_rows(normal, model, label, dataset, seed))

@@ -1,0 +1,32 @@
+{
+  "schema": "ssi_mag_v31_p17c_controls_provenance_v1",
+  "git_commit": "2642cd39fb458ba4b2ece3fbf025251b333254fa",
+  "model": "ssi_mag_v31_controls",
+  "model_source": "src/models/ssi_mag_v31_controls.py",
+  "model_sha256": "482d76137caffb2031ff3c391bf7f64538157b086be83c732120d1249b699e8c",
+  "config_source": "configs/model/ssi_mag_v31_controls.yaml",
+  "config_sha256": "6636ed5e845e4d21ce0a646ccef82da6a684c3d7c4da08778d7a6f3f41a15f1a",
+  "task": "nc",
+  "protocol": "unified_full_graph_nc_v1",
+  "controls": [
+    "r2_only",
+    "r1_r2"
+  ],
+  "variants": {
+    "r2_only": "B",
+    "r1_r2": "AB"
+  },
+  "datasets": [
+    "Movies",
+    "Toys",
+    "Grocery",
+    "ele-fashion",
+    "Reddit-S"
+  ],
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "lp_jobs": 0
+}

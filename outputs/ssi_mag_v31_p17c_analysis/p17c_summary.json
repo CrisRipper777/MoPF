@@ -1,0 +1,44 @@
+{
+  "datasets": [
+    "Movies",
+    "Toys",
+    "Grocery",
+    "ele-fashion",
+    "Reddit-S"
+  ],
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "expected_control_runs": 30,
+  "loaded_control_runs": 30,
+  "finite_control_runs": 30,
+  "device": "cpu",
+  "provenance_lock": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p17c_controls/provenance.lock.json",
+  "lock_git_commit": "2642cd39fb458ba4b2ece3fbf025251b333254fa",
+  "node_ordering_verified": {
+    "Movies": true,
+    "Toys": true,
+    "Grocery": true,
+    "ele-fashion": true,
+    "Reddit-S": true
+  },
+  "attention_simplex_failures": [],
+  "performance_rows": 60,
+  "sequential_delta_rows": 63,
+  "r1_rows": 60,
+  "r2_rows": 420,
+  "reference_rows": 480,
+  "relation_sensitivity_rows": 30,
+  "reference_sensitivity_rows": 15,
+  "training_invoked": false,
+  "lp_invoked": false,
+  "ablation_invoked": false,
+  "test_metrics_used_for_selection_or_decision": false,
+  "comparisons": {
+    "Delta_R2": "B - V3",
+    "Delta_R1": "AB - B",
+    "Delta_remove_ref": "V3.1 - AB"
+  }
+}

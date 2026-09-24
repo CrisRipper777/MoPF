@@ -66,6 +66,29 @@ ABLATION_SPECS: dict[str, AblationSpec] = {
         "uniform_context", True, True, True, True, True, True,
         composition_mode="uniform",
     ),
+    # P1.9 paper ablations around the canonical SSI-MAG final model.
+    "no_relation_modulation": AblationSpec(
+        "no_relation_modulation", True, True, True, True, True, True,
+        relation_calibration=False, edge_weight_override="raw_uniform",
+    ),
+    "fixed_semantic_reference": AblationSpec(
+        "fixed_semantic_reference", True, True, True, True, True, True,
+    ),
+    "last_context_only": AblationSpec(
+        "last_context_only", True, True, True, True, True, True,
+    ),
+    "no_context_change": AblationSpec(
+        "no_context_change", True, True, True, True, True, True,
+    ),
+    "no_cross_hop_interaction": AblationSpec(
+        "no_cross_hop_interaction", True, True, True, True, True, True,
+    ),
+    "global_filter_only": AblationSpec(
+        "global_filter_only", True, True, True, True, True, True,
+    ),
+    "no_formation_conditioning": AblationSpec(
+        "no_formation_conditioning", True, True, True, True, True, True,
+    ),
     "wo_learned_semantic_calibration": AblationSpec(
         "wo_learned_semantic_calibration", False, True, True, True, True, True
     ),

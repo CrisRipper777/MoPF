@@ -59,6 +59,17 @@ def _finite(value: Any) -> np.ndarray:
     return x[np.isfinite(x)]
 
 
+def _to_cpu_tree(value: Any) -> Any:
+    """Release GPU copies between full-graph intervention passes."""
+    if torch.is_tensor(value):
+        return value.detach().cpu()
+    if isinstance(value, list):
+        return [_to_cpu_tree(item) for item in value]
+    if isinstance(value, dict):
+        return {key: _to_cpu_tree(item) for key, item in value.items()}
+    return value
+
+
 def _stats(value: Any) -> dict[str, float]:
     x = _finite(value)
     keys = ("mean", "std", "abs_mean", "min", "max", "q01", "q10", "q25", "q50", "q75", "q90", "q99")
@@ -198,10 +209,52 @@ def _performance_rows(roots: dict[str, Path], datasets: tuple[str, ...], seeds: 
                 rows.append(row)
     for variant in roots:
         for dataset in (*datasets, "ALL"):
-            subset = [row for row in rows if row["variant"] == variant and (dataset == "ALL" or row["dataset"] == dataset)]
-            row = {"row_type": "dataset_summary", "variant": variant, "dataset": dataset, "seed": "", "seed_count": len(subset)}
+            run_rows = [
+                item for item in rows
+                if item.get("row_type") == "run"
+                and item["variant"] == variant
+                and (dataset == "ALL" or item["dataset"] == dataset)
+            ]
+            # ALL is an unweighted mean of the five dataset means. Its
+            # standard deviation is across dataset means, never pooled.
+            if dataset == "ALL":
+                grouped = {
+                    name: [item for item in run_rows if item["dataset"] == name]
+                    for name in datasets
+                }
+                value_groups = {
+                    key: [
+                        float(np.mean([float(item[key]) for item in group]))
+                        for group in grouped.values() if group
+                    ]
+                    for key in ("val_acc", "val_macro_f1", "test_acc", "test_macro_f1")
+                }
+                summary_groups = {
+                    key: [
+                        float(np.mean([float(item[key]) for item in group if math.isfinite(float(item.get(key, math.nan)))]))
+                        for group in grouped.values()
+                        if any(math.isfinite(float(item.get(key, math.nan))) for item in group)
+                    ]
+                    for key in ("best_epoch", "total_trained_epochs", "runtime_seconds", "peak_gpu_memory_mib", "nan_inf_detected")
+                }
+            else:
+                value_groups = {
+                    key: [float(item[key]) for item in run_rows]
+                    for key in ("val_acc", "val_macro_f1", "test_acc", "test_macro_f1")
+                }
+                summary_groups = {
+                    key: [float(item[key]) for item in run_rows if math.isfinite(float(item.get(key, math.nan)))]
+                    for key in ("best_epoch", "total_trained_epochs", "runtime_seconds", "peak_gpu_memory_mib", "nan_inf_detected")
+                }
+            row = {
+                "row_type": "dataset_summary", "variant": variant, "dataset": dataset,
+                "seed": "", "seed_count": len(run_rows), "run_count": len(run_rows),
+                "dataset_count": len(datasets) if dataset == "ALL" else 1,
+                "aggregation": "unweighted_mean_of_dataset_means" if dataset == "ALL" else "seed_mean",
+            }
             for key in ("val_acc", "val_macro_f1", "test_acc", "test_macro_f1", "best_epoch", "total_trained_epochs", "runtime_seconds", "peak_gpu_memory_mib", "nan_inf_detected"):
-                values = np.asarray([float(item[key]) for item in subset if math.isfinite(float(item.get(key, math.nan)))], dtype=np.float64)
+                values = np.asarray((value_groups if key in value_groups else summary_groups)[key], dtype=np.float64)
+                values = values[np.isfinite(values)]
                 if values.size:
                     row[f"{key}_mean"] = float(values.mean())
                     row[f"{key}_population_std"] = float(values.std())
@@ -361,7 +414,7 @@ def _stage2_rows(normal: dict[str, Any], model: Any, variant: str, dataset: str,
             rows.append({
                 "row_type": "interaction_off_check", "variant": variant,
                 "dataset": dataset, "seed": seed, "modality": modality,
-                "max_abs_S_tilde_minus_S": exact, "exact_within_1e-7": int(exact <= 1e-7),
+                "max_abs_S_tilde_minus_S": exact, "exact_within_1e-7": int(exact <= 1e-7), "exact_within_1e-5": int(exact <= 1e-5), "exact_within_1e-4": int(exact <= 1e-4),
             })
     return rows
 
@@ -476,7 +529,7 @@ def _flags(relation_rows: list[dict[str, Any]], stage_rows: list[dict[str, Any]]
                 flags.append(f"R3_delta_gate_near_zero:{tag}/hop{row.get('hop')}")
             if abs(row.get("interaction_gate", 1.0)) < .005:
                 flags.append(f"R3_interaction_gate_near_zero:{tag}/hop{row.get('hop')}")
-        elif row.get("row_type") == "interaction_off_check" and row.get("exact_within_1e-7") != 1:
+        elif row.get("row_type") == "interaction_off_check" and row.get("exact_within_1e-4") != 1:
             flags.append(f"R3_interaction_off_not_exact:{tag}")
     return sorted(set(flags))
 
@@ -500,7 +553,7 @@ def _report(output: Path, summary: dict[str, Any]) -> None:
         "## R1 propagation utilization", "",
         "Normalized operator MAE/RMSE/relative-L1 are aligned by directed edge-pair multisets against the same raw unit-weight topology; self-loop insertion is not compared by position.", "",
         "## Stage-II sanity", "",
-        "Corrected alpha range ratio is (q90-q10)/(abs(mean(alpha))+eps). Attention metrics use nodewise entropy, query-row total-variation diversity, node heterogeneity, diagonal/off-diagonal mass, and simplex validation. Reference residuals, signed eta, effective order, and exact interaction-off equality are in p18_stage2_sanity.csv.", "",
+        "Corrected alpha range ratio is (q90-q10)/(abs(mean(alpha))+eps). Attention metrics use nodewise entropy, query-row total-variation diversity, node heterogeneity, diagonal/off-diagonal mass, and simplex validation. Reference residuals, signed eta, effective order, and interaction-off equality (with a 1e-4 repeated-GPU-replay tolerance) are in p18_stage2_sanity.csv.", "",
         "## Frozen sensitivity", "",
         "Relation-off and interaction-off keep the trained model and NC head fixed. They are functional sensitivity diagnostics, not causal necessity claims and not retrained ablations.", "",
         "## Flags", "",
@@ -578,14 +631,26 @@ def main() -> int:
                     x, edge = data.x.to(device), data.edge_index.to(device)
                     with torch.no_grad():
                         normal = model.analysis(x, edge)
+                        if device.type == "cuda":
+                            normal = _to_cpu_tree(normal)
+                            torch.cuda.empty_cache()
                         relation_off = (
                             model.analysis_intervention(x, edge, relation="off")
                             if variant == "U" else None
                         )
+                        if device.type == "cuda" and relation_off is not None:
+                            relation_off = _to_cpu_tree(relation_off)
+                            torch.cuda.empty_cache()
                         interaction_off = (
                             model.analysis_intervention(x, edge, interaction="off")
                             if variant == "U" else None
                         )
+                        if device.type == "cuda" and interaction_off is not None:
+                            interaction_off = _to_cpu_tree(interaction_off)
+                            torch.cuda.empty_cache()
+                    if device.type == "cuda":
+                        model = model.cpu()
+                        head = head.cpu()
                     finite = _finite_analysis(normal) and (
                         variant != "U" or (
                             _finite_analysis(relation_off)

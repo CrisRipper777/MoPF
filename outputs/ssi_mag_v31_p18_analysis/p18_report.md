@@ -6,7 +6,7 @@ This report separates performance evidence, mechanism behavior evidence, and fro
 
 - U expected/loaded/finite: 15/15/15.
 - Control runs loaded: 30; attention failures: [].
-- Device: cpu; analyzer training invoked: False; LP jobs: 0.
+- Device: cuda:0; analyzer training invoked: False; LP jobs: 0.
 - All model selection remains validation Accuracy; test metrics are descriptive only.
 
 ## Performance evidence
@@ -25,7 +25,7 @@ Normalized operator MAE/RMSE/relative-L1 are aligned by directed edge-pair multi
 
 ## Stage-II sanity
 
-Corrected alpha range ratio is (q90-q10)/(abs(mean(alpha))+eps). Attention metrics use nodewise entropy, query-row total-variation diversity, node heterogeneity, diagonal/off-diagonal mass, and simplex validation. Reference residuals, signed eta, effective order, and exact interaction-off equality are in p18_stage2_sanity.csv.
+Corrected alpha range ratio is (q90-q10)/(abs(mean(alpha))+eps). Attention metrics use nodewise entropy, query-row total-variation diversity, node heterogeneity, diagonal/off-diagonal mass, and simplex validation. Reference residuals, signed eta, effective order, and interaction-off equality (with a 1e-4 repeated-GPU-replay tolerance) are in p18_stage2_sanity.csv.
 
 ## Frozen sensitivity
 

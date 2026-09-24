@@ -1,0 +1,27 @@
+{
+  "schema": "ssi_mag_v31_p18_r1u_provenance_v1",
+  "git_commit": "d31330c325ff26ced732a2fe3ac58905cc569c93",
+  "model": "ssi_mag_v31_r1u",
+  "variant": "U",
+  "model_source": "src/models/ssi_mag_v31_r1u.py",
+  "model_sha256": "483470190d0fd3a592abc121bf04b662562dba51a6c21c4ca0acf3df97d06c52",
+  "config_source": "configs/model/ssi_mag_v31_r1u.yaml",
+  "config_sha256": "2c3b556d725a75a4380d83c62a5301c071930247595f1ed0f0386f0278f30188",
+  "task": "nc",
+  "protocol": "unified_full_graph_nc_v1",
+  "datasets": [
+    "Movies",
+    "Toys",
+    "Grocery",
+    "ele-fashion",
+    "Reddit-S"
+  ],
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "lp_jobs": 0,
+  "selection_metric": "val_acc",
+  "test_used_for_selection": false
+}

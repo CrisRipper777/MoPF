@@ -1,0 +1,130 @@
+{
+  "schema": "ssi_mag_v31_p18_r1u_analysis_v1",
+  "datasets": [
+    "Movies",
+    "Toys",
+    "Grocery",
+    "ele-fashion",
+    "Reddit-S"
+  ],
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "expected_u_runs": 15,
+  "loaded_u_runs": 15,
+  "finite_u_runs": 15,
+  "control_expected_runs": 30,
+  "control_loaded_runs": 30,
+  "variant_loaded_runs": {
+    "U": 15,
+    "AB": 15,
+    "B": 15
+  },
+  "errors": [],
+  "device": "cpu",
+  "input_root": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u",
+  "controls_root": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p17c_controls",
+  "provenance": {
+    "u": {
+      "schema": "ssi_mag_v31_p18_r1u_provenance_v1",
+      "git_commit": "d31330c325ff26ced732a2fe3ac58905cc569c93",
+      "model": "ssi_mag_v31_r1u",
+      "variant": "U",
+      "model_source": "src/models/ssi_mag_v31_r1u.py",
+      "model_sha256": "483470190d0fd3a592abc121bf04b662562dba51a6c21c4ca0acf3df97d06c52",
+      "config_source": "configs/model/ssi_mag_v31_r1u.yaml",
+      "config_sha256": "2c3b556d725a75a4380d83c62a5301c071930247595f1ed0f0386f0278f30188",
+      "task": "nc",
+      "protocol": "unified_full_graph_nc_v1",
+      "datasets": [
+        "Movies",
+        "Toys",
+        "Grocery",
+        "ele-fashion",
+        "Reddit-S"
+      ],
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "lp_jobs": 0,
+      "selection_metric": "val_acc",
+      "test_used_for_selection": false
+    },
+    "p17c": {
+      "schema": "ssi_mag_v31_p17c_controls_provenance_v1",
+      "git_commit": "2642cd39fb458ba4b2ece3fbf025251b333254fa",
+      "model": "ssi_mag_v31_controls",
+      "model_source": "src/models/ssi_mag_v31_controls.py",
+      "model_sha256": "482d76137caffb2031ff3c391bf7f64538157b086be83c732120d1249b699e8c",
+      "config_source": "configs/model/ssi_mag_v31_controls.yaml",
+      "config_sha256": "6636ed5e845e4d21ce0a646ccef82da6a684c3d7c4da08778d7a6f3f41a15f1a",
+      "task": "nc",
+      "protocol": "unified_full_graph_nc_v1",
+      "controls": [
+        "r2_only",
+        "r1_r2"
+      ],
+      "variants": {
+        "r2_only": "B",
+        "r1_r2": "AB"
+      },
+      "datasets": [
+        "Movies",
+        "Toys",
+        "Grocery",
+        "ele-fashion",
+        "Reddit-S"
+      ],
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "lp_jobs": 0
+    }
+  },
+  "node_ordering_verified": {
+    "Movies": true,
+    "Toys": true,
+    "Grocery": true,
+    "ele-fashion": true,
+    "Reddit-S": true
+  },
+  "attention_failures": [],
+  "flags": [
+    "R1_softsign_saturation:B/Grocery/seed42/text",
+    "R1_softsign_saturation:B/Grocery/seed43/text",
+    "R1_softsign_saturation:B/Grocery/seed44/visual",
+    "R1_softsign_saturation:B/Movies/seed42/text",
+    "R1_softsign_saturation:B/Movies/seed43/text",
+    "R1_softsign_saturation:B/ele-fashion/seed44/text",
+    "R1_softsign_saturation:B/ele-fashion/seed44/visual",
+    "R1_weight_cv_negligible:AB/Movies/seed42/text",
+    "R1_weight_cv_negligible:AB/Movies/seed43/text",
+    "R1_weight_cv_negligible:AB/Movies/seed44/text"
+  ],
+  "performance_guardrail": {
+    "status": "PERFORMANCE_REVIEW_TRIGGER",
+    "mean_val_acc_delta": -0.0018750627835591636,
+    "mean_val_f1_delta": -0.0018872145150450545,
+    "mean_val_acc_delta_pp": -0.18750627835591635,
+    "mean_val_f1_delta_pp": -0.18872145150450545,
+    "simultaneous_declines": [
+      "Movies",
+      "Toys",
+      "Grocery",
+      "Reddit-S"
+    ],
+    "threshold_pp": -0.3,
+    "test_used": false
+  },
+  "training_invoked": false,
+  "ablation_invoked": false,
+  "lp_invoked": false,
+  "lp_jobs": 0,
+  "test_metrics_used_for_selection_or_decision": false
+}

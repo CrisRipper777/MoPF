@@ -1,0 +1,7 @@
+{
+  "status": "complete",
+  "task": "nc",
+  "dataset": "Movies",
+  "ablation": "full",
+  "seed": 42
+}

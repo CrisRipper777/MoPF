@@ -612,6 +612,7 @@ def main() -> int:
                     relation_rows.extend(rel)
                     relation_rows.extend(filt)
                     if variant == "U":
+                        stage_rows.extend(filt)
                         stage_rows.extend(_stage2_rows(
                             normal, model, variant, dataset, seed, interaction_off
                         ))

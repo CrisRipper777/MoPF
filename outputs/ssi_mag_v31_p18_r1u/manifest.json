@@ -1,0 +1,240 @@
+{
+  "launcher": "run_ssi_mag_v31_p18_r1u.py",
+  "created_at_utc": "2026-09-24T08:37:33.578503+00:00",
+  "git_commit": "d31330c325ff26ced732a2fe3ac58905cc569c93",
+  "task": "nc",
+  "model": "ssi_mag_v31_r1u",
+  "variant": "U",
+  "protocol": "unified_full_graph_nc_v1",
+  "datasets": [
+    "Movies",
+    "Toys",
+    "Grocery",
+    "ele-fashion",
+    "Reddit-S"
+  ],
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "device": "cuda:0",
+  "dry_run": false,
+  "lp_jobs": 0,
+  "selection_metric": "val_acc",
+  "checkpoint_selection": "best_val_accuracy",
+  "test_used_for_selection": false,
+  "resolved_model_config": {
+    "name": "ssi_mag_v31_r1u",
+    "version": "ssi_mag_v31_r1u",
+    "hidden_dim": 256,
+    "dropout": 0.2,
+    "norm": "layernorm",
+    "max_order": 3,
+    "num_layers": 3,
+    "diffusion_add_self_loops": true,
+    "relation_rank": 16,
+    "relation_edge_chunk_size": 65536,
+    "relation_init_seed": 20260923,
+    "relation_init_std": 0.02,
+    "semantic_reference_init": 0.1,
+    "context_change_gate_init": 0.1,
+    "hop_interaction_gate_init": 0.1,
+    "hop_interaction_layers": 1,
+    "hop_interaction_heads": 1,
+    "hop_interaction_dropout": 0.0,
+    "hop_interaction_order_embedding": true,
+    "filter_rank": 4,
+    "global_prior_restart": 0.15,
+    "global_prior_order": 2,
+    "reference_filter_scale_init": 0.1,
+    "relation_filter_scale_init": 0.1,
+    "fusion": "concat_residual_mlp",
+    "eps": 1e-08,
+    "ablation": "full"
+  },
+  "provenance_lock": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/provenance.lock.json",
+  "provenance_lock_status": "created",
+  "formal_provenance": {
+    "schema": "ssi_mag_v31_p18_r1u_provenance_v1",
+    "git_commit": "d31330c325ff26ced732a2fe3ac58905cc569c93",
+    "model": "ssi_mag_v31_r1u",
+    "variant": "U",
+    "model_source": "src/models/ssi_mag_v31_r1u.py",
+    "model_sha256": "483470190d0fd3a592abc121bf04b662562dba51a6c21c4ca0acf3df97d06c52",
+    "config_source": "configs/model/ssi_mag_v31_r1u.yaml",
+    "config_sha256": "2c3b556d725a75a4380d83c62a5301c071930247595f1ed0f0386f0278f30188",
+    "task": "nc",
+    "protocol": "unified_full_graph_nc_v1",
+    "datasets": [
+      "Movies",
+      "Toys",
+      "Grocery",
+      "ele-fashion",
+      "Reddit-S"
+    ],
+    "seeds": [
+      42,
+      43,
+      44
+    ],
+    "lp_jobs": 0,
+    "selection_metric": "val_acc",
+    "test_used_for_selection": false
+  },
+  "jobs": [
+    {
+      "index": 1,
+      "dataset": "Movies",
+      "seed": 42,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Movies/U/seed42",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=Movies task=nc model=ssi_mag_v31_r1u seed=42 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Movies/U/seed42/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Movies/U/seed42",
+      "status": "complete"
+    },
+    {
+      "index": 2,
+      "dataset": "Movies",
+      "seed": 43,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Movies/U/seed43",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=Movies task=nc model=ssi_mag_v31_r1u seed=43 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Movies/U/seed43/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Movies/U/seed43",
+      "status": "complete"
+    },
+    {
+      "index": 3,
+      "dataset": "Movies",
+      "seed": 44,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Movies/U/seed44",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=Movies task=nc model=ssi_mag_v31_r1u seed=44 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Movies/U/seed44/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Movies/U/seed44",
+      "status": "complete"
+    },
+    {
+      "index": 4,
+      "dataset": "Toys",
+      "seed": 42,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Toys/U/seed42",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=Toys task=nc model=ssi_mag_v31_r1u seed=42 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Toys/U/seed42/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Toys/U/seed42",
+      "status": "complete"
+    },
+    {
+      "index": 5,
+      "dataset": "Toys",
+      "seed": 43,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Toys/U/seed43",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=Toys task=nc model=ssi_mag_v31_r1u seed=43 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Toys/U/seed43/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Toys/U/seed43",
+      "status": "complete"
+    },
+    {
+      "index": 6,
+      "dataset": "Toys",
+      "seed": 44,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Toys/U/seed44",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=Toys task=nc model=ssi_mag_v31_r1u seed=44 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Toys/U/seed44/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Toys/U/seed44",
+      "status": "complete"
+    },
+    {
+      "index": 7,
+      "dataset": "Grocery",
+      "seed": 42,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Grocery/U/seed42",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=Grocery task=nc model=ssi_mag_v31_r1u seed=42 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Grocery/U/seed42/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Grocery/U/seed42",
+      "status": "complete"
+    },
+    {
+      "index": 8,
+      "dataset": "Grocery",
+      "seed": 43,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Grocery/U/seed43",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=Grocery task=nc model=ssi_mag_v31_r1u seed=43 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Grocery/U/seed43/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Grocery/U/seed43",
+      "status": "complete"
+    },
+    {
+      "index": 9,
+      "dataset": "Grocery",
+      "seed": 44,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Grocery/U/seed44",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=Grocery task=nc model=ssi_mag_v31_r1u seed=44 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Grocery/U/seed44/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Grocery/U/seed44",
+      "status": "complete"
+    },
+    {
+      "index": 10,
+      "dataset": "ele-fashion",
+      "seed": 42,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/ele-fashion/U/seed42",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=ele-fashion task=nc model=ssi_mag_v31_r1u seed=42 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/ele-fashion/U/seed42/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/ele-fashion/U/seed42",
+      "status": "complete"
+    },
+    {
+      "index": 11,
+      "dataset": "ele-fashion",
+      "seed": 43,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/ele-fashion/U/seed43",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=ele-fashion task=nc model=ssi_mag_v31_r1u seed=43 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/ele-fashion/U/seed43/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/ele-fashion/U/seed43",
+      "status": "complete"
+    },
+    {
+      "index": 12,
+      "dataset": "ele-fashion",
+      "seed": 44,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/ele-fashion/U/seed44",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=ele-fashion task=nc model=ssi_mag_v31_r1u seed=44 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/ele-fashion/U/seed44/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/ele-fashion/U/seed44",
+      "status": "complete"
+    },
+    {
+      "index": 13,
+      "dataset": "Reddit-S",
+      "seed": 42,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Reddit-S/U/seed42",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=Reddit-S task=nc model=ssi_mag_v31_r1u seed=42 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Reddit-S/U/seed42/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Reddit-S/U/seed42",
+      "status": "complete"
+    },
+    {
+      "index": 14,
+      "dataset": "Reddit-S",
+      "seed": 43,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Reddit-S/U/seed43",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=Reddit-S task=nc model=ssi_mag_v31_r1u seed=43 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Reddit-S/U/seed43/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Reddit-S/U/seed43",
+      "status": "complete"
+    },
+    {
+      "index": 15,
+      "dataset": "Reddit-S",
+      "seed": 44,
+      "variant": "U",
+      "device": "cuda:0",
+      "run_dir": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Reddit-S/U/seed44",
+      "command": "/home/m3/miniconda3/envs/yhf_env/bin/python -m src.main dataset=Reddit-S task=nc model=ssi_mag_v31_r1u seed=44 num_runs=1 device=cuda:0 ablation=full task.training_mode=full_graph task.evaluate_test=true task.protocol_version=unified_full_graph_nc_v1 task.save_ckpt_path=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Reddit-S/U/seed44/best.pt hydra.run.dir=/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Reddit-S/U/seed44",
+      "status": "complete"
+    }
+  ],
+  "completed_jobs": 15,
+  "failed_jobs": 0,
+  "failures": []
+}

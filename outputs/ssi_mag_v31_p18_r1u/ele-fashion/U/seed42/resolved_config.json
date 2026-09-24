@@ -1,0 +1,99 @@
+{
+  "dataset": {
+    "name": "ele-fashion",
+    "source": "mmgraph",
+    "tasks": [
+      "nc"
+    ],
+    "root": "/hdd1/DataInHere/YHF/data/ele-fashion",
+    "joint_feat_path": "/hdd1/DataInHere/YHF/data/ele-fashion/clip_feat.pt",
+    "edge_path": "/hdd1/DataInHere/YHF/data/ele-fashion/nc_edges-nodeid.pt",
+    "label_path": "/hdd1/DataInHere/YHF/data/ele-fashion/labels-w-missing.pt",
+    "node_split_path": "/hdd1/DataInHere/YHF/data/ele-fashion/split.pt",
+    "node_mapping_path": "/hdd1/DataInHere/YHF/data/ele-fashion/node_mapping.pt",
+    "num_classes": 12,
+    "feature_dtype": "float32",
+    "text_dim": 512,
+    "visual_dim": 512,
+    "make_undirected": true,
+    "add_self_loops": false
+  },
+  "task": {
+    "name": "nc",
+    "protocol_version": "unified_full_graph_nc_v1",
+    "training_mode": "full_graph",
+    "optimizer": "adamw",
+    "epochs": 300,
+    "lr": 0.001,
+    "weight_decay": 0.0001,
+    "batch_size": 1024,
+    "num_neighbors": 15,
+    "inference_mode": "full",
+    "inference_batch_size": 4096,
+    "eval_every": 1,
+    "patience": 30,
+    "early_stop_min_epoch": 30,
+    "early_stop_min_delta": 0.0001,
+    "grad_clip": 1.0,
+    "max_train_batches": null,
+    "save_ckpt_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/ele-fashion/U/seed42/best.pt",
+    "scheduler": null,
+    "scheduler_warmup_epochs": 10,
+    "scheduler_min_lr": 1e-05,
+    "loss": {
+      "aux_weight": 1.0
+    },
+    "evaluate_test": true,
+    "eval_modality_masks": {
+      "enabled": false,
+      "modes": [
+        "mask_text",
+        "mask_visual",
+        "mask_both_partial"
+      ],
+      "partial_ratio": 0.5,
+      "partial_seed_offset": 100000
+    }
+  },
+  "model": {
+    "name": "ssi_mag_v31_r1u",
+    "version": "ssi_mag_v31_r1u",
+    "hidden_dim": 256,
+    "dropout": 0.2,
+    "norm": "layernorm",
+    "max_order": 3,
+    "num_layers": 3,
+    "diffusion_add_self_loops": true,
+    "relation_rank": 16,
+    "relation_edge_chunk_size": 65536,
+    "relation_init_seed": 20260923,
+    "relation_init_std": 0.02,
+    "semantic_reference_init": 0.1,
+    "context_change_gate_init": 0.1,
+    "hop_interaction_gate_init": 0.1,
+    "hop_interaction_layers": 1,
+    "hop_interaction_heads": 1,
+    "hop_interaction_dropout": 0.0,
+    "hop_interaction_order_embedding": true,
+    "filter_rank": 4,
+    "global_prior_restart": 0.15,
+    "global_prior_order": 2,
+    "reference_filter_scale_init": 0.1,
+    "relation_filter_scale_init": 0.1,
+    "fusion": "concat_residual_mlp",
+    "eps": 1e-08,
+    "ablation": "full"
+  },
+  "seed": 42,
+  "num_runs": 1,
+  "device": "cuda:0",
+  "ablation": "full",
+  "paths": {
+    "data_root": "/hdd1/DataInHere/YHF/data",
+    "split_root": "/hdd1/DataInHere/YHF/data/MAGB_split",
+    "output_root": "outputs"
+  },
+  "logging": {
+    "level": "INFO"
+  }
+}

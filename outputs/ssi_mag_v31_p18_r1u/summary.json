@@ -1,0 +1,74 @@
+{
+  "model": "ssi_mag_v31_r1u",
+  "variant": "U",
+  "task": "nc",
+  "protocol": "unified_full_graph_nc_v1",
+  "lp_jobs": 0,
+  "rows": [
+    {
+      "dataset": "Movies",
+      "variant": "U",
+      "seed_count": 3,
+      "val_acc_mean": 0.5730853875478109,
+      "val_acc_population_std": 0.002952355232807871,
+      "val_macro_f1_mean": 0.502726897776103,
+      "val_macro_f1_population_std": 0.006028409185056048,
+      "test_acc_mean": 0.5592203736305237,
+      "test_acc_population_std": 0.003704899018363892,
+      "test_macro_f1_mean": 0.4957435808984448,
+      "test_macro_f1_population_std": 0.003864181469068133
+    },
+    {
+      "dataset": "Toys",
+      "variant": "U",
+      "seed_count": 3,
+      "val_acc_mean": 0.8035757342974345,
+      "val_acc_population_std": 0.0013808875650656715,
+      "val_macro_f1_mean": 0.7727586672815174,
+      "val_macro_f1_population_std": 0.0038300958521879872,
+      "test_acc_mean": 0.8017234404881796,
+      "test_acc_population_std": 0.00520555130178818,
+      "test_macro_f1_mean": 0.7702766830731587,
+      "test_macro_f1_population_std": 0.010451807360697129
+    },
+    {
+      "dataset": "Grocery",
+      "variant": "U",
+      "seed_count": 3,
+      "val_acc_mean": 0.837481697400411,
+      "val_acc_population_std": 0.0007172784125990616,
+      "val_macro_f1_mean": 0.766471864857445,
+      "val_macro_f1_population_std": 0.013151290866679209,
+      "test_acc_mean": 0.8308443228403727,
+      "test_acc_population_std": 0.006597079367473495,
+      "test_macro_f1_mean": 0.7560081240976939,
+      "test_macro_f1_population_std": 0.014397411218149796
+    },
+    {
+      "dataset": "ele-fashion",
+      "variant": "U",
+      "seed_count": 3,
+      "val_acc_mean": 0.8822406331698099,
+      "val_acc_population_std": 0.0013000193214918253,
+      "val_macro_f1_mean": 0.7664188325376157,
+      "val_macro_f1_population_std": 0.004923900448719374,
+      "test_acc_mean": 0.8829639752705892,
+      "test_acc_population_std": 0.0009064898144674213,
+      "test_macro_f1_mean": 0.7756711282283562,
+      "test_macro_f1_population_std": 0.004638657612649503
+    },
+    {
+      "dataset": "Reddit-S",
+      "variant": "U",
+      "seed_count": 3,
+      "val_acc_mean": 0.9669707417488098,
+      "val_acc_population_std": 0.0012842244969320795,
+      "val_macro_f1_mean": 0.9300328051367207,
+      "val_macro_f1_population_std": 0.004855053278965632,
+      "test_acc_mean": 0.967599888642629,
+      "test_acc_population_std": 0.0016842238574194142,
+      "test_macro_f1_mean": 0.929698548976866,
+      "test_macro_f1_population_std": 0.0030700977710320233
+    }
+  ]
+}

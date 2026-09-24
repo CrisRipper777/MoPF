@@ -1,0 +1,35 @@
+{
+  "task": "nc",
+  "dataset": "Movies",
+  "model": "ssi_mag_v31_r1u",
+  "ablation": "full",
+  "seed": 43,
+  "selection_metric": "val_acc",
+  "checkpoint_selection": "best_val_accuracy",
+  "best_epoch": 62,
+  "runtime_seconds": 38.04466222599149,
+  "peak_gpu_memory_mib": 3688.830078125,
+  "checkpoint": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/ssi_mag_v31_p18_r1u/Movies/U/seed43/best.pt",
+  "checkpoint_metadata": {
+    "selection": "best_val_accuracy",
+    "best_epoch": 62
+  },
+  "metrics": {
+    "val_acc": {
+      "mean": 0.5764846801757812,
+      "std": 0.0
+    },
+    "val_macro_f1": {
+      "mean": 0.5111918825092095,
+      "std": 0.0
+    },
+    "test_acc": {
+      "mean": 0.5556221604347229,
+      "std": 0.0
+    },
+    "test_macro_f1": {
+      "mean": 0.49557834634502235,
+      "std": 0.0
+    }
+  }
+}

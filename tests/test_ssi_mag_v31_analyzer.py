@@ -9,6 +9,7 @@ from scripts.analyze_ssi_mag_v31_p17b import (
     _cross_seed_rows,
     _operator_metrics,
     _tail_fractions,
+    _validate_attention_simplex,
     attention_diagnostics,
 )
 from src.models.ssi_mag_v31 import SSIMAGV31
@@ -134,3 +135,15 @@ def test_analyzer_reuses_corrected_nodewise_attention_definition() -> None:
     _, _, metrics = attention_diagnostics(attention)
     assert metrics["nodewise_normalized_entropy"] == 1.0
     assert metrics["attention_nonuniformity"] == 0.0
+
+
+def test_attention_simplex_rejects_invalid_rows() -> None:
+    import pytest
+
+    valid = torch.full((2, 4, 4), 0.25)
+    result = _validate_attention_simplex(valid)
+    assert result["attention_max_row_sum_error"] < 1e-5
+    with pytest.raises(ValueError, match="simplex-normalized"):
+        _validate_attention_simplex(valid * 0.9)
+    with pytest.raises(ValueError, match="negative mass"):
+        _validate_attention_simplex(torch.tensor([[[1.1, -0.1, 0.0, 0.0]]]))

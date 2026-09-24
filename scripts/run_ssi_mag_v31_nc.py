@@ -202,6 +202,65 @@ def _is_complete(job: Job) -> tuple[bool, str]:
     return True, "complete"
 
 
+def _provenance_payload(
+    commit: str,
+    model_config: dict[str, Any],
+    datasets: list[str],
+    seeds: list[int],
+    ablations: list[str],
+) -> dict[str, Any]:
+    if ablations != ["full"]:
+        raise ValueError("formal V3.1 provenance only supports variant=full")
+    return {
+        "schema": "ssi_mag_v31_p17b_provenance_v1",
+        "git_commit": commit,
+        "model": "ssi_mag_v31",
+        "model_source": "src/models/ssi_mag_v31.py",
+        "model_sha256": _sha256(ROOT / "src/models/ssi_mag_v31.py"),
+        "config_source": "configs/model/ssi_mag_v31.yaml",
+        "config_sha256": _sha256(MODEL_CONFIG_PATH),
+        "task": "nc",
+        "protocol": "unified_full_graph_nc_v1",
+        "variant": "full",
+        "datasets": list(datasets),
+        "seeds": [int(seed) for seed in seeds],
+        "ablations": list(ablations),
+        "lp_jobs": 0,
+    }
+
+
+def _ensure_provenance_lock(
+    output_root: Path,
+    jobs: list[Job],
+    provenance: dict[str, Any],
+    *,
+    dry_run: bool,
+) -> tuple[Path, str]:
+    """Create/validate the formal lock; dry-run never creates or mutates it."""
+    lock_path = output_root / "provenance.lock.json"
+    if dry_run:
+        return lock_path, "not_written_dry_run"
+    if lock_path.is_file():
+        try:
+            stored = json.loads(lock_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            raise RuntimeError(f"invalid provenance lock: {lock_path}: {exc}") from exc
+        if stored != provenance:
+            raise RuntimeError(
+                "provenance lock mismatch; refusing resume. "
+                f"expected={provenance} stored={stored}"
+            )
+        return lock_path, "validated_existing"
+    completed = [f"{job.dataset}/seed{job.seed}" for job in jobs if _is_complete(job)[0]]
+    if completed:
+        raise RuntimeError(
+            "formal completed artifacts exist without provenance.lock.json; refusing to infer provenance: "
+            + ", ".join(completed)
+        )
+    _dump(lock_path, provenance)
+    return lock_path, "created"
+
+
 def _manifest_payload(
     args: argparse.Namespace,
     jobs: list[Job],
@@ -299,8 +358,15 @@ def main() -> int:
     output_root.mkdir(parents=True, exist_ok=True)
     commit = _git_commit()
     model_config = _resolved_model_config()
+    provenance = _provenance_payload(commit, model_config, args.datasets, args.seeds, args.ablations)
+    lock_path, lock_status = _ensure_provenance_lock(
+        output_root, jobs, provenance, dry_run=bool(args.dry_run)
+    )
     manifest_path = output_root / "manifest.json"
     manifest = _manifest_payload(args, jobs, commit, model_config)
+    manifest["provenance_lock"] = str(lock_path)
+    manifest["provenance_lock_status"] = lock_status
+    manifest["formal_provenance"] = provenance if not args.dry_run else None
     _dump(manifest_path, manifest)
     training_started = False
 

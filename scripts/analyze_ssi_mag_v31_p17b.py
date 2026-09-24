@@ -16,6 +16,7 @@ import csv
 import hashlib
 import json
 import math
+import subprocess
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -27,6 +28,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from omegaconf import OmegaConf
 from scipy.stats import pearsonr, spearmanr
+from sklearn.metrics import f1_score
 
 ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
@@ -119,6 +121,27 @@ def _alpha_range_ratio(alpha: Any, eps: float = EPS) -> float:
     if x.size == 0:
         return math.nan
     return float((np.quantile(x, 0.90) - np.quantile(x, 0.10)) / (abs(np.mean(x)) + eps))
+
+
+def _validate_attention_simplex(
+    attention: torch.Tensor,
+    *,
+    min_value_tolerance: float = -1.0e-7,
+    row_sum_tolerance: float = 1.0e-5,
+) -> dict[str, float]:
+    """Reject malformed attention before downstream attention statistics."""
+    if attention.ndim != 3:
+        raise ValueError(f"attention must be rank-3, got shape={tuple(attention.shape)}")
+    if not bool(torch.isfinite(attention).all().item()):
+        raise ValueError("attention contains NaN/Inf")
+    minimum = float(attention.min().item()) if attention.numel() else 0.0
+    if minimum < min_value_tolerance:
+        raise ValueError(f"attention has negative mass below tolerance: min={minimum}")
+    row_sums = attention.sum(dim=-1)
+    max_row_error = float((row_sums - 1.0).abs().max().item()) if row_sums.numel() else 0.0
+    if max_row_error >= row_sum_tolerance:
+        raise ValueError(f"attention rows are not simplex-normalized: max_error={max_row_error}")
+    return {"attention_min": minimum, "attention_max_row_sum_error": max_row_error}
 
 
 def _tail_fractions(value: Any, thresholds: tuple[float, ...] = (3.0, 5.0)) -> dict[str, float]:
@@ -301,18 +324,35 @@ def _relation_rows(normal: dict[str, Any], model: Any, dataset: str, seed: int, 
         relative = normal[f"relation_centered_{modality}"][nonself]
         score = normal[f"a_{modality}"][nonself]
         weights = normal[f"relation_weight_{modality}"][nonself]
+        scorer = getattr(model, f"relation_scorer_{modality}")
+        coefficients = scorer.weight.detach().reshape(-1).cpu()
+        bias = float(scorer.bias.detach().reshape(-1)[0].cpu())
+        term_s = coefficients[0].to(compatibility.device) * compatibility
+        term_r = coefficients[1].to(compatibility.device) * relative
+        term_abs = coefficients[2].to(compatibility.device) * relative.abs()
+        dynamic_logit = term_s + term_r + term_abs
         row: dict[str, Any] = {
             "dataset": dataset,
             "seed": seed,
             "modality": modality,
             "nonself_edge_count": int(nonself.sum().item()),
             "beta": float(normal[f"beta_parameter_{modality}"].item()),
+            "scorer_w_s": float(coefficients[0]),
+            "scorer_w_r": float(coefficients[1]),
+            "scorer_w_abs": float(coefficients[2]),
+            "scorer_bias": bias,
             "score_fraction_abs_gt_0.8": float((score.abs() > 0.8).float().mean().item()) if score.numel() else math.nan,
             "score_fraction_abs_gt_0.9": float((score.abs() > 0.9).float().mean().item()) if score.numel() else math.nan,
         }
         _put(row, "semantic_compatibility", compatibility)
         _put(row, "relative_compatibility", relative)
         _put(row, "learned_score", score)
+        _put(row, "scorer_term_s", term_s)
+        _put(row, "scorer_term_r", term_r)
+        _put(row, "scorer_term_abs", term_abs)
+        _put(row, "dynamic_logit", dynamic_logit)
+        row["dynamic_logit_std_over_bias_abs"] = _safe_ratio(row["dynamic_logit_std"], abs(bias))
+        row["dynamic_logit_abs_mean_over_bias_abs"] = _safe_ratio(row["dynamic_logit_abs_mean"], abs(bias))
         _put(row, "relation_weight", weights)
         row["relation_weight_cv"] = _safe_ratio(row["relation_weight_std"], row["relation_weight_mean"])
         c = normal[f"c_{modality}"]
@@ -378,11 +418,12 @@ def _attention_rows(normal: dict[str, Any], dataset: str, seed: int) -> tuple[li
     matrices: dict[str, Any] = {}
     for modality in MODALITIES:
         attention = normal[f"attention_{modality}"]
+        simplex = _validate_attention_simplex(attention)
         mean_matrix, node_std, metrics = attention_diagnostics(attention)
-        row = {"dataset": dataset, "seed": seed, "modality": modality, "attention_shape": str(list(attention.shape)), **metrics}
+        row = {"dataset": dataset, "seed": seed, "modality": modality, "attention_shape": str(list(attention.shape)), **simplex, **metrics}
         _put(row, "entrywise_node_std", node_std)
         rows.append(row)
-        matrices[modality] = {"shape": list(attention.shape), "mean_matrix": mean_matrix.tolist(), "entrywise_node_std": node_std.tolist(), "metrics": metrics}
+        matrices[modality] = {"shape": list(attention.shape), "mean_matrix": mean_matrix.tolist(), "entrywise_node_std": node_std.tolist(), "simplex": simplex, "metrics": metrics}
     return rows, matrices
 
 
@@ -444,6 +485,49 @@ def _filter_rows(normal: dict[str, Any], dataset: str, seed: int) -> tuple[list[
     return rows, effective_rows
 
 
+def _functional_sensitivity(
+    normal: dict[str, Any],
+    relation_off: dict[str, Any],
+    interaction_off: dict[str, Any],
+    head: nn.Module,
+    data: Any,
+    dataset: str,
+    seed: int,
+) -> dict[str, Any]:
+    """Frozen representation/prediction sensitivity; never retrains a head."""
+    row: dict[str, Any] = {"dataset": dataset, "seed": seed}
+    for tag, changed in (("relation_off", relation_off), ("interaction_off", interaction_off)):
+        for source, label in (("z", "fused_embedding"), ("z_text", "text_embedding"), ("z_visual", "visual_embedding")):
+            base = normal[source].float()
+            other = changed[source].float()
+            difference = other - base
+            row[f"{tag}_{label}_mae"] = float(difference.abs().mean().item())
+            row[f"{tag}_{label}_relative_l2"] = float(
+                difference.norm().item() / (base.norm().item() + EPS)
+            )
+            row[f"{tag}_{label}_cosine"] = float(
+                F.cosine_similarity(base, other, dim=-1, eps=EPS).mean().item()
+            )
+        normal_logits = head(normal["z"])
+        changed_logits = head(changed["z"])
+        normal_pred = normal_logits.argmax(dim=-1)
+        changed_pred = changed_logits.argmax(dim=-1)
+        row[f"{tag}_prediction_flip_rate"] = float(
+            (normal_pred != changed_pred).float().mean().item()
+        )
+        val_idx = data.val_idx.to(normal_logits.device)
+        target = data.y[val_idx].detach().cpu().numpy()
+        labels = list(range(int(data.num_classes)))
+        before = normal_logits[val_idx].argmax(dim=-1).detach().cpu().numpy()
+        after = changed_logits[val_idx].argmax(dim=-1).detach().cpu().numpy()
+        row[f"{tag}_val_acc_delta"] = float((after == target).mean() - (before == target).mean())
+        row[f"{tag}_val_macro_f1_delta"] = float(
+            f1_score(target, after, labels=labels, average="macro", zero_division=0)
+            - f1_score(target, before, labels=labels, average="macro", zero_division=0)
+        )
+    return row
+
+
 def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     if not rows:
@@ -467,6 +551,265 @@ def _mean(rows: list[dict[str, Any]], key: str) -> float:
     return float(np.mean(values)) if values.size else math.nan
 
 
+def _performance_rows(input_root: Path, datasets: tuple[str, ...], seeds: tuple[int, ...]) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    for dataset in datasets:
+        for seed in seeds:
+            run_dir = _checkpoint_run(input_root, dataset, seed)
+            results = json.loads((run_dir / "results.json").read_text(encoding="utf-8"))
+            metrics = json.loads((run_dir / "metrics.json").read_text(encoding="utf-8"))
+            row: dict[str, Any] = {"dataset": dataset, "seed": seed, "model": "ssi_mag_v31", "ablation": "full"}
+            for key in ("val_acc", "val_macro_f1", "test_acc", "test_macro_f1"):
+                row[key] = float(results[key]["mean"])
+            row["best_epoch"] = int(metrics.get("best_epoch")) if metrics.get("best_epoch") is not None else math.nan
+            row["runtime_seconds"] = float(metrics.get("runtime_seconds", math.nan))
+            row["peak_gpu_memory_mib"] = float(metrics.get("peak_gpu_memory_mib", math.nan))
+            log_path = run_dir / "train.log"
+            log_text = log_path.read_text(errors="ignore") if log_path.is_file() else ""
+            epochs = [int(value) for value in __import__("re").findall(r"Epoch\s+(\d+)", log_text)]
+            row["total_trained_epochs"] = max(epochs) if epochs else math.nan
+            row["nan_inf_detected"] = int(not all(math.isfinite(float(row[key])) for key in ("val_acc", "val_macro_f1", "test_acc", "test_macro_f1")))
+            rows.append(row)
+    return rows
+
+
+def _performance_summary(rows: list[dict[str, Any]], datasets: tuple[str, ...]) -> list[dict[str, Any]]:
+    output: list[dict[str, Any]] = []
+    for dataset in (*datasets, "ALL"):
+        items = rows if dataset == "ALL" else [row for row in rows if row["dataset"] == dataset]
+        result: dict[str, Any] = {"dataset": dataset, "n_runs": len(items)}
+        for key in ("val_acc", "val_macro_f1", "test_acc", "test_macro_f1", "best_epoch", "total_trained_epochs", "runtime_seconds", "peak_gpu_memory_mib", "nan_inf_detected"):
+            values = np.asarray([float(row[key]) for row in items if key in row and math.isfinite(float(row[key]))], dtype=np.float64)
+            if values.size:
+                result[f"{key}_mean"] = float(values.mean())
+                result[f"{key}_population_std"] = float(values.std())
+                result[f"{key}_values"] = ";".join(f"{value:.12g}" for value in values)
+        output.append(result)
+    return output
+
+
+def _load_v3_reference() -> tuple[list[dict[str, Any]], str]:
+    """Load only provenance-verified historical V3 Full NC runs."""
+    root = ROOT / "outputs/ssi_mag_v3_p1_full"
+    rows: list[dict[str, Any]] = []
+    for dataset in DATASETS:
+        for seed in SEEDS:
+            run_dir = root / dataset / "full" / f"seed{seed}"
+            try:
+                marker = json.loads((run_dir / "complete.marker").read_text(encoding="utf-8"))
+                cfg = json.loads((run_dir / "resolved_config.json").read_text(encoding="utf-8"))
+                results = json.loads((run_dir / "results.json").read_text(encoding="utf-8"))
+                task = cfg["task"]
+                dataset_cfg = cfg["dataset"]
+                split_path = str(dataset_cfg.get("nc_split_path") or dataset_cfg.get("node_split_path") or "")
+                split_matches = (
+                    split_path.endswith(f"seed{seed}_train0.6_val0.2.pt")
+                    or (dataset == "ele-fashion" and split_path.endswith("ele-fashion/split.pt"))
+                )
+                if not (
+                    marker.get("status") == "complete"
+                    and marker.get("task") == "nc"
+                    and marker.get("dataset") == dataset
+                    and int(marker.get("seed", -1)) == seed
+                    and cfg["model"]["name"] == "ssi_mag_v3"
+                    and cfg["ablation"] == "full"
+                    and task["name"] == "nc"
+                    and task["protocol_version"] == "unified_full_graph_nc_v1"
+                    and task["training_mode"] == "full_graph"
+                    and int(cfg.get("num_runs", 0)) == 1
+                    and int(cfg["seed"]) == seed
+                    and split_matches
+                ):
+                    raise ValueError("identity/protocol/split mismatch")
+                row = {"dataset": dataset, "seed": seed, "model": "ssi_mag_v3", "ablation": "full"}
+                for key in ("val_acc", "val_macro_f1", "test_acc", "test_macro_f1"):
+                    row[key] = float(results[key]["mean"])
+                rows.append(row)
+            except (KeyError, OSError, TypeError, ValueError, json.JSONDecodeError) as exc:
+                return [], f"unavailable: provenance checks failed for {dataset}/seed{seed}: {exc}"
+    return rows, "verified: matching datasets/seeds, NC, full-graph, unified_full_graph_nc_v1, validation-Accuracy checkpoint selection"
+
+
+def _paired_performance_rows(v31_rows: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    v3_rows, status = _load_v3_reference()
+    if not v3_rows:
+        return [{"row_type": "status", "source_status": status}], {"status": status, "available": False}
+    v3 = {(row["dataset"], int(row["seed"])): row for row in v3_rows}
+    paired: list[dict[str, Any]] = []
+    metric_keys = ("val_acc", "val_macro_f1", "test_acc", "test_macro_f1")
+    for row in v31_rows:
+        ref = v3[(row["dataset"], int(row["seed"]))]
+        out: dict[str, Any] = {"row_type": "paired_seed", "dataset": row["dataset"], "seed": row["seed"], "source_status": status}
+        for key in metric_keys:
+            out[f"v31_{key}"] = row[key]
+            out[f"v3_{key}"] = ref[key]
+            out[f"delta_{key}"] = row[key] - ref[key]
+        paired.append(out)
+    for dataset in (*DATASETS, "ALL"):
+        items = v31_rows if dataset == "ALL" else [row for row in v31_rows if row["dataset"] == dataset]
+        refs = v3_rows if dataset == "ALL" else [row for row in v3_rows if row["dataset"] == dataset]
+        out = {"row_type": "dataset_summary", "dataset": dataset, "seed": "", "source_status": status}
+        for key in metric_keys:
+            a = np.asarray([row[key] for row in items], dtype=np.float64)
+            b = np.asarray([row[key] for row in refs], dtype=np.float64)
+            out[f"v31_{key}_mean"] = float(a.mean())
+            out[f"v31_{key}_population_std"] = float(a.std())
+            out[f"v3_{key}_mean"] = float(b.mean())
+            out[f"v3_{key}_population_std"] = float(b.std())
+            out[f"delta_{key}_mean"] = float(a.mean() - b.mean())
+            out[f"delta_{key}_values"] = ";".join(f"{value:.12g}" for value in (a - b))
+        out["v31_better_val_acc_count"] = int(sum(a["val_acc"] > b["val_acc"] for a, b in zip(items, refs)))
+        out["v3_better_val_acc_count"] = int(sum(a["val_acc"] < b["val_acc"] for a, b in zip(items, refs)))
+        out["val_acc_tie_count"] = int(sum(a["val_acc"] == b["val_acc"] for a, b in zip(items, refs)))
+        out["v31_better_val_macro_f1_count"] = int(sum(a["val_macro_f1"] > b["val_macro_f1"] for a, b in zip(items, refs)))
+        out["v3_better_val_macro_f1_count"] = int(sum(a["val_macro_f1"] < b["val_macro_f1"] for a, b in zip(items, refs)))
+        out["val_macro_f1_tie_count"] = int(sum(a["val_macro_f1"] == b["val_macro_f1"] for a, b in zip(items, refs)))
+        paired.append(out)
+    return paired, {"status": status, "available": True}
+
+
+def _numeric_mean(rows: list[dict[str, Any]], key: str) -> tuple[float, float]:
+    values = np.asarray([float(row[key]) for row in rows if key in row and _is_finite_number(row[key])], dtype=np.float64)
+    return (float(values.mean()), float(values.std())) if values.size else (math.nan, math.nan)
+
+
+def _is_finite_number(value: Any) -> bool:
+    try:
+        return math.isfinite(float(value))
+    except (TypeError, ValueError):
+        return False
+
+
+def _mechanism_comparison(
+    relation_rows: list[dict[str, Any]],
+    semantic_rows: list[dict[str, Any]],
+    attention_rows: list[dict[str, Any]],
+    context_rows: list[dict[str, Any]],
+    filter_rows: list[dict[str, Any]],
+    effective_rows: list[dict[str, Any]],
+    sensitivity_rows: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    old_path = ROOT / "outputs/ssi_mag_v3_p1_analysis/p1_mechanism_per_run.csv"
+    if not old_path.is_file():
+        return [{"status": "unavailable: V3 mechanism summary missing"}]
+    with old_path.open(newline="", encoding="utf-8") as handle:
+        old_rows = list(csv.DictReader(handle))
+    if len(old_rows) != len(DATASETS) * len(SEEDS):
+        return [{"status": "unavailable: V3 mechanism run count mismatch"}]
+    old_by_key = {(row.get("dataset"), int(row["seed"])): row for row in old_rows}
+    rows: list[dict[str, Any]] = []
+    def add(quantity: str, dataset: str, modality: str, hop: int | str, new_rows: list[dict[str, Any]], new_key: str, old_key: str, note: str) -> None:
+        selected_new = [row for row in new_rows if row.get("dataset") == dataset and row.get("modality") == modality and (hop == "" or str(row.get("hop")) == str(hop))]
+        selected_old = [row for row in old_rows if row.get("dataset") == dataset]
+        new_mean, new_std = _numeric_mean(selected_new, new_key)
+        old_values = [float(row[old_key]) for row in selected_old if old_key in row and _is_finite_number(row[old_key])]
+        old_mean = float(np.mean(old_values)) if old_values else math.nan
+        old_std = float(np.std(old_values)) if old_values else math.nan
+        rows.append({"quantity": quantity, "dataset": dataset, "modality": modality, "hop": hop, "v31_mean": new_mean, "v31_population_std": new_std, "v3_mean": old_mean, "v3_population_std": old_std, "note": note})
+    for dataset in DATASETS:
+        for modality in MODALITIES:
+            add("normalized_operator_relative_l1", dataset, modality, "", relation_rows, "operator_weight_relative_l1", f"operator_weight_relative_l1_{modality}", "same physical support and gcn_norm; descriptive")
+            add("beta", dataset, modality, "", relation_rows, "beta", f"beta_{modality}", "scorer definition changed; beta alone is not a utility ranking")
+            add("local_adaptation_c_mean", dataset, modality, "", relation_rows, "local_adaptation_mean", f"local_adaptation_{modality}_mean", "same c_i definition family")
+            for hop in range(1, 4):
+                add("alpha_mean", dataset, modality, hop, semantic_rows, "alpha_mean", f"alpha_{modality}_k{hop}_mean", "same semantic-reference quantity")
+                add("alpha_std", dataset, modality, hop, semantic_rows, "alpha_std", f"alpha_{modality}_k{hop}_std", "same semantic-reference quantity")
+                add("eta_negative_fraction", dataset, modality, hop - 1, filter_rows, "negative_eta_fraction", f"eta_{modality}_k{hop-1}_negative_fraction", "signed filtering behavior")
+            add("attention_normalized_entropy", dataset, modality, "", attention_rows, "nodewise_normalized_entropy", f"attention_{modality}_normalized_entropy", "P1.5a corrected nodewise metric")
+            add("attention_node_heterogeneity", dataset, modality, "", attention_rows, "node_heterogeneity_mean", f"attention_{modality}_row_diversity_l1", "V3 column is older row-diversity proxy; interpret descriptively")
+            add("context_change_gate", dataset, modality, "", context_rows, "delta_gate", f"delta_gate_{modality}", "learned gate")
+            add("cross_hop_interaction_gate", dataset, modality, "", context_rows, "interaction_gate", f"interaction_gate_{modality}", "learned gate")
+            add("effective_order_mean", dataset, modality, "", effective_rows, "effective_order_mean", f"effective_order_{modality}_mean", "signed effective order")
+            add("relation_off_fused_relative_l2", dataset, modality, "", sensitivity_rows, "relation_off_fused_embedding_relative_l2", "relation_off_z_relative_l2", "frozen sensitivity; V3.1 row is duplicated by modality")
+            add("interaction_off_fused_relative_l2", dataset, modality, "", sensitivity_rows, "interaction_off_fused_embedding_relative_l2", "interaction_off_z_relative_l2", "frozen sensitivity; V3.1 row is duplicated by modality")
+    return rows
+
+
+def _guardrail(paired: list[dict[str, Any]], comparison_info: dict[str, Any]) -> dict[str, Any]:
+    if not comparison_info.get("available"):
+        return {"status": "REVIEW_REQUIRED", "reason": "paired V3 provenance unavailable; validation guardrail cannot be evaluated"}
+    summaries = {row.get("dataset"): row for row in paired if row.get("row_type") == "dataset_summary" and row.get("dataset") in DATASETS}
+    acc_deltas = [float(summaries[d]["delta_val_acc_mean"]) for d in DATASETS]
+    f1_deltas = [float(summaries[d]["delta_val_macro_f1_mean"]) for d in DATASETS]
+    mean_acc = float(np.mean(acc_deltas))
+    mean_f1 = float(np.mean(f1_deltas))
+    simultaneous_declines = [d for d in DATASETS if summaries[d]["delta_val_acc_mean"] < 0.0 and summaries[d]["delta_val_macro_f1_mean"] < 0.0]
+    passed = mean_acc >= -0.005 and mean_f1 >= -0.005 and len(simultaneous_declines) < 3
+    return {
+        "status": "PASS_GUARDRAIL" if passed else "REVIEW_REQUIRED",
+        "mean_validation_accuracy_delta": mean_acc,
+        "mean_validation_macro_f1_delta": mean_f1,
+        "mean_validation_accuracy_delta_pp": 100.0 * mean_acc,
+        "mean_validation_macro_f1_delta_pp": 100.0 * mean_f1,
+        "simultaneous_validation_declines": simultaneous_declines,
+        "simultaneous_decline_count": len(simultaneous_declines),
+        "threshold_pp": -0.5,
+        "test_used_for_guardrail": False,
+    }
+
+
+def _write_decision_packet(summary: dict[str, Any]) -> None:
+    docs = ROOT / "docs"
+    docs.mkdir(parents=True, exist_ok=True)
+    guard = summary.get("guardrail", {})
+    lines = [
+        "# SSI-MAG-V3.1 P1.7b Decision Packet",
+        "",
+        f"Decision status: **{guard.get('status', 'REVIEW_REQUIRED')}**",
+        "",
+        "This packet separates performance evidence, mechanism behavior evidence, and frozen functional sensitivity. It does not choose a final paper model.",
+        "",
+        "## 1. Performance evidence",
+        "",
+        f"- Formal Full NC runs: {summary.get('loaded_runs', 0)}/{summary.get('expected_runs', 0)} loaded; finite: {summary.get('finite_runs', 0)}.",
+        "- Checkpoint selection is validation Accuracy; test metrics are final descriptive outputs only.",
+        "",
+        "## 2. Seed stability",
+        "",
+        f"- Cross-seed ordering failures: `{summary.get('ordering_failures', [])}`.",
+        "- See `p17b_performance_summary.csv` for population standard deviations.",
+        "",
+        "## 3–5. Mechanism behavior",
+        "",
+        "- R1/R2/Stage-II quantities are reported in the diagnostic CSVs, including scorer dynamic-logit attribution and attention simplex validation.",
+        "- Flags are descriptive review triggers, not automatic mechanism failures.",
+        "",
+        "## 6. Frozen functional sensitivity",
+        "",
+        "- `relation=off` and `interaction=off` use unchanged model parameters and the same saved NC head; these are sensitivity diagnostics, not retrained causal ablations.",
+        "",
+        "## 7. V3 vs V3.1 comparison",
+        "",
+        f"- Paired performance provenance: `{summary.get('comparison_status', 'unavailable')}`.",
+        "- Test deltas are descriptive and were not used for guardrail decisions.",
+        "",
+        "## 8. Guardrail status",
+        "",
+        f"- `{guard.get('status', 'REVIEW_REQUIRED')}`.",
+        f"- Validation Accuracy mean delta: `{guard.get('mean_validation_accuracy_delta_pp', 'NA')} pp`; Validation Macro-F1 mean delta: `{guard.get('mean_validation_macro_f1_delta_pp', 'NA')} pp`.",
+        f"- Simultaneous validation declines: `{guard.get('simultaneous_validation_declines', [])}`.",
+        "",
+        "## 9. Open questions",
+        "",
+        "- Any saturation, collapse, or negligible-effect flag requires human audit and is not repaired here.",
+        "- No LP, retrained ablation, hyperparameter search, auxiliary loss, or test-based architecture selection was run.",
+    ]
+    (docs / "ssi_mag_v31_p17b_decision_packet.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    if guard.get("status") == "PASS_GUARDRAIL":
+        plan = [
+            "# SSI-MAG-V3.1 P1.7c Control Plan (not executed)",
+            "",
+            "This is a planning artifact only. No controls are implemented, trained, or launched in P1.7b.",
+            "",
+            "- A: R1 revision only",
+            "- B: R2 stabilization / rho_c removal only",
+            "- C: Stage-II reference residual removal only",
+            "- AB: A+B",
+            "- Historical V3 is the reference; V3.1 Full is the ABC reference.",
+        ]
+        (docs / "ssi_mag_v31_p17c_control_plan.md").write_text("\n".join(plan) + "\n", encoding="utf-8")
+
+
 def _flags(relation_rows: list[dict[str, Any]], semantic_rows: list[dict[str, Any]], attention_rows: list[dict[str, Any]], context_rows: list[dict[str, Any]], filter_rows: list[dict[str, Any]]) -> list[str]:
     flags: list[str] = []
     for row in relation_rows:
@@ -478,11 +821,13 @@ def _flags(relation_rows: list[dict[str, Any]], semantic_rows: list[dict[str, An
         if row["relation_weight_cv"] < 1.0e-4:
             flags.append(f"R1_relation_weight_cv_negligible:{tag}")
         if row["operator_weight_relative_l1"] < 1.0e-4:
-            flags.append(f"R1_operator_perturbation_negligible:{tag}")
+            flags.append(f"R1_operator_perturbation_near_zero:{tag}")
         if row["score_fraction_abs_gt_0.9"] > 0.5:
             flags.append(f"R1_score_saturation:{tag}")
-        if row["relation_residual_abs_mean"] < 1.0e-4:
-            flags.append(f"relation_residual_small_amplitude:{tag}")
+        if row["learned_score_abs_mean"] < 1.0e-4:
+            flags.append(f"R1_relation_score_small_amplitude:{tag}")
+        if row["dynamic_logit_std"] < 1.0e-4:
+            flags.append(f"R1_dynamic_logit_negligible:{tag}")
     for row in semantic_rows:
         tag = f"{row['dataset']}/{row['seed']}/{row['modality']}/hop{row['hop']}"
         if row["alpha_std"] < 1.0e-5:
@@ -495,7 +840,7 @@ def _flags(relation_rows: list[dict[str, Any]], semantic_rows: list[dict[str, An
         tag = f"{row['dataset']}/{row['seed']}/{row['modality']}"
         if abs(row["attention_nonuniformity"]) < 1.0e-3:
             flags.append(f"R3_attention_near_uniform:{tag}")
-        if row["diagonal_excess"] > 0.75:
+        if row["diagonal_mass_mean"] > 1.0 - 1.0e-3:
             flags.append(f"R3_attention_near_diagonal:{tag}")
     for row in context_rows:
         tag = f"{row['dataset']}/{row['seed']}/{row['modality']}/hop{row['hop']}"
@@ -508,7 +853,7 @@ def _flags(relation_rows: list[dict[str, Any]], semantic_rows: list[dict[str, An
         if row["eta_variance_near_zero"]:
             flags.append(f"R3_eta_variance_near_zero:{tag}")
         if row["relation_residual_small_amplitude"]:
-            flags.append(f"relation_residual_small_amplitude:{tag}")
+            flags.append(f"R3_relation_residual_small_amplitude:{tag}")
     return sorted(set(flags))
 
 
@@ -516,28 +861,49 @@ def _report(output: Path, summary: dict[str, Any]) -> None:
     lines = [
         "# SSI-MAG-V3.1 P1.7b Post-hoc Diagnostic Report",
         "",
-        "This report is generated only from validation-selected Full V3.1 NC checkpoints in evaluation/no-grad mode. It does not train, select checkpoints, read test metrics for a decision, run LP, run ablations, or tune hyperparameters.",
+        "This report uses only validation-selected Full V3.1 NC checkpoints in evaluation/no-grad mode. It does not train, run LP, run retrained ablations, tune hyperparameters, add losses, or use test metrics for a model decision.",
         "",
         "## Integrity",
         "",
         f"- Expected/loaded/finite runs: {summary['expected_runs']}/{summary['loaded_runs']}/{summary['finite_runs']}",
+        f"- Provenance lock: `{summary.get('provenance_lock', 'missing')}`",
         f"- Node ordering verified by dataset: `{summary['node_ordering_verified']}`",
-        f"- Attention definition source: imported P1.5a corrected `attention_diagnostics()`; shapes: `{summary['attention_shapes']}`",
-        f"- Device: `{summary['device']}`",
+        f"- Attention simplex validation failures: `{summary.get('attention_simplex_failures', [])}`",
+        f"- Device: `{summary['device']}` (CPU is the default analysis device)",
         "",
-        "## Metric interpretation",
+        "## Performance evidence",
         "",
-        "See `docs/ssi_mag_v31_diagnostic_spec.md`. All relation/operator, alpha, entropy, eta-sign, and effective-order quantities are descriptive/pathology checks. No direction such as larger perturbation, larger alpha variance, lower entropy, or more negative eta is treated as inherently better.",
+        "See `p17b_performance_summary.csv` for validation/test Accuracy and Macro-F1, population standard deviations, best epoch, runtime, and peak GPU memory. Test metrics are descriptive final metrics from the validation-selected checkpoint.",
         "",
-        "## Diagnostic groups",
+        "## Mechanism behavior evidence",
         "",
         f"- R1 rows: `{summary['relation_rows']}`; R2 rows: `{summary['semantic_rows']}`; attention rows: `{summary['attention_rows']}`; context rows: `{summary['context_rows']}`; filter rows: `{summary['filter_rows']}`.",
         f"- Cross-seed rows: `{summary['cross_seed_rows']}`; ordering failures: `{summary['ordering_failures']}`.",
-        f"- Automatic flags: `{len(summary['flags'])}`. Flags are reported observations, not architecture verdicts.",
+        f"- Automatic flags: `{len(summary['flags'])}`. These are declared pathology/review triggers, not verdicts.",
+        "- R1 scorer decomposition reports the linear terms `w_s*s`, `w_r*rrel`, `w_abs*abs(rrel)`, their dynamic logit, and the softsign output on non-self physical edges.",
+        "- Attention row diversity is the mean pairwise L1/L2 distance between different query rows for the same node over all unordered row pairs.",
+        "",
+        "## Frozen functional sensitivity",
+        "",
+        "`relation=off` and `interaction=off` keep all parameters and the saved NC head fixed. Their embedding and validation prediction changes are sensitivity evidence, not retrained causal ablations.",
+        "",
+        "## V3 versus V3.1",
+        "",
+        f"- Paired performance provenance: `{summary.get('comparison_status', 'unavailable')}`.",
+        "- `p17b_v31_vs_v3_performance.csv` contains per-seed paired validation/test deltas and dataset summaries.",
+        "- `p17b_v31_vs_v3_mechanism.csv` compares only defined comparable quantities; old V3 scorer values are not ranked against new V3.1 scorer values as the same scale.",
+        "",
+        "## Guardrail",
+        "",
+        f"- Status: **{summary.get('guardrail', {}).get('status', 'REVIEW_REQUIRED')}**",
+        f"- Validation Accuracy mean delta: `{summary.get('guardrail', {}).get('mean_validation_accuracy_delta_pp', 'NA')} pp`.",
+        f"- Validation Macro-F1 mean delta: `{summary.get('guardrail', {}).get('mean_validation_macro_f1_delta_pp', 'NA')} pp`.",
+        f"- Simultaneous validation declines: `{summary.get('guardrail', {}).get('simultaneous_validation_declines', [])}`.",
+        "- This guardrail uses validation evidence and mechanism evidence only; test performance cannot trigger it.",
         "",
         "## Boundary",
         "",
-        "No formal P1.7b benchmark, LP, ablation, auxiliary loss, test-based decision, or architecture modification is performed by this analyzer.",
+        "No final paper-model decision or unvalidated repair is made. No LP jobs, retrained ablations, hyperparameter search, auxiliary loss, or test-based architecture selection were run.",
     ]
     (output / "p17b_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
@@ -547,7 +913,7 @@ def main() -> int:
     parser.add_argument("--project-root", type=Path, default=ROOT)
     parser.add_argument("--input-root", type=Path, default=Path("outputs/ssi_mag_v31_p17b_full"))
     parser.add_argument("--output-root", type=Path, default=Path("outputs/ssi_mag_v31_p17b_analysis"))
-    parser.add_argument("--device", default=None)
+    parser.add_argument("--device", default="cpu")
     parser.add_argument("--datasets", nargs="+", choices=DATASETS, default=list(DATASETS))
     parser.add_argument("--seeds", nargs="+", type=int, default=list(SEEDS))
     args = parser.parse_args()
@@ -555,7 +921,26 @@ def main() -> int:
     input_root = args.input_root if args.input_root.is_absolute() else project_root / args.input_root
     output = args.output_root if args.output_root.is_absolute() else project_root / args.output_root
     output.mkdir(parents=True, exist_ok=True)
-    device = torch.device(args.device or ("cuda:0" if torch.cuda.is_available() else "cpu"))
+    device = torch.device(args.device)
+    if device.type == "cuda" and not torch.cuda.is_available():
+        raise SystemExit(f"requested analysis device is unavailable: {device}")
+    dataset_tuple = tuple(args.datasets)
+    seed_tuple = tuple(args.seeds)
+    lock_path = input_root / "provenance.lock.json"
+    if not lock_path.is_file():
+        raise SystemExit(f"refusing analysis without formal provenance lock: {lock_path}")
+    try:
+        provenance = json.loads(lock_path.read_text(encoding="utf-8"))
+        if not (
+            provenance.get("task") == "nc"
+            and provenance.get("model") == "ssi_mag_v31"
+            and provenance.get("variant") == "full"
+            and tuple(provenance.get("datasets", [])) == dataset_tuple
+            and tuple(int(seed) for seed in provenance.get("seeds", [])) == seed_tuple
+        ):
+            raise ValueError("provenance lock does not match requested formal NC set")
+    except (OSError, ValueError, TypeError, json.JSONDecodeError) as exc:
+        raise SystemExit(f"invalid provenance lock: {exc}") from exc
 
     relation_rows: list[dict[str, Any]] = []
     semantic_rows: list[dict[str, Any]] = []
@@ -563,22 +948,34 @@ def main() -> int:
     context_rows: list[dict[str, Any]] = []
     filter_rows: list[dict[str, Any]] = []
     effective_rows: list[dict[str, Any]] = []
+    sensitivity_rows: list[dict[str, Any]] = []
     vectors: dict[tuple[str, int, str], dict[str, Any]] = {}
     signatures: dict[str, dict[int, tuple[Any, ...]]] = defaultdict(dict)
     matrices: dict[str, dict[str, dict[str, Any]]] = defaultdict(dict)
     errors: list[dict[str, Any]] = []
+    attention_simplex_failures: list[str] = []
     loaded = 0
     finite_runs = 0
-    for dataset in args.datasets:
-        for seed in args.seeds:
+    for dataset in dataset_tuple:
+        for seed in seed_tuple:
             try:
                 run_dir, cfg, data, model, head = _load_run(input_root, dataset, seed, device)
-                del cfg, head
+                del cfg, run_dir
                 x = data.x.to(device)
                 edge_index = data.edge_index.to(device)
                 with torch.no_grad():
                     normal = model.analysis(x, edge_index)
-                finite = _finite_analysis(normal)
+                    relation_off = model.analysis_intervention(x, edge_index, relation="off")
+                    interaction_off = model.analysis_intervention(x, edge_index, interaction="off")
+                finite = _finite_analysis(normal) and _finite_analysis(relation_off) and _finite_analysis(interaction_off)
+                if not finite:
+                    raise ValueError("normal or intervention analysis contains NaN/Inf")
+                for modality in MODALITIES:
+                    try:
+                        _validate_attention_simplex(normal[f"attention_{modality}"])
+                    except ValueError as exc:
+                        attention_simplex_failures.append(f"{dataset}/seed{seed}/{modality}: {exc}")
+                        raise
                 loaded += 1
                 finite_runs += int(finite)
                 signatures[dataset][seed] = (data.num_nodes, _tensor_hash(data.x), _tensor_hash(data.edge_index), _tensor_hash(data.y) if data.y is not None else None)
@@ -587,16 +984,18 @@ def main() -> int:
                 attention_part, attention_matrix = _attention_rows(normal, dataset, seed)
                 context_part = _context_rows(normal, model, dataset, seed)
                 filter_part, effective_part = _filter_rows(normal, dataset, seed)
+                sensitivity_part = _functional_sensitivity(normal, relation_off, interaction_off, head, data, dataset, seed)
                 relation_rows.extend(relation_part)
                 semantic_rows.extend(semantic_part)
                 attention_rows.extend(attention_part)
                 context_rows.extend(context_part)
                 filter_rows.extend(filter_part)
                 effective_rows.extend(effective_part)
+                sensitivity_rows.append(sensitivity_part)
                 for modality in MODALITIES:
                     vectors[(dataset, seed, modality)] = semantic_vectors[(modality, "vector")]
                     matrices[dataset].setdefault(modality, {})[str(seed)] = attention_matrix[modality]
-                del normal, model, data, x, edge_index
+                del normal, relation_off, interaction_off, model, head, data, x, edge_index
                 if device.type == "cuda":
                     torch.cuda.empty_cache()
                 print(f"OK {dataset} seed={seed} finite={finite}", flush=True)
@@ -604,22 +1003,32 @@ def main() -> int:
                 errors.append({"dataset": dataset, "seed": seed, "error": repr(exc)})
                 print(f"ERROR {dataset} seed={seed}: {exc}", flush=True)
 
-    dataset_tuple = tuple(args.datasets)
-    seed_tuple = tuple(args.seeds)
     cross_seed_rows, ordering = _cross_seed_rows(vectors, signatures, dataset_tuple, seed_tuple)
     flags = _flags(relation_rows, semantic_rows, attention_rows, context_rows, filter_rows)
     ordering_failures = sorted(dataset for dataset, verified in ordering.items() if not verified)
+    try:
+        performance_run_rows = _performance_rows(input_root, dataset_tuple, seed_tuple)
+        performance_summary = _performance_summary(performance_run_rows, dataset_tuple)
+    except Exception as exc:
+        errors.append({"performance": repr(exc)})
+        performance_run_rows = []
+        performance_summary = []
+    paired_performance, comparison_info = _paired_performance_rows(performance_run_rows) if performance_run_rows else ([{"row_type": "status", "source_status": "unavailable: V3.1 performance rows missing"}], {"available": False, "status": "unavailable: V3.1 performance rows missing"})
+    mechanism_comparison = _mechanism_comparison(relation_rows, semantic_rows, attention_rows, context_rows, filter_rows, effective_rows, sensitivity_rows)
+    guardrail = _guardrail(paired_performance, comparison_info)
     summary = {
-        "datasets": list(args.datasets),
-        "seeds": list(args.seeds),
-        "expected_runs": len(args.datasets) * len(args.seeds),
+        "datasets": list(dataset_tuple),
+        "seeds": list(seed_tuple),
+        "expected_runs": len(dataset_tuple) * len(seed_tuple),
         "loaded_runs": loaded,
         "finite_runs": finite_runs,
         "errors": errors,
         "device": str(device),
         "input_root": str(input_root),
+        "provenance_lock": str(lock_path),
         "node_ordering_verified": ordering,
         "ordering_failures": ordering_failures,
+        "attention_simplex_failures": attention_simplex_failures,
         "attention_shapes": sorted({row["attention_shape"] for row in attention_rows}),
         "relation_rows": len(relation_rows),
         "semantic_rows": len(semantic_rows),
@@ -627,12 +1036,20 @@ def main() -> int:
         "context_rows": len(context_rows),
         "filter_rows": len(filter_rows),
         "cross_seed_rows": len(cross_seed_rows),
+        "sensitivity_rows": len(sensitivity_rows),
+        "performance_rows": len(performance_run_rows),
+        "performance_summary_rows": len(performance_summary),
         "flags": flags,
-        "test_metrics_read": False,
+        "comparison_status": comparison_info.get("status", "unavailable"),
+        "comparison_available": bool(comparison_info.get("available", False)),
+        "guardrail": guardrail,
+        "test_metrics_used_for_selection_or_decision": False,
         "training_invoked": False,
         "ablation_invoked": False,
         "lp_invoked": False,
     }
+    _write_csv(output / "p17b_performance_run.csv", performance_run_rows)
+    _write_csv(output / "p17b_performance_summary.csv", performance_summary)
     _write_csv(output / "p17b_relation_diagnostics.csv", relation_rows)
     _write_csv(output / "p17b_semantic_diagnostics.csv", semantic_rows)
     _write_csv(output / "p17b_attention_diagnostics.csv", attention_rows)
@@ -640,10 +1057,14 @@ def main() -> int:
     _write_csv(output / "p17b_filter_diagnostics.csv", filter_rows)
     _write_csv(output / "p17b_effective_order.csv", effective_rows)
     _write_csv(output / "p17b_cross_seed_consistency.csv", cross_seed_rows)
+    _write_csv(output / "p17b_intervention_sensitivity.csv", sensitivity_rows)
+    _write_csv(output / "p17b_v31_vs_v3_performance.csv", paired_performance)
+    _write_csv(output / "p17b_v31_vs_v3_mechanism.csv", mechanism_comparison)
     _write_csv(output / "p17b_flags.csv", [{"flag": flag} for flag in flags])
     (output / "p17b_attention_matrices.json").write_text(json.dumps(matrices, indent=2, default=_json_default), encoding="utf-8")
     (output / "p17b_summary.json").write_text(json.dumps(summary, indent=2, default=_json_default), encoding="utf-8")
     _report(output, summary)
+    _write_decision_packet(summary)
     print(json.dumps(summary, indent=2), flush=True)
     return 0 if loaded == summary["expected_runs"] and finite_runs == loaded and not errors else 1
 

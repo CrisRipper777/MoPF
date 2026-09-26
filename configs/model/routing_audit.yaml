@@ -1,0 +1,9 @@
+name: routing_audit
+
+hidden_dim: 256
+max_order: 3
+dropout: 0.2
+context_dim: 128
+latent_dim: 32
+routing_variant: uniform # uniform | global_simplex | node_flat_simplex | hierarchical_flat_simplex | trajectory | relation | capacity_control | cross_relation
+

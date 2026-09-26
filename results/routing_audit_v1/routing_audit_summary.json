@@ -1,0 +1,190 @@
+{
+  "status": "complete",
+  "phase_candidates": [
+    {
+      "candidate": "A1_global_simplex",
+      "parent": "A0_uniform",
+      "positive_datasets": 2,
+      "positive_seed_pairs": 6,
+      "mean_delta_acc": 0.00027145942052202935,
+      "mean_delta_macro_f1": 0.0017303501036390334,
+      "datasets_with_f1_drop_below_-0.005": 1,
+      "no_systematic_macro_f1_damage": true,
+      "intervention": {
+        "functional": true,
+        "mean_acc_drop": 0.0014133519596523333,
+        "mean_f1_drop": 0.003540079978367381,
+        "mean_alpha_change": 0.02312927791434853,
+        "mean_intervention": {}
+      },
+      "candidate_gate_pass": true
+    },
+    {
+      "candidate": "A2_node_flat_simplex",
+      "parent": "A0_uniform",
+      "positive_datasets": 2,
+      "positive_seed_pairs": 6,
+      "mean_delta_acc": -0.008883039156595891,
+      "mean_delta_macro_f1": -0.022374179589851384,
+      "datasets_with_f1_drop_below_-0.005": 1,
+      "no_systematic_macro_f1_damage": false,
+      "intervention": {
+        "functional": true,
+        "mean_acc_drop": 0.004895650678210742,
+        "mean_f1_drop": 0.007186573351220898,
+        "mean_alpha_change": 0.0881019403537114,
+        "mean_intervention": {
+          "acc_drop": 0.0042188101344638,
+          "macro_f1_drop": 0.006079070870085378,
+          "mean_abs_alpha_change": 0.06668332581304837
+        }
+      },
+      "candidate_gate_pass": false
+    },
+    {
+      "candidate": "A3_hierarchical_flat_simplex",
+      "parent": "A1_global_simplex",
+      "positive_datasets": 2,
+      "positive_seed_pairs": 5,
+      "mean_delta_acc": -0.009362485673692503,
+      "mean_delta_macro_f1": -0.03313644664220765,
+      "datasets_with_f1_drop_below_-0.005": 1,
+      "no_systematic_macro_f1_damage": false,
+      "intervention": {
+        "functional": true,
+        "mean_acc_drop": 0.004461356666352966,
+        "mean_f1_drop": 0.006683224181989647,
+        "mean_alpha_change": 0.08524292990979217,
+        "mean_intervention": {
+          "acc_drop": 0.002999762694040878,
+          "macro_f1_drop": 0.004689088892333578,
+          "mean_abs_alpha_change": 0.06421586529662208
+        }
+      },
+      "candidate_gate_pass": false
+    },
+    {
+      "candidate": "B1_trajectory",
+      "parent": "B0_hierarchical_flat",
+      "positive_datasets": 1,
+      "positive_seed_pairs": 5,
+      "mean_delta_acc": 0.0004212061564127481,
+      "mean_delta_macro_f1": 0.007519919046596441,
+      "datasets_with_f1_drop_below_-0.005": 0,
+      "no_systematic_macro_f1_damage": true,
+      "intervention": {
+        "functional": true,
+        "mean_acc_drop": 0.004667557610405776,
+        "mean_f1_drop": 0.007105983797563638,
+        "mean_alpha_change": 0.09758792072534557,
+        "mean_intervention": {
+          "acc_drop": 0.0028277304437424886,
+          "macro_f1_drop": 0.003243240226252,
+          "mean_abs_alpha_change": 0.07369713071319789
+        }
+      },
+      "candidate_gate_pass": false
+    },
+    {
+      "candidate": "B2_relation",
+      "parent": "B2_capacity_control",
+      "positive_datasets": 2,
+      "positive_seed_pairs": 4,
+      "mean_delta_acc": -0.002094017134772407,
+      "mean_delta_macro_f1": -0.010874946983715748,
+      "datasets_with_f1_drop_below_-0.005": 1,
+      "no_systematic_macro_f1_damage": false,
+      "intervention": {
+        "functional": true,
+        "mean_acc_drop": 0.002543891138500594,
+        "mean_f1_drop": 0.004838220877258058,
+        "mean_alpha_change": 0.07331537554661428,
+        "mean_intervention": {}
+      },
+      "candidate_gate_pass": false
+    }
+  ],
+  "winning_candidate": "A1_global_simplex",
+  "phase_c_triggered": false,
+  "phase_c_status": "OWN_RELATION_CONTEXT_NOT_SUPPORTED",
+  "phase_c_gate": {
+    "B2_minus_capacity_mean_acc": -0.002094017134772407,
+    "positive_dataset_means": 2,
+    "positive_paired_seeds": 4,
+    "relation_shuffle": {
+      "functional": true,
+      "mean_acc_drop": 0.002543891138500594,
+      "mean_f1_drop": 0.004838220877258058,
+      "mean_alpha_change": 0.07331537554661428,
+      "mean_intervention": {}
+    }
+  },
+  "run_counts": {
+    "new_formal_trainings": 66,
+    "failed_trainings_unresolved": 0,
+    "failed_attempts_total": 9,
+    "failed_attempts_retried_successfully": 9,
+    "training_attempts": 75,
+    "successful_formal_trainings_by_phase": {
+      "confirmation": 12,
+      "phase_a": 27,
+      "phase_b": 27
+    },
+    "preexisting_jobs_reused": 18,
+    "screening_uniform_c0_reused": 9,
+    "all_dataset_uniform_c0_checkpoints_available": 15,
+    "nonformal_debug_smokes": 1
+  },
+  "confirmation_analysis": {
+    "global_simplex": {
+      "datasets_supported": 2,
+      "positive_paired_seeds": 7,
+      "paired_seed_count": 15,
+      "mean_delta_val_acc": -0.0005482196807861399,
+      "mean_delta_macro_f1": -0.000928449025304985,
+      "dataset_mean_delta_val_acc": {
+        "Grocery": -0.002830644448598167,
+        "Movies": -0.0018996198972066,
+        "Reddit-S": 0.0008388559023538668,
+        "Toys": -0.0007248322168986,
+        "ele-fashion": 0.0018751422564188
+      }
+    },
+    "hierarchical_flat_simplex": {
+      "datasets_supported": 2,
+      "positive_paired_seeds": 6,
+      "paired_seed_count": 15,
+      "mean_delta_val_acc": -0.007402014732360826,
+      "mean_delta_macro_f1": -0.020685907154064855,
+      "dataset_mean_delta_val_acc": {
+        "Grocery": -0.0040995478630065,
+        "Movies": -0.035492916901906264,
+        "Reddit-S": 0.004299064477284667,
+        "Toys": -0.005637447039286266,
+        "ele-fashion": 0.003920773665110233
+      }
+    },
+    "hierarchical_minus_global_simplex": {
+      "datasets_supported": 2,
+      "positive_paired_seeds": 6,
+      "paired_seed_count": 15,
+      "mean_delta_val_acc": -0.0068537950515746805,
+      "mean_delta_macro_f1": -0.019757458128759883,
+      "dataset_mean_delta_val_acc": {
+        "Grocery": -0.0012689034144083,
+        "Movies": -0.03359329700469963,
+        "Reddit-S": 0.0034602085749308002,
+        "Toys": -0.004912614822387667,
+        "ele-fashion": 0.0020456314086914
+      }
+    }
+  },
+  "decision_thresholds": {
+    "candidate_positive_datasets": "at least 2/3",
+    "candidate_positive_seed_pairs": "at least 6/9",
+    "no_systematic_macro_f1_damage": "overall delta >= -0.003 and at most one dataset mean delta < -0.005",
+    "functional_intervention": "mean absolute alpha change > 0.001 and mean Acc or Macro-F1 drop >= 0.0005",
+    "node_adaptation": "both train-mean and shuffled delta must each lower Acc or Macro-F1 by at least 0.0005",
+    "phase_c_shuffle_commensurate": "relation shuffle drop >= max(50% of B2-capacity Acc gain, 0.0005)"
+  }
+}

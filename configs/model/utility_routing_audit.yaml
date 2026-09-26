@@ -1,0 +1,8 @@
+name: utility_routing_audit
+hidden_dim: 256
+max_order: 3
+dropout: 0.2
+action_count: 5
+flat_latent_dim: 32
+context_dim: 128
+router_hidden_dim: 64

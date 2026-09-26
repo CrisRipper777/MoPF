@@ -1,0 +1,13 @@
+dataset,seed,variant,source,val_acc,val_macro_f1,mean_routing_regret,best_epoch
+Toys,42,C0_Uniform,reused_E3_C0_checkpoint,0.8093742728233337,0.7802075065332348,,
+Toys,42,screening_winner,reused_E3_C0_checkpoint,0.8093742728233337,0.7802075065332348,,
+Toys,43,C0_Uniform,reused_E3_C0_checkpoint,0.8062334060668945,0.7817875810315805,,
+Toys,43,screening_winner,reused_E3_C0_checkpoint,0.8062334060668945,0.7817875810315805,,
+Toys,44,C0_Uniform,reused_E3_C0_checkpoint,0.8074414134025574,0.7743037984566693,,
+Toys,44,screening_winner,reused_E3_C0_checkpoint,0.8074414134025574,0.7743037984566693,,
+Grocery,42,C0_Uniform,reused_E3_C0_checkpoint,0.8301610946655273,0.7618937324304558,,
+Grocery,42,screening_winner,reused_E3_C0_checkpoint,0.8301610946655273,0.7618937324304558,,
+Grocery,43,C0_Uniform,reused_E3_C0_checkpoint,0.8383601903915405,0.7427906124545802,,
+Grocery,43,screening_winner,reused_E3_C0_checkpoint,0.8383601903915405,0.7427906124545802,,
+Grocery,44,C0_Uniform,reused_E3_C0_checkpoint,0.8307467103004456,0.7331073045828524,,
+Grocery,44,screening_winner,reused_E3_C0_checkpoint,0.8307467103004456,0.7331073045828524,,

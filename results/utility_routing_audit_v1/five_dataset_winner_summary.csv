@@ -1,0 +1,6 @@
+dataset,winning_variant,paired_seeds,mean_val_acc,mean_macro_f1,sources
+Grocery,C0_Uniform,3,0.8330893317858378,0.7459305498226295,reused_E3_C0_checkpoint
+Movies,C0_Uniform,3,0.5756848454475403,0.4940850835730884,reused_E3_C0_checkpoint
+Reddit-S,C0_Uniform,3,0.9612037142117819,0.9211163642266499,reused_E3_C0_checkpoint
+Toys,C0_Uniform,3,0.8076830307642618,0.7787662953404949,reused_E3_C0_checkpoint
+ele-fashion,C0_Uniform,3,0.8757628798484802,0.7541544496860381,reused_E3_C0_checkpoint

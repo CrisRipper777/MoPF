@@ -1,0 +1,7 @@
+dataset,seed,candidate,delta_val_acc,delta_macro_f1,delta_routing_regret
+Toys,42,C0_Uniform,0.0,0.0,
+Toys,43,C0_Uniform,0.0,0.0,
+Toys,44,C0_Uniform,0.0,0.0,
+Grocery,42,C0_Uniform,0.0,0.0,
+Grocery,43,C0_Uniform,0.0,0.0,
+Grocery,44,C0_Uniform,0.0,0.0,

@@ -1,0 +1,294 @@
+{
+  "experiment": "E5 \u2014 Utility-Aligned Structural Routing Audit",
+  "status": "complete",
+  "branch": "utility_routing_audit",
+  "starting_commit": "12e52f948aab8944dc71eb342d091ef3266a53f3",
+  "final_head": "12e52f948aab8944dc71eb342d091ef3266a53f3",
+  "screening_datasets": [
+    "Movies",
+    "ele-fashion",
+    "Reddit-S"
+  ],
+  "confirmation_datasets": [
+    "Toys",
+    "Grocery"
+  ],
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "phase_b_gate": {
+    "status": "UTILITY_ALIGNED_OBJECTIVE_NOT_SUPPORTED",
+    "supported": false,
+    "candidate_gates": [
+      {
+        "candidate": "B1_flat_utility_kd",
+        "datasets_lower_regret": 1,
+        "positive_regret_seed_pairs": "3/9",
+        "mean_delta_regret": 0.0032880219320456185,
+        "mean_delta_acc": -0.0012137691179911296,
+        "mean_delta_macro_f1": -0.0031787772511826765,
+        "mean_delta_regret_by_dataset": {
+          "Movies": -0.003515938917795817,
+          "Reddit-S": 0.005998712033033371,
+          "ele-fashion": 0.0073812926808993025
+        },
+        "mean_delta_acc_by_dataset": {
+          "Movies": -0.0005999008814493815,
+          "Reddit-S": -0.00167769193649292,
+          "ele-fashion": -0.0013637145360310872
+        },
+        "utility_aligned_objective_gate": false
+      },
+      {
+        "candidate": "B2_weighted_utility_kd",
+        "datasets_lower_regret": 1,
+        "positive_regret_seed_pairs": "4/9",
+        "mean_delta_regret": -0.0012169161604510413,
+        "mean_delta_acc": -0.00020569562911987305,
+        "mean_delta_macro_f1": -0.0007769058323925937,
+        "mean_delta_regret_by_dataset": {
+          "Movies": -0.004124959309895833,
+          "Reddit-S": 0.00021013493339220682,
+          "ele-fashion": 0.0002640758951505025
+        },
+        "mean_delta_acc_by_dataset": {
+          "Movies": -0.00029995044072469074,
+          "Reddit-S": -0.0004194180170694987,
+          "ele-fashion": 0.00010228157043457031
+        },
+        "utility_aligned_objective_gate": false
+      }
+    ],
+    "preference_weighting_promising": false,
+    "B2_nonnegative_acc_datasets": 1,
+    "Movies_delta_acc_B1": -0.0005999008814493815,
+    "Movies_delta_acc_B2": -0.00029995044072469074
+  },
+  "historical_e4_comparison": {
+    "status": "MIXED_SUPPORT",
+    "positive_paired_seeds": "3/9",
+    "mean_B0_minus_E4_acc_effect": 0.010695669386121986,
+    "mean_B0_minus_E4_f1_effect": 0.03519528525502326,
+    "note": "E4 B0 HierarchicalFlat vs C0 and E5 B0 frozen Direct CE vs C0, paired on the same screening dataset/seed; descriptive historical contrast."
+  },
+  "phase_c_gate": null,
+  "phase_d_gate": null,
+  "phase_e": {
+    "selected_variant": "B2_weighted_utility_kd",
+    "phase": "phase_b",
+    "conservative_personalization_supported": false,
+    "movies_negative_transfer_reduced": false,
+    "positive_dataset_gains_retained": false,
+    "selected_by": "highest screening mean Val Acc among utility-aligned candidates; regret tie-break"
+  },
+  "winner_lock": {
+    "experiment": "E5 Utility-Aligned Structural Routing Audit",
+    "winning_variant": "C0_Uniform",
+    "winning_architecture": "C0_uniform",
+    "objective": "frozen_reference",
+    "safe_routing_used": false,
+    "fixed_hyperparameters": {
+      "screening_datasets": [
+        "Movies",
+        "ele-fashion",
+        "Reddit-S"
+      ],
+      "seeds": [
+        42,
+        43,
+        44
+      ],
+      "hidden_dim": 256,
+      "max_order": 3,
+      "actions": [
+        "A0_SELF",
+        "A1_S1",
+        "A2_S2",
+        "A3_S3",
+        "AU_UNIFORM"
+      ],
+      "flat_state_projection_dim": 32,
+      "context_dim": 128,
+      "router_hidden_dim": 64,
+      "router_output_dim": 5,
+      "optimizer": "AdamW",
+      "learning_rate": 0.001,
+      "weight_decay": 0.0001,
+      "max_epochs": 200,
+      "patience": 30,
+      "grad_clip": 1.0,
+      "selection": "best Validation Accuracy",
+      "utility_teacher": "softmax(-CE), no temperature",
+      "preference_strength": "1-H(q)/log(5)"
+    },
+    "git_commit": "12e52f948aab8944dc71eb342d091ef3266a53f3",
+    "confirmation_datasets_not_loaded_before_lock": true,
+    "decision_rationale": "No routing candidate met the preregistered objective and performance gates; keep frozen C0 Uniform as incumbent.",
+    "phase_b_gate": {
+      "status": "UTILITY_ALIGNED_OBJECTIVE_NOT_SUPPORTED",
+      "supported": false,
+      "candidate_gates": [
+        {
+          "candidate": "B1_flat_utility_kd",
+          "datasets_lower_regret": 1,
+          "positive_regret_seed_pairs": "3/9",
+          "mean_delta_regret": 0.0032880219320456185,
+          "mean_delta_acc": -0.0012137691179911296,
+          "mean_delta_macro_f1": -0.0031787772511826765,
+          "mean_delta_regret_by_dataset": {
+            "Movies": -0.003515938917795817,
+            "Reddit-S": 0.005998712033033371,
+            "ele-fashion": 0.0073812926808993025
+          },
+          "mean_delta_acc_by_dataset": {
+            "Movies": -0.0005999008814493815,
+            "Reddit-S": -0.00167769193649292,
+            "ele-fashion": -0.0013637145360310872
+          },
+          "utility_aligned_objective_gate": false
+        },
+        {
+          "candidate": "B2_weighted_utility_kd",
+          "datasets_lower_regret": 1,
+          "positive_regret_seed_pairs": "4/9",
+          "mean_delta_regret": -0.0012169161604510413,
+          "mean_delta_acc": -0.00020569562911987305,
+          "mean_delta_macro_f1": -0.0007769058323925937,
+          "mean_delta_regret_by_dataset": {
+            "Movies": -0.004124959309895833,
+            "Reddit-S": 0.00021013493339220682,
+            "ele-fashion": 0.0002640758951505025
+          },
+          "mean_delta_acc_by_dataset": {
+            "Movies": -0.00029995044072469074,
+            "Reddit-S": -0.0004194180170694987,
+            "ele-fashion": 0.00010228157043457031
+          },
+          "utility_aligned_objective_gate": false
+        }
+      ],
+      "preference_weighting_promising": false,
+      "B2_nonnegative_acc_datasets": 1,
+      "Movies_delta_acc_B1": -0.0005999008814493815,
+      "Movies_delta_acc_B2": -0.00029995044072469074
+    },
+    "phase_c_gate": null,
+    "phase_d_gate": null,
+    "phase_e": {
+      "selected_variant": "B2_weighted_utility_kd",
+      "phase": "phase_b",
+      "conservative_personalization_supported": false,
+      "movies_negative_transfer_reduced": false,
+      "positive_dataset_gains_retained": false,
+      "selected_by": "highest screening mean Val Acc among utility-aligned candidates; regret tie-break"
+    }
+  },
+  "five_dataset_winner_summary": [
+    {
+      "dataset": "Grocery",
+      "winning_variant": "C0_Uniform",
+      "paired_seeds": 3,
+      "mean_val_acc": 0.8330893317858378,
+      "mean_macro_f1": 0.7459305498226295,
+      "sources": "reused_E3_C0_checkpoint"
+    },
+    {
+      "dataset": "Movies",
+      "winning_variant": "C0_Uniform",
+      "paired_seeds": 3,
+      "mean_val_acc": 0.5756848454475403,
+      "mean_macro_f1": 0.4940850835730884,
+      "sources": "reused_E3_C0_checkpoint"
+    },
+    {
+      "dataset": "Reddit-S",
+      "winning_variant": "C0_Uniform",
+      "paired_seeds": 3,
+      "mean_val_acc": 0.9612037142117819,
+      "mean_macro_f1": 0.9211163642266499,
+      "sources": "reused_E3_C0_checkpoint"
+    },
+    {
+      "dataset": "Toys",
+      "winning_variant": "C0_Uniform",
+      "paired_seeds": 3,
+      "mean_val_acc": 0.8076830307642618,
+      "mean_macro_f1": 0.7787662953404949,
+      "sources": "reused_E3_C0_checkpoint"
+    },
+    {
+      "dataset": "ele-fashion",
+      "winning_variant": "C0_Uniform",
+      "paired_seeds": 3,
+      "mean_val_acc": 0.8757628798484802,
+      "mean_macro_f1": 0.7541544496860381,
+      "sources": "reused_E3_C0_checkpoint"
+    }
+  ],
+  "decision_matrix": [
+    {
+      "hypothesis": "H1_action_landscape_nontrivial",
+      "status": "MIXED_SUPPORT",
+      "evidence": "{\"mean_preference_strength\": 0.02588419538612161, \"mean_oracle_ce_gain\": 0.16348185949027533, \"mean_oracle_acc_gain\": 0.044085005919138553, \"diverse_action_count\": 6.0}",
+      "counterevidence": "Per-node oracle is label-informed and only an upper bound."
+    },
+    {
+      "hypothesis": "H2_frozen_routing_reduces_coadaptation_problem",
+      "status": "MIXED_SUPPORT",
+      "evidence": "{\"status\": \"MIXED_SUPPORT\", \"positive_paired_seeds\": \"3/9\", \"mean_B0_minus_E4_acc_effect\": 0.010695669386121974, \"mean_B0_minus_E4_f1_effect\": 0.035195285255023266, \"note\": \"E4 B0 HierarchicalFlat vs C0 and E5 B0 frozen Direct CE vs C0, paired on the same screening dataset/seed; descriptive historical contrast.\"}",
+      "counterevidence": "B0 is compared to E4's Validation-selected joint router only on the fixed screening panel."
+    },
+    {
+      "hypothesis": "H3_utility_distillation_improves_routing_alignment",
+      "status": "MIXED_SUPPORT",
+      "evidence": "{\"status\": \"UTILITY_ALIGNED_OBJECTIVE_NOT_SUPPORTED\", \"supported\": false, \"candidate_gates\": [{\"candidate\": \"B1_flat_utility_kd\", \"datasets_lower_regret\": 1, \"positive_regret_seed_pairs\": \"3/9\", \"mean_delta_regret\": 0.0032880219320456185, \"mean_delta_acc\": -0.0012137691179911296, \"mean_delta_macro_f1\": -0.0031787772511826765, \"mean_delta_regret_by_dataset\": {\"Movies\": -0.003515938917795817, \"Reddit-S\": 0.005998712033033371, \"ele-fashion\": 0.0073812926808993025}, \"mean_delta_acc_by_dataset\": {\"Movies\": -0.0005999008814493815, \"Reddit-S\": -0.00167769193649292, \"ele-fashion\": -0.0013637145360310872}, \"utility_aligned_objective_gate\": false}, {\"candidate\": \"B2_weighted_utility_kd\", \"datasets_lower_regret\": 1, \"positive_regret_seed_pairs\": \"4/9\", \"mean_delta_regret\": -0.0012169161604510413, \"mean_delta_acc\": -0.00020569562911987305, \"mean_delta_macro_f1\": -0.0007769058323925937, \"mean_delta_regret_by_dataset\": {\"Movies\": -0.004124959309895833, \"Reddit-S\": 0.00021013493339220682, \"ele-fashion\": 0.0002640758951505025}, \"mean_delta_acc_by_dataset\": {\"Movies\": -0.00029995044072469074, \"Reddit-S\": -0.0004194180170694987, \"ele-fashion\": 0.00010228157043457031}, \"utility_aligned_objective_gate\": false}], \"preference_weighting_promising\": false, \"B2_nonnegative_acc_datasets\": 1, \"Movies_delta_acc_B1\": -0.0005999008814493815, \"Movies_delta_acc_B2\": -0.00029995044072469074}",
+      "counterevidence": "Regret reduction and task metrics are reported separately."
+    },
+    {
+      "hypothesis": "H4_preference_weighting_helps_selective_personalization",
+      "status": "MIXED_SUPPORT",
+      "evidence": "{\"status\": \"UTILITY_ALIGNED_OBJECTIVE_NOT_SUPPORTED\", \"supported\": false, \"preference_weighting_promising\": false, \"B2_nonnegative_acc_datasets\": 1, \"Movies_delta_acc_B1\": -0.0005999008814493815, \"Movies_delta_acc_B2\": -0.00029995044072469074}",
+      "counterevidence": "Preference weighting is not called useful when regret improves without task benefit."
+    },
+    {
+      "hypothesis": "H5_decision_response_improves_utility_routing",
+      "status": "NOT_TESTED",
+      "evidence": "Phase B gate failed.",
+      "counterevidence": "Capacity-matched C1 vs C0 is required."
+    },
+    {
+      "hypothesis": "H6_relation_context_benefits_from_utility_alignment",
+      "status": "NOT_TESTED",
+      "evidence": "Phase B gate failed; Phase D is conditional.",
+      "counterevidence": "D1 uses E_prop without loops; edge context cannot alter propagation."
+    },
+    {
+      "hypothesis": "H7_conservative_personalization_reduces_negative_transfer",
+      "status": "NO_SUPPORT",
+      "evidence": "{\"selected_variant\": \"B2_weighted_utility_kd\", \"phase\": \"phase_b\", \"conservative_personalization_supported\": false, \"movies_negative_transfer_reduced\": false, \"positive_dataset_gains_retained\": false, \"selected_by\": \"highest screening mean Val Acc among utility-aligned candidates; regret tie-break\"}",
+      "counterevidence": "Confidence blend has no fitted threshold; report per-dataset results."
+    },
+    {
+      "hypothesis": "H8_untouched_dataset_confirmation",
+      "status": "NOT_TESTED",
+      "evidence": "{\"reason\": \"C0 Uniform was locked as incumbent; no learned router confirmation candidate.\"}",
+      "counterevidence": "Toys and Grocery were accessed only after the winner lock."
+    }
+  ],
+  "run_counts": {
+    "trained": 27,
+    "reused_existing": 27,
+    "failed": 0,
+    "attempts": 27,
+    "by_phase": {
+      "phase_b": {
+        "reused_existing": 27,
+        "trained": 27
+      }
+    }
+  },
+  "test_labels_indexed": false,
+  "c0_retrained": false
+}

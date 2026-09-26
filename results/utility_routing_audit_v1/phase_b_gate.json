@@ -1,0 +1,48 @@
+{
+  "status": "UTILITY_ALIGNED_OBJECTIVE_NOT_SUPPORTED",
+  "supported": false,
+  "candidate_gates": [
+    {
+      "candidate": "B1_flat_utility_kd",
+      "datasets_lower_regret": 1,
+      "positive_regret_seed_pairs": "3/9",
+      "mean_delta_regret": 0.0032880219320456185,
+      "mean_delta_acc": -0.0012137691179911296,
+      "mean_delta_macro_f1": -0.0031787772511826765,
+      "mean_delta_regret_by_dataset": {
+        "Movies": -0.003515938917795817,
+        "Reddit-S": 0.005998712033033371,
+        "ele-fashion": 0.0073812926808993025
+      },
+      "mean_delta_acc_by_dataset": {
+        "Movies": -0.0005999008814493815,
+        "Reddit-S": -0.00167769193649292,
+        "ele-fashion": -0.0013637145360310872
+      },
+      "utility_aligned_objective_gate": false
+    },
+    {
+      "candidate": "B2_weighted_utility_kd",
+      "datasets_lower_regret": 1,
+      "positive_regret_seed_pairs": "4/9",
+      "mean_delta_regret": -0.0012169161604510413,
+      "mean_delta_acc": -0.00020569562911987305,
+      "mean_delta_macro_f1": -0.0007769058323925937,
+      "mean_delta_regret_by_dataset": {
+        "Movies": -0.004124959309895833,
+        "Reddit-S": 0.00021013493339220682,
+        "ele-fashion": 0.0002640758951505025
+      },
+      "mean_delta_acc_by_dataset": {
+        "Movies": -0.00029995044072469074,
+        "Reddit-S": -0.0004194180170694987,
+        "ele-fashion": 0.00010228157043457031
+      },
+      "utility_aligned_objective_gate": false
+    }
+  ],
+  "preference_weighting_promising": false,
+  "B2_nonnegative_acc_datasets": 1,
+  "Movies_delta_acc_B1": -0.0005999008814493815,
+  "Movies_delta_acc_B2": -0.00029995044072469074
+}

@@ -1,0 +1,16 @@
+dataset,seed,winning_variant,winner_val_acc,winner_val_macro_f1,source
+Movies,42,C0_Uniform,0.5731853246688843,0.4898358795583738,reused_E3_C0_checkpoint
+Movies,43,C0_Uniform,0.5776844620704651,0.5011326884390359,reused_E3_C0_checkpoint
+Movies,44,C0_Uniform,0.5761847496032715,0.4912866827218554,reused_E3_C0_checkpoint
+ele-fashion,42,C0_Uniform,0.8749105334281921,0.7522751372355608,reused_E3_C0_checkpoint
+ele-fashion,43,C0_Uniform,0.8765470385551453,0.7528000777554916,reused_E3_C0_checkpoint
+ele-fashion,44,C0_Uniform,0.8758310675621033,0.757388134067062,reused_E3_C0_checkpoint
+Reddit-S,42,C0_Uniform,0.9591066241264344,0.9176357122178068,reused_E3_C0_checkpoint
+Reddit-S,43,C0_Uniform,0.9641396403312684,0.9265336665518298,reused_E3_C0_checkpoint
+Reddit-S,44,C0_Uniform,0.9603648781776428,0.9191797139103132,reused_E3_C0_checkpoint
+Toys,42,C0_Uniform,0.8093742728233337,0.7802075065332348,reused_E3_C0_checkpoint
+Toys,43,C0_Uniform,0.8062334060668945,0.7817875810315805,reused_E3_C0_checkpoint
+Toys,44,C0_Uniform,0.8074414134025574,0.7743037984566693,reused_E3_C0_checkpoint
+Grocery,42,C0_Uniform,0.8301610946655273,0.7618937324304558,reused_E3_C0_checkpoint
+Grocery,43,C0_Uniform,0.8383601903915405,0.7427906124545802,reused_E3_C0_checkpoint
+Grocery,44,C0_Uniform,0.8307467103004456,0.7331073045828524,reused_E3_C0_checkpoint

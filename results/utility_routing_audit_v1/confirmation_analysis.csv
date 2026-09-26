@@ -1,0 +1,3 @@
+dataset,candidate,paired_seeds,mean_delta_val_acc,mean_delta_macro_f1,mean_delta_routing_regret,positive_acc_seed_pairs,lower_regret_seed_pairs,interpretation
+Grocery,C0_Uniform,3,0.0,0.0,,0,0,NOT_TESTED_C0_IDENTITY
+Toys,C0_Uniform,3,0.0,0.0,,0,0,NOT_TESTED_C0_IDENTITY

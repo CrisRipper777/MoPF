@@ -1,0 +1,8 @@
+{
+  "selected_variant": "B2_weighted_utility_kd",
+  "phase": "phase_b",
+  "conservative_personalization_supported": false,
+  "movies_negative_transfer_reduced": false,
+  "positive_dataset_gains_retained": false,
+  "selected_by": "highest screening mean Val Acc among utility-aligned candidates; regret tie-break"
+}

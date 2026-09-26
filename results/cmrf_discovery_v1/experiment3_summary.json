@@ -1,0 +1,172 @@
+{
+  "branch": "cmrf_discovery",
+  "head": "e0f93dea44f8081f14ddf6ce2a232ba843338216",
+  "formal_run_count": 60,
+  "formal_runs_expected": 60,
+  "formal_runs_by_variant": {
+    "uniform": 15,
+    "own_soft": 15,
+    "cross_soft": 15,
+    "gated_cross_soft": 15
+  },
+  "test_used": false,
+  "lp_runs": 0,
+  "controller_mean_metrics": [
+    {
+      "variant": "uniform",
+      "val_acc_mean": 0.8106847524642944,
+      "val_acc_sd": 0.12856996494808104,
+      "val_f1_mean": 0.7388105485297802,
+      "val_f1_sd": 0.1379909401434199,
+      "best_epoch_mean": 113.4
+    },
+    {
+      "variant": "own_soft",
+      "val_acc_mean": 0.808149003982544,
+      "val_acc_sd": 0.13542492564032274,
+      "val_f1_mean": 0.7360588053377963,
+      "val_f1_sd": 0.14862097200753133,
+      "best_epoch_mean": 93.06666666666666
+    },
+    {
+      "variant": "cross_soft",
+      "val_acc_mean": 0.8082014203071595,
+      "val_acc_sd": 0.13491693367031468,
+      "val_f1_mean": 0.7339931721397824,
+      "val_f1_sd": 0.1490671642306233,
+      "best_epoch_mean": 101.8
+    },
+    {
+      "variant": "gated_cross_soft",
+      "val_acc_mean": 0.8080445448557536,
+      "val_acc_sd": 0.13361162104437424,
+      "val_f1_mean": 0.7336170055947981,
+      "val_f1_sd": 0.14878610977357218,
+      "best_epoch_mean": 96.93333333333334
+    }
+  ],
+  "main_comparisons_all": [
+    {
+      "dataset": "ALL",
+      "comparison": "OwnSoft - Uniform",
+      "left_variant": "own_soft",
+      "right_variant": "uniform",
+      "n_paired_seeds": 15,
+      "mean_val_acc_pp": -0.25357484817504883,
+      "population_sd_val_acc_pp": 0.7769160894688376,
+      "positive_acc_seed_pairs": 8,
+      "positive_acc_seed_pairs_denominator": 15,
+      "mean_val_macro_f1_pp": -0.2751743191983806,
+      "population_sd_val_macro_f1_pp": 1.7842929270184993,
+      "positive_macro_f1_seed_pairs": 10,
+      "positive_macro_f1_seed_pairs_denominator": 15
+    },
+    {
+      "dataset": "ALL",
+      "comparison": "CrossSoft - OwnSoft",
+      "left_variant": "cross_soft",
+      "right_variant": "own_soft",
+      "n_paired_seeds": 15,
+      "mean_val_acc_pp": 0.0052416324615478516,
+      "population_sd_val_acc_pp": 0.2819124677983871,
+      "positive_acc_seed_pairs": 8,
+      "positive_acc_seed_pairs_denominator": 15,
+      "mean_val_macro_f1_pp": -0.20656331980139608,
+      "population_sd_val_macro_f1_pp": 0.9476591687184633,
+      "positive_macro_f1_seed_pairs": 5,
+      "positive_macro_f1_seed_pairs_denominator": 15
+    },
+    {
+      "dataset": "ALL",
+      "comparison": "GatedCross - OwnSoft",
+      "left_variant": "gated_cross_soft",
+      "right_variant": "own_soft",
+      "n_paired_seeds": 15,
+      "mean_val_acc_pp": -0.010445912679036459,
+      "population_sd_val_acc_pp": 0.4151243769682296,
+      "positive_acc_seed_pairs": 7,
+      "positive_acc_seed_pairs_denominator": 15,
+      "mean_val_macro_f1_pp": -0.24417997429982075,
+      "population_sd_val_macro_f1_pp": 0.8152506382519757,
+      "positive_macro_f1_seed_pairs": 5,
+      "positive_macro_f1_seed_pairs_denominator": 15
+    },
+    {
+      "dataset": "ALL",
+      "comparison": "GatedCross - CrossSoft",
+      "left_variant": "gated_cross_soft",
+      "right_variant": "cross_soft",
+      "n_paired_seeds": 15,
+      "mean_val_acc_pp": -0.01568754514058431,
+      "population_sd_val_acc_pp": 0.2530816477164145,
+      "positive_acc_seed_pairs": 8,
+      "positive_acc_seed_pairs_denominator": 15,
+      "mean_val_macro_f1_pp": -0.03761665449842466,
+      "population_sd_val_macro_f1_pp": 0.8698582530082597,
+      "positive_macro_f1_seed_pairs": 6,
+      "positive_macro_f1_seed_pairs_denominator": 15
+    }
+  ],
+  "mean_shuffle_effects": {
+    "acc_drop_pp": 0.03838388125101725,
+    "macro_f1_drop_pp": 0.04413217752885176,
+    "prediction_flip_rate": 0.00207564158035287,
+    "mean_abs_coefficient_change": 0.014947833072122402
+  },
+  "mean_cross_zero_effects": {
+    "acc_drop_pp": 0.01788636048634847,
+    "macro_f1_drop_pp": 0.0327703374092723,
+    "prediction_flip_rate": 0.0030430419012797455,
+    "mean_abs_coefficient_change": 0.02204464612538383
+  },
+  "hypotheses": {
+    "H1": "STRONG_SUPPORT",
+    "H2": "NO_SUPPORT",
+    "H3": "NO_SUPPORT",
+    "H4": "NO_SUPPORT",
+    "H5": "MIXED_SUPPORT",
+    "H6": "MIXED_SUPPORT",
+    "H7": "MIXED_SUPPORT",
+    "overall_interpretation": "neither",
+    "support_details": {
+      "H1_datasets": [
+        "Grocery",
+        "Movies",
+        "Reddit-S",
+        "Toys",
+        "ele-fashion"
+      ],
+      "H2_datasets": [
+        "Grocery"
+      ],
+      "H3_datasets": [
+        "Reddit-S"
+      ],
+      "H4_datasets": [
+        "Reddit-S"
+      ],
+      "H5_datasets": [
+        "Reddit-S",
+        "ele-fashion"
+      ],
+      "H6_datasets": [],
+      "H7_datasets": [
+        "Grocery"
+      ]
+    }
+  },
+  "results_files": [
+    "results/cmrf_discovery_v1/e3_decision_matrix.csv",
+    "results/cmrf_discovery_v1/e3a_conditional_utility.csv",
+    "results/cmrf_discovery_v1/e3a_utility_predictability.csv",
+    "results/cmrf_discovery_v1/e3b_cross_order_matrix.csv",
+    "results/cmrf_discovery_v1/e3b_summary.json",
+    "results/cmrf_discovery_v1/e3c_controller_analysis.csv",
+    "results/cmrf_discovery_v1/e3c_controller_results.csv",
+    "results/cmrf_discovery_v1/e3c_crossmodal_intervention.csv",
+    "results/cmrf_discovery_v1/e3c_per_run_validation.csv",
+    "results/cmrf_discovery_v1/experiment3_report.md",
+    "results/cmrf_discovery_v1/preflight_report.md"
+  ],
+  "next_stage_recommendation": "Do not expand the router family; audit utility-target stability and out-of-sample probe calibration on Train/Validation before any new model design."
+}

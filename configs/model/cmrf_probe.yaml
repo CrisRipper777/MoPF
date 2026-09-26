@@ -1,0 +1,9 @@
+name: cmrf_probe
+
+hidden_dim: 256
+max_order: 3
+dropout: 0.2
+composition_mode: uniform # uniform | own_soft | cross_soft | gated_cross_soft
+controller_latent_dim: 32
+controller_hidden_dim: 64
+controller_lambda: 0.25

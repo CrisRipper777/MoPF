@@ -45,7 +45,7 @@ def _resolve_training_mode(cfg, model) -> str:
     return mode
 
 
-def _resolve_nc_eval_labels(data: MAGData) -> list[int]:
+def _resolve_nc_eval_labels(data: MAGData, *, include_test: bool = True) -> list[int]:
     """Resolve one stable Macro-F1 label set for the complete NC task.
 
     The label set is based on labels observed in the union of the supervised
@@ -58,9 +58,10 @@ def _resolve_nc_eval_labels(data: MAGData) -> list[int]:
     if data.num_classes is None:
         raise ValueError("NC data must define num_classes to resolve evaluation labels")
 
-    split_indices = [
-        idx for idx in (data.train_idx, data.val_idx, data.test_idx) if idx is not None
-    ]
+    split_indices = [data.train_idx, data.val_idx]
+    if include_test:
+        split_indices.append(data.test_idx)
+    split_indices = [idx for idx in split_indices if idx is not None]
     if not split_indices:
         raise ValueError("NC data must contain at least one supervised split")
 
@@ -640,7 +641,10 @@ def run_nc(
     if evaluate_test and data.test_idx is None:
         raise ValueError("NC data must contain test_idx when task.evaluate_test=true")
 
-    eval_labels = _resolve_nc_eval_labels(data)
+    # Discovery runs must not use test labels even to infer the Macro-F1 label set.
+    eval_labels = _resolve_nc_eval_labels(
+        data, include_test=bool(cfg.task.get("evaluate_test", True))
+    )
     run_results = [
         _run_single_nc(cfg, data, device, logger, run_id, output_dir, eval_labels)
         for run_id in range(int(cfg.num_runs))

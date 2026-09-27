@@ -43,20 +43,23 @@ PARAMETER_FIELDS = [
 INTERVENTION_FIELDS = [
     "variant", "dataset", "seed", "intervention", "val_acc", "val_macro_f1",
     "delta_val_acc", "delta_val_macro_f1", "prediction_flip_rate",
-    "routing_change", "mean_message_change", "selected_edges", "test_evaluated",
+    "routing_change", "mean_message_change", "selected_edges", "candidate_edges",
+    "status", "skip_reason", "test_evaluated",
 ]
 SPECIALIZATION_FIELDS = [
-    "variant", "dataset", "seed", "modality", "diagnostic", "expert", "value",
+    "variant", "dataset", "seed", "modality", "diagnostic", "hop", "expert", "value",
     "routing_entropy", "top1_fraction", "collapse_flag",
 ]
 RELATION_FIELDS = [
     "variant", "dataset", "seed", "modality", "diagnostic", "similarity_quartile",
-    "hop", "n_edges", "train_similarity_q25", "train_similarity_q50",
+    "similarity_reference", "hop", "n_edges", "train_similarity_q25", "train_similarity_q50",
     "train_similarity_q75", "similarity_mean", "mean", "median", "p10", "p90",
     "correction_relative_mean", "correction_relative_p10",
     "correction_relative_median", "correction_relative_p90",
+    "correction_fraction_gt_1", "correction_fraction_gt_2",
     "message_direction_cosine_mean", "message_direction_cosine_p10",
     "message_direction_cosine_median", "message_direction_cosine_p90",
+    "message_direction_negative_fraction",
     "mean_expert_usage_0", "mean_expert_usage_1", "mean_expert_usage_2",
     "mean_expert_usage_3",
 ]
@@ -292,6 +295,35 @@ def _load_checkpoint_context(variant: str, dataset: str, seed: int, device: torc
     return cfg, data, model, head, payload, eval_labels, x, edge_index
 
 
+def _pairwise_expert_cosine_rows(variant, dataset, seed, model, analysis, data, modality):
+    train_idx = data.train_idx
+    generator = torch.Generator(device="cpu").manual_seed(
+        int(seed) * 1009 + (0 if modality == "text" else 1)
+    )
+    count = min(4096, int(train_idx.numel()))
+    chosen = train_idx[torch.randperm(train_idx.numel(), generator=generator)[:count].to(train_idx.device)]
+    chosen = chosen.to(analysis[f"H0_{modality}"].device)
+    experts = getattr(model, f"experts_{modality}")
+    rows = []
+    # C[0], C[1], C[2] are the inputs H0, C1, and C2 to hops 1, 2, and 3.
+    for hop in (1, 2, 3):
+        stage_input = analysis[f"C_{modality}"][hop - 1][chosen]
+        expert_outputs = [expert(stage_input) for expert in experts]
+        for left in range(len(expert_outputs)):
+            for right in range(left + 1, len(expert_outputs)):
+                cosine = F.cosine_similarity(
+                    expert_outputs[left], expert_outputs[right], dim=-1
+                ).mean()
+                value = float(cosine.item())
+                rows.append({
+                    "variant": variant, "dataset": dataset, "seed": seed,
+                    "modality": modality, "diagnostic": "pairwise_expert_output_cosine",
+                    "hop": hop, "expert": f"{left}:{right}", "value": value,
+                    "collapse_flag": "EXPERT_COLLAPSE_OBSERVED" if value > 0.98 else "",
+                })
+    return rows
+
+
 @torch.no_grad()
 def _run_interventions(runs: list[dict], device: torch.device) -> tuple[list[dict], list[dict]]:
     rows, specialization = [], []
@@ -312,27 +344,15 @@ def _run_interventions(runs: list[dict], device: torch.device) -> tuple[list[dic
                 for expert_id, load in enumerate(stats.get("expert_load", torch.empty(0)).detach().cpu().tolist()):
                     specialization.append({
                         "variant": "relation_expert", "dataset": dataset, "seed": seed,
-                        "modality": modality, "diagnostic": "expert_load",
+                        "modality": modality, "diagnostic": "expert_load", "hop": "all",
                         "expert": expert_id, "value": load,
                         "routing_entropy": float(stats["routing_entropy"].item()),
                         "top1_fraction": float(stats["top1_fraction"][expert_id].item()),
                         "collapse_flag": "EXPERT_COLLAPSE_OBSERVED" if load > 0.90 else "",
                     })
-                h0 = normal[f"H0_{modality}"]
-                train_idx = data.train_idx.to(device)
-                generator = torch.Generator(device="cpu").manual_seed(seed * 1009 + (0 if modality == "text" else 1))
-                count = min(4096, int(train_idx.numel()))
-                chosen = train_idx[torch.randperm(train_idx.numel(), generator=generator)[:count].to(device)]
-                same_input = h0[chosen]
-                expert_outputs = [expert(same_input) for expert in getattr(model, f"experts_{modality}")]
-                for left in range(len(expert_outputs)):
-                    for right in range(left + 1, len(expert_outputs)):
-                        cosine = F.cosine_similarity(expert_outputs[left], expert_outputs[right], dim=-1).mean()
-                        specialization.append({
-                            "variant": "relation_expert", "dataset": dataset, "seed": seed,
-                            "modality": modality, "diagnostic": "pairwise_expert_output_cosine",
-                            "expert": f"{left}:{right}", "value": float(cosine.item()),
-                        })
+                specialization.extend(_pairwise_expert_cosine_rows(
+                    "relation_expert", dataset, seed, model, normal, data, modality
+                ))
             rows.append({
                 "variant": "relation_expert", "dataset": dataset, "seed": seed,
                 "intervention": "normal", "val_acc": normal_acc, "val_macro_f1": normal_f1,
@@ -364,9 +384,9 @@ def _run_interventions(runs: list[dict], device: torch.device) -> tuple[list[dic
     return rows, specialization
 
 
-def _semantic_bins(model, analysis, data, target, source, modality: str):
+def _semantic_bins(model, h0: torch.Tensor, data, target, source, modality: str):
+    """Freeze quartile edges from the supplied plain-A0 projected H0 tensor."""
     device = target.device
-    h0 = analysis[f"H0_{modality}"]
     train_nodes = torch.zeros(data.num_nodes, dtype=torch.bool, device=device)
     val_nodes = torch.zeros(data.num_nodes, dtype=torch.bool, device=device)
     train_nodes[data.train_idx.to(device)] = True
@@ -382,24 +402,38 @@ def _semantic_bins(model, analysis, data, target, source, modality: str):
     val_related = val_nodes[target] | val_nodes[source]
     if not train_edge.any():
         return None
-    thresholds = torch.quantile(similarity[train_edge], torch.tensor([0.25, 0.5, 0.75], device=device))
+    thresholds = torch.quantile(
+        similarity[train_edge], torch.tensor([0.25, 0.5, 0.75], device=device)
+    )
     positions = torch.nonzero(val_related, as_tuple=False).flatten()
-    bins = torch.bucketize(similarity[positions], thresholds)
-    return thresholds, positions, bins, similarity
+    val_similarity = similarity[positions]
+    bins = torch.bucketize(val_similarity, thresholds)
+    return {
+        "thresholds": thresholds,
+        "positions": positions,
+        "bins": bins,
+        "similarity": val_similarity,
+        "target": target,
+        "source": source,
+        "reference": "plain_A0_H0",
+        "modality": modality,
+    }
 
 
 @torch.no_grad()
 def _quartile_relation_rows(
     variant: str, dataset: str, seed: int, model, analysis, data,
     target: torch.Tensor, source: torch.Tensor, modality: str,
+    semantic: dict | None,
 ) -> tuple[list[dict], dict | None]:
     if variant not in {"scalar_weight", "relation_expert"}:
         return [], None
-    semantic = _semantic_bins(model, analysis, data, target, source, modality)
     if semantic is None:
         return [], None
-    thresholds, positions, bins, similarity = semantic
-    target_val, source_val = target[positions], source[positions]
+    thresholds = semantic["thresholds"]
+    positions, bins, similarity = semantic["positions"], semantic["bins"], semantic["similarity"]
+    # The semantic edge coordinates and bins come exclusively from frozen A0 H0.
+    target_val, source_val = semantic["target"][positions], semantic["source"][positions]
     h0 = analysis[f"H0_{modality}"]
     control, _ = model._edge_controls(modality, h0, target_val, source_val)
     rows = []
@@ -413,15 +447,15 @@ def _quartile_relation_rows(
             rows.append({
                 "variant": variant, "dataset": dataset, "seed": seed,
                 "modality": modality, "diagnostic": "scalar_weight",
-                "similarity_quartile": q + 1, "hop": "all",
+                "similarity_quartile": q + 1, "similarity_reference": "plain_A0_H0", "hop": "all",
                 "n_edges": int(vals.numel()), "train_similarity_q25": float(thresholds[0].item()),
                 "train_similarity_q50": float(thresholds[1].item()),
                 "train_similarity_q75": float(thresholds[2].item()),
-                "similarity_mean": float(similarity[positions[selected]].mean().item()),
+                "similarity_mean": float(similarity[selected].mean().item()),
                 "mean": float(vals.mean().item()), "median": float(vals.median().item()),
                 "p10": float(quantiles[0].item()), "p90": float(quantiles[1].item()),
             })
-        return rows, {"thresholds": thresholds, "positions": positions, "bins": bins}
+        return rows, semantic
 
     experts = getattr(model, f"experts_{modality}")
     for q in range(4):
@@ -447,77 +481,100 @@ def _quartile_relation_rows(
             row = {
                 "variant": variant, "dataset": dataset, "seed": seed,
                 "modality": modality, "diagnostic": "relative_operator_correction",
-                "similarity_quartile": q + 1, "hop": hop,
+                "similarity_quartile": q + 1, "similarity_reference": "plain_A0_H0", "hop": hop,
                 "n_edges": int(magnitude.numel()),
                 "train_similarity_q25": float(thresholds[0].item()),
                 "train_similarity_q50": float(thresholds[1].item()),
                 "train_similarity_q75": float(thresholds[2].item()),
-                "similarity_mean": float(similarity[positions[selected]].mean().item()),
+                "similarity_mean": float(similarity[selected].mean().item()),
                 "correction_relative_mean": float(magnitude.mean().item()),
                 "correction_relative_p10": float(mag_q[0].item()),
                 "correction_relative_median": float(mag_q[1].item()),
                 "correction_relative_p90": float(mag_q[2].item()),
+                "correction_fraction_gt_1": float((magnitude > 1.0).float().mean().item()),
+                "correction_fraction_gt_2": float((magnitude > 2.0).float().mean().item()),
                 "message_direction_cosine_mean": float(direction.mean().item()),
                 "message_direction_cosine_p10": float(dir_q[0].item()),
                 "message_direction_cosine_median": float(dir_q[1].item()),
                 "message_direction_cosine_p90": float(dir_q[2].item()),
+                "message_direction_negative_fraction": float((direction < 0).float().mean().item()),
             }
             for expert_id in range(model.NUM_EXPERTS):
                 row[f"mean_expert_usage_{expert_id}"] = float(route_q[:, expert_id].mean().item())
             rows.append(row)
-    return rows, {"thresholds": thresholds, "positions": positions, "bins": bins}
+    return rows, semantic
+
+
+def _sample_matched_random_edge_group(val_positions, bins, target_quartile: int, generator):
+    target_group = val_positions[bins == target_quartile]
+    candidates = val_positions[bins != target_quartile]
+    if candidates.numel() < target_group.numel():
+        return target_group, None, int(candidates.numel())
+    permutation = torch.randperm(candidates.numel(), generator=generator)[:target_group.numel()]
+    matched = candidates[permutation.to(candidates.device)]
+    return target_group, matched, int(candidates.numel())
 
 
 @torch.no_grad()
 def _targeted_edge_interventions(
     variant: str, dataset: str, seed: int, model, data, x, edge_index,
-    labels: list[int], head, analysis, target, source,
+    labels: list[int], head, analysis, target, source, semantic: dict | None,
 ) -> list[dict]:
-    if variant != "relation_expert":
+    if variant != "relation_expert" or semantic is None:
         return []
     rows = []
     edge_count = int(target.numel())
-    for modality in ("text", "visual"):
-        semantic = _semantic_bins(model, analysis, data, target, source, modality)
-        if semantic is None:
+    normal_acc, normal_macro, normal_pred = _validation_metrics(head, analysis["fused_z"], data, labels)
+    modality = semantic["modality"]
+    positions, bins = semantic["positions"], semantic["bins"]
+    for q in range(4):
+        generator = torch.Generator(device="cpu").manual_seed(
+            seed * 100003 + q * 101 + (0 if modality == "text" else 1)
+        )
+        group, chosen_random, candidate_count = _sample_matched_random_edge_group(
+            positions, bins, q, generator
+        )
+        if not group.numel():
             continue
-        _, positions, bins, _ = semantic
-        val_positions = positions
-        for q in range(4):
-            group = val_positions[bins == q]
-            if not group.numel():
-                continue
-            candidates = val_positions
-            generator = torch.Generator(device="cpu").manual_seed(seed * 100003 + q * 101 + (0 if modality == "text" else 1))
-            chosen_random = candidates[torch.randperm(candidates.numel(), generator=generator)[: group.numel()].to(target.device)]
-            for name, selected in ((f"remove_{modality}_expert_residual_val_similarity_q{q + 1}", group),
-                                   (f"matched_random_{modality}_edge_group_q{q + 1}", chosen_random)):
-                scale_t = torch.ones(edge_count, device=target.device)
-                scale_v = torch.ones(edge_count, device=target.device)
-                (scale_t if modality == "text" else scale_v)[selected] = 0.0
-                with torch.no_grad():
-                    result = model.analyze(
-                        x, edge_index,
-                        residual_scale_text=scale_t,
-                        residual_scale_visual=scale_v,
-                    )
-                    acc, macro, pred = _validation_metrics(head, result["fused_z"], data, labels)
-                normal_acc, normal_macro, normal_pred = _validation_metrics(
-                    head, analysis["fused_z"], data, labels
-                )
-                stats = result["intervention_stats"]
-                changed = stats[f"mean_message_change_{modality}"]
-                rows.append({
-                    "variant": variant, "dataset": dataset, "seed": seed,
-                    "intervention": name, "val_acc": acc, "val_macro_f1": macro,
-                    "delta_val_acc": acc - normal_acc,
-                    "delta_val_macro_f1": macro - normal_macro,
-                    "prediction_flip_rate": float((pred != normal_pred).float().mean().item()),
-                    "routing_change": 0.0,
-                    "mean_message_change": float(changed.item()) if changed is not None else 0.0,
-                    "selected_edges": int(selected.numel()),
-                    "test_evaluated": False,
-                })
+        group_name = f"remove_{modality}_expert_residual_val_similarity_q{q + 1}"
+        selections = [(group_name, group)]
+        random_name = f"matched_random_{modality}_edge_group_q{q + 1}"
+        if chosen_random is None:
+            rows.append({
+                "variant": variant, "dataset": dataset, "seed": seed,
+                "intervention": random_name, "selected_edges": 0,
+                "candidate_edges": candidate_count, "status": "skipped",
+                "skip_reason": "insufficient_non_target_validation_edges",
+                "test_evaluated": False,
+            })
+        else:
+            if torch.isin(chosen_random, group).any():
+                raise RuntimeError("matched random edge group overlaps its target quartile")
+            selections.append((random_name, chosen_random))
+        for name, selected in selections:
+            scale_t = torch.ones(edge_count, device=target.device)
+            scale_v = torch.ones(edge_count, device=target.device)
+            (scale_t if modality == "text" else scale_v)[selected] = 0.0
+            result = model.analyze(
+                x, edge_index,
+                residual_scale_text=scale_t,
+                residual_scale_visual=scale_v,
+            )
+            acc, macro, pred = _validation_metrics(head, result["fused_z"], data, labels)
+            stats = result["intervention_stats"]
+            changed = stats[f"mean_message_change_{modality}"]
+            rows.append({
+                "variant": variant, "dataset": dataset, "seed": seed,
+                "intervention": name, "val_acc": acc, "val_macro_f1": macro,
+                "delta_val_acc": acc - normal_acc,
+                "delta_val_macro_f1": macro - normal_macro,
+                "prediction_flip_rate": float((pred != normal_pred).float().mean().item()),
+                "routing_change": 0.0,
+                "mean_message_change": float(changed.item()) if changed is not None else 0.0,
+                "selected_edges": int(selected.numel()),
+                "candidate_edges": candidate_count if name == random_name else "",
+                "status": "complete", "skip_reason": "", "test_evaluated": False,
+            })
     return rows
 
 
@@ -527,35 +584,65 @@ def _mechanism_analysis(
 ) -> tuple[list[dict], list[dict], list[dict]]:
     intervention_rows, specialization_rows, relation_rows = [], [], []
     run_map = {(r["variant"], r["dataset"], int(r["seed"])): r for r in runs}
-    for variant in ("scalar_weight", "global_expert", "relation_expert"):
-        for dataset in DATASETS:
-            for seed in SEEDS:
-                if (variant, dataset, seed) not in run_map:
-                    continue
+    for dataset in DATASETS:
+        for seed in SEEDS:
+            present = [
+                variant for variant in ("scalar_weight", "global_expert", "relation_expert")
+                if (variant, dataset, seed) in run_map
+            ]
+            if not present:
+                continue
+            semantic_by_modality = {}
+            reference_target = reference_source = None
+            if any(variant in {"scalar_weight", "relation_expert"} for variant in present):
+                if ("plain", dataset, seed) not in run_map:
+                    raise RuntimeError(
+                        f"missing plain A0 checkpoint required for semantic reference: {dataset}/seed{seed}"
+                    )
+                _, ref_data, ref_model, _, _, _, ref_x, ref_edge_index = _load_checkpoint_context(
+                    "plain", dataset, seed, device
+                )
+                ref_analysis = ref_model.analyze(ref_x, ref_edge_index)
+                ref_operator = ref_model._get_operator(ref_edge_index, ref_data.num_nodes, ref_x.dtype)
+                reference_target, reference_source, _, _, _, _ = ref_model._operator_edges(ref_operator)
+                for modality in ("text", "visual"):
+                    semantic_by_modality[modality] = _semantic_bins(
+                        ref_model, ref_analysis[f"H0_{modality}"], ref_data,
+                        reference_target, reference_source, modality,
+                    )
+                del ref_model, ref_data, ref_analysis, ref_operator, ref_x, ref_edge_index
+
+            for variant in present:
                 _, data, model, head, _, labels, x, edge_index = _load_checkpoint_context(
                     variant, dataset, seed, device
                 )
-                with torch.no_grad():
-                    analysis = model.analyze(x, edge_index)
+                analysis = model.analyze(x, edge_index)
+                operator = model._get_operator(edge_index, data.num_nodes, x.dtype)
+                target, source, _, _, _, _ = model._operator_edges(operator)
+                if reference_target is not None and (
+                    not torch.equal(target, reference_target)
+                    or not torch.equal(source, reference_source)
+                ):
+                    raise RuntimeError(f"physical edge ordering differs from A0 reference for {dataset}/seed{seed}")
+                diag_target = reference_target if reference_target is not None else target
+                diag_source = reference_source if reference_source is not None else source
                 if variant == "relation_expert":
                     rows, expert_rows = _run_interventions(
                         [run_map[(variant, dataset, seed)]], device
                     )
                     intervention_rows.extend(rows)
                     specialization_rows.extend(expert_rows)
-                operator = model._get_operator(edge_index, data.num_nodes, x.dtype)
-                target, source, _, _, _, _ = model._operator_edges(operator)
                 for modality in ("text", "visual"):
-                    diag_rows, semantic = _quartile_relation_rows(
+                    semantic = semantic_by_modality.get(modality)
+                    diag_rows, _ = _quartile_relation_rows(
                         variant, dataset, seed, model, analysis, data,
-                        target, source, modality,
+                        diag_target, diag_source, modality, semantic,
                     )
                     relation_rows.extend(diag_rows)
                     if targeted and variant == "relation_expert" and semantic is not None:
-                        # The targeted utility evaluates validation only; no test indices or labels are read.
                         intervention_rows.extend(_targeted_edge_interventions(
                             variant, dataset, seed, model, data, x, edge_index,
-                            labels, head, analysis, target, source,
+                            labels, head, analysis, diag_target, diag_source, semantic,
                         ))
                 if variant == "global_expert":
                     for modality in ("text", "visual"):
@@ -563,27 +650,17 @@ def _mechanism_analysis(
                         for expert_id, load in enumerate(stats["expert_load"].detach().cpu().tolist()):
                             specialization_rows.append({
                                 "variant": variant, "dataset": dataset, "seed": seed,
-                                "modality": modality, "diagnostic": "expert_load",
+                                "modality": modality, "diagnostic": "expert_load", "hop": "all",
                                 "expert": expert_id, "value": load,
                                 "routing_entropy": float(stats["routing_entropy"].item()),
                                 "top1_fraction": float(stats["top1_fraction"][expert_id].item()),
+                                "collapse_flag": "EXPERT_COLLAPSE_OBSERVED" if load > 0.90 else "",
                             })
-                        outputs = [expert(analysis[f"H0_{modality}"][data.train_idx[:min(4096, len(data.train_idx))].to(device)])
-                                   for expert in getattr(model, f"experts_{modality}")]
-                        for left in range(len(outputs)):
-                            for right in range(left + 1, len(outputs)):
-                                specialization_rows.append({
-                                    "variant": variant, "dataset": dataset, "seed": seed,
-                                    "modality": modality, "diagnostic": "pairwise_expert_output_cosine",
-                                    "expert": f"{left}:{right}",
-                                    "value": float(F.cosine_similarity(outputs[left], outputs[right], dim=-1).mean().item()),
-                                    "collapse_flag": (
-                                        "EXPERT_COLLAPSE_OBSERVED"
-                                        if F.cosine_similarity(outputs[left], outputs[right], dim=-1).mean().item() > 0.98
-                                        else ""
-                                    ),
-                                })
-                del model, head, data, analysis
+                        specialization_rows.extend(_pairwise_expert_cosine_rows(
+                            "global_expert", dataset, seed, model, analysis, data, modality
+                        ))
+                del model, head, data, analysis, x, edge_index
+            del semantic_by_modality, reference_target, reference_source
     return intervention_rows, specialization_rows, relation_rows
 
 
@@ -678,6 +755,10 @@ def _decision_rows(
         "complete_formal_contexts": complete,
         "expected_formal_contexts": 60,
         "collapse_load_or_cosine_rows": len(collapse_rows),
+        "collapse_cosine_hops": "; ".join(
+            f"{r.get('variant')}/{r.get('dataset')}/seed{r.get('seed')}/{r.get('modality')}/hop{r.get('hop')}:{float(r.get('value', 0.0)):.6f}"
+            for r in collapse_rows if r.get("diagnostic") == "pairwise_expert_output_cosine"
+        ),
         "mean_expert_intervention_rows": len(mean_expert_rows),
         "criteria": "Flag if any expert load >90%, pairwise expert-output cosine >0.98, or mean-expert intervention has negligible Validation effect across measured contexts",
     })
@@ -718,8 +799,10 @@ def _write_report(runs, comparisons, decision_rows, intervention_rows, specializ
         "## Mechanism and expert diagnostics",
         "",
         f"Validation-only frozen interventions recorded: {len(intervention_rows)} rows. Targeted similarity-quartile edge interventions: {'included' if targeted else 'not run (optional flag not supplied)'}.",
-        "`relation_diagnostics.csv` uses cosine similarity in projected H0 space. Quartile boundaries are computed from physical edges whose endpoints are both Train nodes; reported edges are physical edges incident to at least one Validation node. Test labels are not used.",
-        f"expert_specialization.csv contains mean load, routing entropy, top-1 fractions, and pairwise output cosine on the same Train-node inputs. Collapse diagnostic: {collapse_status}. No balancing/diversity regularizer is added.",
+        "`relation_diagnostics.csv` uses cosine similarity in projected H0 space. For each dataset/seed/modality, quartiles and edge assignments are frozen from the plain A0 best checkpoint; Q25/Q50/Q75 use physical Train–Train non-self edges, and A1/A3 are measured on the identical A0-defined physical Validation-incident edge groups. `similarity_reference=plain_A0_H0`. Test labels are not used.",
+        "A3 residual dominance is summarized by fractions with |Δm|/(|h|+ε)>1, >2, and cos(h,h+Δm)<0 for each quartile and hop.",
+        f"expert_specialization.csv contains mean load, routing entropy, top-1 fractions, and pairwise output cosine on Train-node inputs at hop 1 (H0), hop 2 (C1), and hop 3 (C2). Collapse diagnostic: {collapse_status}. No balancing/diversity regularizer is added.",
+        "Collapse cosine rows by exact context and hop: " + (next((r.get("collapse_cosine_hops", "") for r in decision_rows if r["hypothesis"] == "expert_collapse_diagnostic"), "") or "none"),
         "",
         "## Parameter counts",
         "",
@@ -727,7 +810,7 @@ def _write_report(runs, comparisons, decision_rows, intervention_rows, specializ
         "",
         "## Run integrity",
         "",
-        "Every completed run is checked for a resolved config with test evaluation disabled and for absence of test metrics in the checkpoint and run metrics. The formal launcher writes the exact command, git SHA, deterministic run/checkpoint paths, runtime, peak GPU allocation, and failure reason to its manifest.",
+        "Every completed run is checked for a resolved config with test evaluation disabled and for absence of test metrics in the checkpoint and run metrics. The formal launcher requires a clean worktree and writes branch, git SHA, exact command, deterministic run/checkpoint paths, runtime, peak GPU allocation, and failure reason to its manifest.",
     ]
     (RESULTS / "relation_operator_audit_report.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 

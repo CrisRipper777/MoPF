@@ -21,7 +21,7 @@ VARIANTS = ["plain", "scalar_weight", "global_expert", "relation_expert"]
 OUTPUT = ROOT / "outputs/relation_operator_audit_v1"
 FORMAL_FIELDS = [
     "run_key", "mode", "variant", "dataset", "seed", "device", "status",
-    "return_code", "command", "git_commit", "run_dir", "checkpoint",
+    "return_code", "command", "git_branch", "git_commit", "run_dir", "checkpoint",
     "resolved_config", "runtime_seconds", "peak_gpu_memory_mib",
     "test_evaluated", "error_reason", "updated_at",
 ]
@@ -84,10 +84,27 @@ def smoke_contexts(
     return [Context("smoke", variant, dataset, seed, epochs, device, edge_chunk_size)]
 
 
-def _git_commit() -> str:
-    return subprocess.check_output(
-        ["git", "rev-parse", "HEAD"], cwd=ROOT, text=True
-    ).strip()
+def _git_info(repo_root: Path | None = None) -> dict[str, str]:
+    repo_root = ROOT if repo_root is None else repo_root
+    return {
+        "branch": subprocess.check_output(
+            ["git", "branch", "--show-current"], cwd=repo_root, text=True
+        ).strip(),
+        "commit": subprocess.check_output(
+            ["git", "rev-parse", "HEAD"], cwd=repo_root, text=True
+        ).strip(),
+        "status": subprocess.check_output(
+            ["git", "status", "--porcelain"], cwd=repo_root, text=True
+        ),
+    }
+
+
+def _require_formal_clean_worktree(git_info: dict[str, str]) -> None:
+    if git_info["status"]:
+        raise RuntimeError(
+            "formal mode requires a clean Git worktree; git status --porcelain:\n"
+            + git_info["status"].rstrip()
+        )
 
 
 def build_command(context: Context) -> list[str]:
@@ -181,7 +198,9 @@ def _tail(path: Path, lines: int = 30) -> str:
     return "\n".join(path.read_text(encoding="utf-8", errors="replace").splitlines()[-lines:])
 
 
-def run_context(context: Context, git_commit: str, *, dry_run: bool = False) -> dict:
+def run_context(
+    context: Context, git_branch: str, git_commit: str, *, dry_run: bool = False
+) -> dict:
     command = build_command(context)
     command_text = shlex.join(command)
     row = {
@@ -192,6 +211,7 @@ def run_context(context: Context, git_commit: str, *, dry_run: bool = False) -> 
         "seed": context.seed,
         "device": context.device,
         "command": command_text,
+        "git_branch": git_branch,
         "git_commit": git_commit,
         "run_dir": str(context.run_dir),
         "checkpoint": str(context.checkpoint),
@@ -303,16 +323,22 @@ def main() -> None:
             args.device, args.edge_chunk_size,
         )
 
-    git_commit = _git_commit()
+    git_info = _git_info()
+    if args.mode == "formal":
+        _require_formal_clean_worktree(git_info)
+    git_branch, git_commit = git_info["branch"], git_info["commit"]
     if args.dry_run:
-        print(f"mode={args.mode} contexts={len(contexts)} git_commit={git_commit}")
+        print(
+            f"mode={args.mode} contexts={len(contexts)} "
+            f"git_branch={git_branch} git_commit={git_commit}"
+        )
         for context in contexts:
-            run_context(context, git_commit, dry_run=True)
+            run_context(context, git_branch, git_commit, dry_run=True)
         return
 
     failures = []
     for context in contexts:
-        row = run_context(context, git_commit)
+        row = run_context(context, git_branch, git_commit)
         if row.get("status") == "failed":
             failures.append((context.run_key, row.get("return_code"), row.get("error_reason")))
     if failures:

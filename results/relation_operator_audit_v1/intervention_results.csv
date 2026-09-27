@@ -1,1 +1,1 @@
-variant,dataset,seed,intervention,val_acc,val_macro_f1,delta_val_acc,delta_val_macro_f1,prediction_flip_rate,routing_change,mean_message_change,selected_edges,test_evaluated
+variant,dataset,seed,intervention,val_acc,val_macro_f1,delta_val_acc,delta_val_macro_f1,prediction_flip_rate,routing_change,mean_message_change,selected_edges,candidate_edges,status,skip_reason,test_evaluated

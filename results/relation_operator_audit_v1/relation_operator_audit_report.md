@@ -32,8 +32,9 @@ H2's phrase “catastrophic negative transfer” has no numeric cutoff in the fr
 ## Mechanism and expert diagnostics
 
 Validation-only frozen interventions recorded: 0 rows. Targeted similarity-quartile edge interventions: not run (optional flag not supplied).
-`relation_diagnostics.csv` uses cosine similarity in projected H0 space. Quartile boundaries are computed from physical edges whose endpoints are both Train nodes; reported edges are physical edges incident to at least one Validation node. Test labels are not used.
-expert_specialization.csv contains mean load, routing entropy, top-1 fractions, and pairwise output cosine on the same Train-node inputs. Collapse diagnostic: PENDING. No balancing/diversity regularizer is added.
+`relation_diagnostics.csv` uses cosine similarity in projected H0 space. For each dataset/seed/modality, quartiles and edge assignments are frozen from the plain A0 best checkpoint; Q25/Q50/Q75 use physical Train–Train non-self edges, and A1/A3 are measured on the identical A0-defined physical Validation-incident edge groups. `similarity_reference=plain_A0_H0`. Test labels are not used.
+A3 residual dominance is summarized by fractions with |Δm|/(|h|+ε)>1, >2, and cos(h,h+Δm)<0 for each quartile and hop.
+expert_specialization.csv contains mean load, routing entropy, top-1 fractions, and pairwise output cosine on Train-node inputs at hop 1 (H0), hop 2 (C1), and hop 3 (C2). Collapse diagnostic: PENDING. Collapse cosine rows identify the exact context and hop in `collapse_cosine_hops`. No balancing/diversity regularizer is added.
 
 ## Parameter counts
 
@@ -41,4 +42,4 @@ Parameter-count rows: 20. Counts distinguish the Text+Visual model, NC classifie
 
 ## Run integrity
 
-Every completed run is checked for a resolved config with test evaluation disabled and for absence of test metrics in the checkpoint and run metrics. The formal launcher writes the exact command, git SHA, deterministic run/checkpoint paths, runtime, peak GPU allocation, and failure reason to its manifest.
+Every completed run is checked for a resolved config with test evaluation disabled and for absence of test metrics in the checkpoint and run metrics. The formal launcher requires a clean worktree before any formal job and writes the current branch, git SHA, exact command, deterministic run/checkpoint paths, runtime, peak GPU allocation, and failure reason to its manifest.

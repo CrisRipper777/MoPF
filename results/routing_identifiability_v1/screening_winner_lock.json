@@ -1,0 +1,42 @@
+{
+  "experiment": "E6-SRIJ",
+  "winning_variant": "D0_independent",
+  "selection": "Validation Accuracy primary, Macro-F1 secondary; candidate gates include paired seed consistency and functional intervention",
+  "candidate_summary": [
+    {
+      "candidate": "C0_Uniform",
+      "mean_val_acc": 0.8042171465026008,
+      "mean_val_macro_f1": 0.7231186324952588
+    },
+    {
+      "candidate": "D0_independent",
+      "mean_val_acc": 0.8059299720658196,
+      "mean_val_macro_f1": 0.7264890274169417
+    }
+  ],
+  "phase_b_joint_gate": {
+    "status": "JOINT_UTILITY_WEAK_OR_MIXED",
+    "positive_dataset_count": 3,
+    "positive_dataset_seed_count": "9/9",
+    "relative_joint_regret": 0.04478239858854529,
+    "mean_joint_pair_regret": 0.0072085353999999996,
+    "mean_joint_oracle_gain_vs_uniform": 0.1609680505555556,
+    "interaction_reproducible_dataset_count": 1,
+    "gate_split": "Train primary; Validation diagnostics reported separately"
+  },
+  "phase_d_independent_gate": {
+    "pass": true,
+    "positive_dataset_count": 3,
+    "positive_seed_count": "8/9",
+    "mean_delta_acc": 0.0017128255632188586,
+    "mean_delta_macro_f1": 0.003370394921682834,
+    "node_shuffle_functional_effect": true,
+    "mean_node_shuffle_prediction_flip": 0.003892946108761761
+  },
+  "phase_d_joint_gate": {
+    "status": "NOT_TESTED",
+    "reason": "Phase B joint-utility gate did not pass"
+  },
+  "confirmation_loaded_before_lock": false,
+  "test_metrics": null
+}

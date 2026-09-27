@@ -1,0 +1,10 @@
+{
+  "status": "JOINT_UTILITY_WEAK_OR_MIXED",
+  "positive_dataset_count": 3,
+  "positive_dataset_seed_count": "9/9",
+  "relative_joint_regret": 0.04478239858854529,
+  "mean_joint_pair_regret": 0.0072085353999999996,
+  "mean_joint_oracle_gain_vs_uniform": 0.1609680505555556,
+  "interaction_reproducible_dataset_count": 1,
+  "gate_split": "Train primary; Validation diagnostics reported separately"
+}

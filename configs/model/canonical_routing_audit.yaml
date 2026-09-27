@@ -1,0 +1,14 @@
+name: canonical_routing_audit
+hidden_dim: 256
+num_orders: 4
+trajectory_state_projection_dim: 32
+trajectory_context_dim: 128
+router_hidden_dim: 64
+output_dim: 4
+optimizer: adamw
+lr: 1.0e-3
+weight_decay: 1.0e-4
+max_epochs: 200
+patience: 30
+selection: best_validation_accuracy
+evaluate_test: false

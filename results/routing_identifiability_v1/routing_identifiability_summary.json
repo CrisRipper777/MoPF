@@ -1,0 +1,316 @@
+{
+  "experiment": "E6-SRIJ",
+  "phase_a": {
+    "max_embedding_abs_error": 4.676762443978078e-07,
+    "max_logit_abs_error": 3.3410229605124186e-07,
+    "preflight_max_val_acc_delta": 5.960464477539064e-08,
+    "preflight_max_val_macro_f1_delta": 0.0,
+    "teacher_scale": [
+      {
+        "temperature": 0.1,
+        "entropy": 1.311737106906043,
+        "preference_strength": 0.18497192042155394,
+        "hard_ranking_invariance": 0.9999255289634069,
+        "soft_q_js": 0.05112686614868123
+      },
+      {
+        "temperature": 0.25,
+        "entropy": 1.4546519915262859,
+        "preference_strength": 0.09617391802991426,
+        "hard_ranking_invariance": 0.9999999701976776,
+        "soft_q_js": 0.017534898736307144
+      },
+      {
+        "temperature": 0.5,
+        "entropy": 1.5311353968249426,
+        "preference_strength": 0.04865209468536902,
+        "hard_ranking_invariance": 0.9999999701976776,
+        "soft_q_js": 0.0036954948114321273
+      },
+      {
+        "temperature": 1.0,
+        "entropy": 1.576095826096005,
+        "preference_strength": 0.020716614329204328,
+        "hard_ranking_invariance": 0.9999999701976776,
+        "soft_q_js": 0.0
+      }
+    ]
+  },
+  "phase_b": {
+    "gate": {
+      "status": "JOINT_UTILITY_WEAK_OR_MIXED",
+      "positive_dataset_count": 3,
+      "positive_dataset_seed_count": "9/9",
+      "relative_joint_regret": 0.04478239858854529,
+      "mean_joint_pair_regret": 0.0072085353999999996,
+      "mean_joint_oracle_gain_vs_uniform": 0.1609680505555556,
+      "interaction_reproducible_dataset_count": 1,
+      "gate_split": "Train primary; Validation diagnostics reported separately"
+    },
+    "mean_abs_interaction": 0.05162175155555555,
+    "mean_RMS_interaction": 0.07396157133333334,
+    "mean_P90_abs_interaction": 0.10899010311111111,
+    "mean_interaction_energy": 0.08596716577777778,
+    "mean_joint_best_pair_agreement": 0.4619693660701288
+  },
+  "phase_c": {
+    "mean_continuous_minus_discrete_gain": 0.00632163987029339,
+    "gain_by_dataset": {
+      "Movies": 0.016133979583779934,
+      "Reddit-S": 0.0014822907590616998,
+      "ele-fashion": 0.0013486492680385334
+    },
+    "positive_seed_count": 9,
+    "stable_continuous_gate": false,
+    "discrete_sufficient_gate": false,
+    "train_geometry_by_modality": {
+      "text": {
+        "seed": 43.0,
+        "mean_entropy": 0.11620708223846218,
+        "mean_nearest_vertex_l1": 0.1027577892891554,
+        "mean_l1_to_uniform": 1.4100679291619196,
+        "mean_active_order_count": 1.1809587493743021,
+        "mean_top2_mass": 0.9807805551422967,
+        "fraction_near_vertex_l1_lt_0_10": 0.8738666794221843,
+        "fraction_ge_2_active_orders": 0.10914482166195807,
+        "fraction_ge_3_active_orders": 0.04559615433286773
+      },
+      "visual": {
+        "seed": 43.0,
+        "mean_entropy": 0.12779043118158973,
+        "mean_nearest_vertex_l1": 0.11554649232073262,
+        "mean_l1_to_uniform": 1.4004319111506145,
+        "mean_active_order_count": 1.1992176710613025,
+        "mean_top2_mass": 0.980360123846266,
+        "fraction_near_vertex_l1_lt_0_10": 0.8542084472384832,
+        "fraction_ge_2_active_orders": 0.12872885062023584,
+        "fraction_ge_3_active_orders": 0.04530164199351357
+      }
+    },
+    "train_stability": {
+      "alpha_cosine_similarity": 0.7644568350580003,
+      "alpha_js_divergence": 0.16313263277212775,
+      "order_rank_agreement": 0.7387234594894765,
+      "distance_uniform_spearman": 0.2742123765336661,
+      "continuous_gain_spearman": 0.8783441962710956
+    },
+    "optimizer": {
+      "mean_restart_loss_range": 0.02838762644826178,
+      "p90_restart_loss_range": 0.0377171039581298,
+      "mean_steps": 103.66666666666667,
+      "early_stop_fraction": 0.3333333333333333
+    },
+    "sanity_mean_violation": 6.646801339462152e-08,
+    "sanity_max_violation": 1.1444092e-05,
+    "oracle_train_solutions": {
+      "C1_text_marginal": {
+        "seed": 43.0,
+        "mean_CE": 0.2232880003,
+        "accuracy_oracle": 0.9294980313,
+        "macro_f1_oracle": 0.8868916581
+      },
+      "C2_visual_marginal": {
+        "seed": 43.0,
+        "mean_CE": 0.2039347532,
+        "accuracy_oracle": 0.9356814629,
+        "macro_f1_oracle": 0.8939348233
+      },
+      "best_joint_discrete": {
+        "seed": 43.0,
+        "mean_CE": 0.1524613021,
+        "accuracy_oracle": 0.951913125,
+        "macro_f1_oracle": 0.9175340154
+      },
+      "continuous_minus_discrete_gain": {
+        "seed": 43.0,
+        "mean_CE": 0.0063216399,
+        "accuracy_oracle": null,
+        "macro_f1_oracle": null
+      },
+      "joint_continuous": {
+        "seed": 43.0,
+        "mean_CE": 0.1461396595,
+        "accuracy_oracle": 0.9552883714,
+        "macro_f1_oracle": 0.9238365716
+      },
+      "joint_continuous_minus_marginal_gain": {
+        "seed": 43.0,
+        "mean_CE": 0.0045495613,
+        "accuracy_oracle": null,
+        "macro_f1_oracle": null
+      },
+      "marginal_continuous_pair": {
+        "seed": 43.0,
+        "mean_CE": 0.1506892213,
+        "accuracy_oracle": 0.9533698218,
+        "macro_f1_oracle": 0.9197759761
+      },
+      "uniform": {
+        "seed": 43.0,
+        "mean_CE": 0.3134293457,
+        "accuracy_oracle": 0.8961299525,
+        "macro_f1_oracle": 0.842406966
+      }
+    },
+    "oracle_validation_solutions": {
+      "C1_text_marginal": {
+        "seed": 43.0,
+        "mean_CE": 0.5063982324,
+        "accuracy_oracle": 0.8431159812,
+        "macro_f1_oracle": 0.7709267373
+      },
+      "C2_visual_marginal": {
+        "seed": 43.0,
+        "mean_CE": 0.4712117985,
+        "accuracy_oracle": 0.8535250984,
+        "macro_f1_oracle": 0.7836157049
+      },
+      "best_joint_discrete": {
+        "seed": 43.0,
+        "mean_CE": 0.3724817145,
+        "accuracy_oracle": 0.8828049368,
+        "macro_f1_oracle": 0.8211936478
+      },
+      "continuous_minus_discrete_gain": {
+        "seed": 43.0,
+        "mean_CE": 0.0072732642,
+        "accuracy_oracle": null,
+        "macro_f1_oracle": null
+      },
+      "joint_continuous": {
+        "seed": 43.0,
+        "mean_CE": 0.365208442,
+        "accuracy_oracle": 0.8855595121,
+        "macro_f1_oracle": 0.8258473173
+      },
+      "joint_continuous_minus_marginal_gain": {
+        "seed": 43.0,
+        "mean_CE": 0.0061047944,
+        "accuracy_oracle": null,
+        "macro_f1_oracle": null
+      },
+      "marginal_continuous_pair": {
+        "seed": 43.0,
+        "mean_CE": 0.3713132449,
+        "accuracy_oracle": 0.882866886,
+        "macro_f1_oracle": 0.8224698139
+      },
+      "uniform": {
+        "seed": 43.0,
+        "mean_CE": 0.655933352,
+        "accuracy_oracle": 0.8042171465,
+        "macro_f1_oracle": 0.7231186325
+      }
+    }
+  },
+  "phase_d_d0_gate": {
+    "pass": true,
+    "positive_dataset_count": 3,
+    "positive_seed_count": "8/9",
+    "mean_delta_acc": 0.0017128255632188586,
+    "mean_delta_macro_f1": 0.003370394921682834,
+    "node_shuffle_functional_effect": true,
+    "mean_node_shuffle_prediction_flip": 0.003892946108761761
+  },
+  "phase_d_d1_gate": {
+    "status": "NOT_TESTED",
+    "reason": "Phase B joint-utility gate did not pass"
+  },
+  "screening_winner": "D0_independent",
+  "screening_winner_lock": {
+    "experiment": "E6-SRIJ",
+    "winning_variant": "D0_independent",
+    "selection": "Validation Accuracy primary, Macro-F1 secondary; candidate gates include paired seed consistency and functional intervention",
+    "candidate_summary": [
+      {
+        "candidate": "C0_Uniform",
+        "mean_val_acc": 0.8042171465026008,
+        "mean_val_macro_f1": 0.7231186324952588
+      },
+      {
+        "candidate": "D0_independent",
+        "mean_val_acc": 0.8059299720658196,
+        "mean_val_macro_f1": 0.7264890274169417
+      }
+    ],
+    "phase_b_joint_gate": {
+      "status": "JOINT_UTILITY_WEAK_OR_MIXED",
+      "positive_dataset_count": 3,
+      "positive_dataset_seed_count": "9/9",
+      "relative_joint_regret": 0.04478239858854529,
+      "mean_joint_pair_regret": 0.0072085353999999996,
+      "mean_joint_oracle_gain_vs_uniform": 0.1609680505555556,
+      "interaction_reproducible_dataset_count": 1,
+      "gate_split": "Train primary; Validation diagnostics reported separately"
+    },
+    "phase_d_independent_gate": {
+      "pass": true,
+      "positive_dataset_count": 3,
+      "positive_seed_count": "8/9",
+      "mean_delta_acc": 0.0017128255632188586,
+      "mean_delta_macro_f1": 0.003370394921682834,
+      "node_shuffle_functional_effect": true,
+      "mean_node_shuffle_prediction_flip": 0.003892946108761761
+    },
+    "phase_d_joint_gate": {
+      "status": "NOT_TESTED",
+      "reason": "Phase B joint-utility gate did not pass"
+    },
+    "confirmation_loaded_before_lock": false,
+    "test_metrics": null
+  },
+  "confirmation_status": "COMPLETED",
+  "confirmation_positive_seed_count": "3/6",
+  "confirmation_mean_delta_acc": 6.345907847086669e-05,
+  "confirmation_mean_delta_macro_f1": 7.992319250205003e-05,
+  "formal_training_run_count": 15,
+  "c0_retraining_runs": 0,
+  "test_metrics_used": false,
+  "decisions": [
+    {
+      "hypothesis": "H1_e5_routing_nonidentifiability_confirmed",
+      "status": "STRONG_SUPPORT",
+      "evidence": "Two prescribed distinct five-action vectors map to alpha_U; maximum representation error=4.68e-07, logit error=3.34e-07."
+    },
+    {
+      "hypothesis": "H2_marginal_modality_utility_is_sufficient",
+      "status": "STRONG_SUPPORT",
+      "evidence": "Material joint-utility gate=JOINT_UTILITY_WEAK_OR_MIXED; relative joint regret=0.04478."
+    },
+    {
+      "hypothesis": "H3_joint_multimodal_structural_utility_is_material",
+      "status": "NO_SUPPORT",
+      "evidence": "Joint gate requires relative regret >=0.10 and reproducible interaction; observed 0.04478 and 1/3 reproducible datasets."
+    },
+    {
+      "hypothesis": "H4_discrete_order_selection_is_sufficient",
+      "status": "MIXED_SUPPORT",
+      "evidence": "Mean continuous CE gain over discrete=0.006322; near-vertex fraction by dataset={'Movies': 0.7967276483721552, 'Reddit-S': 0.873636744966443, 'ele-fashion': 0.9217482966524034}."
+    },
+    {
+      "hypothesis": "H5_continuous_filtering_has_extra_headroom",
+      "status": "MIXED_SUPPORT",
+      "evidence": "Continuous gain by dataset={'Movies': 0.016133979583779934, 'Reddit-S': 0.0014822907590616998, 'ele-fashion': 0.0013486492680385334}; positive dataset-seeds=9/9; non-vertex fraction by dataset={'Movies': 0.20327235162784485, 'Reddit-S': 0.12636325503355705, 'ele-fashion': 0.07825170334759657}."
+    },
+    {
+      "hypothesis": "H6_continuous_oracle_filter_is_cross_seed_stable",
+      "status": "MIXED_SUPPORT",
+      "evidence": "Train alpha cosine=0.7645, JS=0.1631, rank agreement=0.7387."
+    },
+    {
+      "hypothesis": "H7_canonical_frozen_router_improves_uniform",
+      "status": "STRONG_SUPPORT",
+      "evidence": "{\"mean_delta_acc\": 0.0017128255632188586, \"mean_delta_macro_f1\": 0.003370394921682834, \"mean_node_shuffle_prediction_flip\": 0.003892946108761761, \"node_shuffle_functional_effect\": true, \"pass\": true, \"positive_dataset_count\": 3, \"positive_seed_count\": \"8/9\"}"
+    },
+    {
+      "hypothesis": "H8_joint_router_improves_independent_router",
+      "status": "NOT_TESTED",
+      "evidence": "D1 skipped because the Phase B joint-utility gate was weak/mixed."
+    },
+    {
+      "hypothesis": "H9_untouched_confirmation",
+      "status": "MIXED_SUPPORT",
+      "evidence": "D0 confirmation on Toys/Grocery: 3/6 positive seed pairs; mean delta Acc=6.346e-05, Macro-F1=7.992e-05."
+    }
+  ]
+}

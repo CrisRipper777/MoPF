@@ -1,0 +1,9 @@
+{
+  "pass": true,
+  "positive_dataset_count": 3,
+  "positive_seed_count": "8/9",
+  "mean_delta_acc": 0.0017128255632188586,
+  "mean_delta_macro_f1": 0.003370394921682834,
+  "node_shuffle_functional_effect": true,
+  "mean_node_shuffle_prediction_flip": 0.003892946108761761
+}

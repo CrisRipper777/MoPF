@@ -1,0 +1,10 @@
+hypothesis,status,evidence
+H1_e5_routing_nonidentifiability_confirmed,STRONG_SUPPORT,"Two prescribed distinct five-action vectors map to alpha_U; maximum representation error=4.68e-07, logit error=3.34e-07."
+H2_marginal_modality_utility_is_sufficient,STRONG_SUPPORT,Material joint-utility gate=JOINT_UTILITY_WEAK_OR_MIXED; relative joint regret=0.04478.
+H3_joint_multimodal_structural_utility_is_material,NO_SUPPORT,Joint gate requires relative regret >=0.10 and reproducible interaction; observed 0.04478 and 1/3 reproducible datasets.
+H4_discrete_order_selection_is_sufficient,MIXED_SUPPORT,"Mean continuous CE gain over discrete=0.006322; near-vertex fraction by dataset={'Movies': 0.7967276483721552, 'Reddit-S': 0.873636744966443, 'ele-fashion': 0.9217482966524034}."
+H5_continuous_filtering_has_extra_headroom,MIXED_SUPPORT,"Continuous gain by dataset={'Movies': 0.016133979583779934, 'Reddit-S': 0.0014822907590616998, 'ele-fashion': 0.0013486492680385334}; positive dataset-seeds=9/9; non-vertex fraction by dataset={'Movies': 0.20327235162784485, 'Reddit-S': 0.12636325503355705, 'ele-fashion': 0.07825170334759657}."
+H6_continuous_oracle_filter_is_cross_seed_stable,MIXED_SUPPORT,"Train alpha cosine=0.7645, JS=0.1631, rank agreement=0.7387."
+H7_canonical_frozen_router_improves_uniform,STRONG_SUPPORT,"{""mean_delta_acc"": 0.0017128255632188586, ""mean_delta_macro_f1"": 0.003370394921682834, ""mean_node_shuffle_prediction_flip"": 0.003892946108761761, ""node_shuffle_functional_effect"": true, ""pass"": true, ""positive_dataset_count"": 3, ""positive_seed_count"": ""8/9""}"
+H8_joint_router_improves_independent_router,NOT_TESTED,D1 skipped because the Phase B joint-utility gate was weak/mixed.
+H9_untouched_confirmation,MIXED_SUPPORT,"D0 confirmation on Toys/Grocery: 3/6 positive seed pairs; mean delta Acc=6.346e-05, Macro-F1=7.992e-05."

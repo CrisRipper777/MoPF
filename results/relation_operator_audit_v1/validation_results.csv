@@ -1,0 +1,1 @@
+variant,dataset,seed,best_epoch,val_acc,val_macro_f1,runtime_seconds,peak_gpu_memory_mib,model_trainable_params,head_trainable_params,total_trainable_params,checkpoint,run_dir,test_evaluated,status

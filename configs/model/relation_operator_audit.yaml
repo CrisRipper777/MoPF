@@ -1,0 +1,7 @@
+name: relation_operator_audit
+
+hidden_dim: 256
+max_order: 3
+dropout: 0.2
+operator_variant: plain # plain | scalar_weight | global_expert | relation_expert
+edge_chunk_size: 65536

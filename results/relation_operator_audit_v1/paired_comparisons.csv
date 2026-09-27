@@ -1,0 +1,9 @@
+comparison,candidate,baseline,metric,aggregate_mean_delta,population_sd,positive_seed_pairs,complete_seed_pairs,expected_seed_pairs,positive_dataset_means,nonnegative_dataset_means,expected_datasets,mean_delta_Movies,mean_delta_Toys,mean_delta_Grocery,mean_delta_ele-fashion,mean_delta_Reddit-S
+relation_expert_minus_global_expert,relation_expert,global_expert,val_acc,,,0,0,15,0,0,5,,,,,
+relation_expert_minus_global_expert,relation_expert,global_expert,val_macro_f1,,,0,0,15,0,0,5,,,,,
+relation_expert_minus_scalar_weight,relation_expert,scalar_weight,val_acc,,,0,0,15,0,0,5,,,,,
+relation_expert_minus_scalar_weight,relation_expert,scalar_weight,val_macro_f1,,,0,0,15,0,0,5,,,,,
+relation_expert_minus_plain,relation_expert,plain,val_acc,,,0,0,15,0,0,5,,,,,
+relation_expert_minus_plain,relation_expert,plain,val_macro_f1,,,0,0,15,0,0,5,,,,,
+global_expert_minus_plain,global_expert,plain,val_acc,,,0,0,15,0,0,5,,,,,
+global_expert_minus_plain,global_expert,plain,val_macro_f1,,,0,0,15,0,0,5,,,,,

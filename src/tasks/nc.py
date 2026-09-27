@@ -248,7 +248,12 @@ def _run_single_nc(
         )
         loader_name = "NodeDataLoader"
     x_all = data.x.to(device) if (not uses_graph or full_graph_training) else None
-    y_all = data.y.to(device) if (not uses_graph or full_graph_training) else None
+    # Full-graph optimization supervises only Train rows. Keep test labels off
+    # the device and avoid copying the complete label vector into the training path.
+    y_all = data.y.to(device) if (not uses_graph and not full_graph_training) else None
+    train_labels_all = (
+        data.y[data.train_idx].to(device) if full_graph_training else None
+    )
     edge_index_all = data.edge_index.to(device) if (uses_graph and full_graph_training) else None
     train_idx_all = data.train_idx.to(device) if full_graph_training else None
 
@@ -304,7 +309,7 @@ def _run_single_nc(
             if hasattr(model, "set_hrc_training_nodes"):
                 model.set_hrc_training_nodes(train_idx_all)
             z, _, _, aux_loss, aux_info = model(x_all, edge_index_all)
-            labels = y_all[train_idx_all]
+            labels = train_labels_all
             logits = classifier(z[train_idx_all])
             loss = criterion(logits, labels) + aux_weight * aux_loss
             loss.backward()

@@ -1,0 +1,24 @@
+name: structural_action_ranker
+hidden_dim: 256
+action_names: [Uniform, S0, S1, S2, S3]
+action_embedding_dim: 16
+trajectory_projection_dim: 32
+trajectory_context_dim: 128
+decision_signature_dim: 11
+decision_embedding_dim: 32
+score_hidden_dim: 64
+capacity_bottleneck_dim: 4
+modes:
+  - r0_trajectory
+  - r1_capacity_control
+  - r1_decision
+optimizer:
+  name: AdamW
+  lr: 0.001
+  weight_decay: 0.0001
+training:
+  max_epochs: 200
+  patience: 30
+  grad_clip: 1.0
+  checkpoint_selection: validation_joint_execution_accuracy_then_macro_f1
+  evaluate_test: false

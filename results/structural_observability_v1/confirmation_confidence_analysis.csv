@@ -1,0 +1,3 @@
+dataset,candidate,status,reason,spearman_confidence_vs_negative_regret
+Toys,confirmation_ranker,NOT_TESTED,screening winner locked to E6_D0; conditional confirmation ranker fit was not authorized,
+Grocery,confirmation_ranker,NOT_TESTED,screening winner locked to E6_D0; conditional confirmation ranker fit was not authorized,

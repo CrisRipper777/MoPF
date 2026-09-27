@@ -1,0 +1,597 @@
+{
+  "experiment": "E7-CSAO",
+  "locked_at_utc": "2026-09-27T08:18:23.351166+00:00",
+  "screening_datasets": [
+    "Movies",
+    "ele-fashion",
+    "Reddit-S"
+  ],
+  "seeds": [
+    42,
+    43,
+    44
+  ],
+  "test_evaluated": false,
+  "winner": "E6_D0",
+  "winner_type": "frozen_baseline",
+  "gate_results": {
+    "H1_COUNTERFACTUAL_RANKING_OBSERVABLE": {
+      "gate": "H1_COUNTERFACTUAL_RANKING_OBSERVABLE",
+      "passed": false,
+      "status": "FAIL",
+      "definition": "At least 2/3 dataset means and 6/9 paired contexts have lower marginal selection regret than GLOBAL_ACTION; aggregate joint Accuracy and Macro-F1 are both nonworse.",
+      "evidence": {
+        "regret": {
+          "candidate": "R0_trajectory_ranker",
+          "baseline": "GLOBAL_ACTION",
+          "metric": "selection_regret_mean",
+          "mean_candidate": 0.16421923413872716,
+          "mean_baseline": 0.16348186404340795,
+          "mean_delta_candidate_minus_baseline": 0.0007373700953192212,
+          "improved_seed_count": 0,
+          "paired_seed_count": 9,
+          "datasets_improved": 0,
+          "dataset_mean_deltas": {
+            "Movies": 6.189942359926166e-05,
+            "Reddit-S": 0.0007149310161670049,
+            "ele-fashion": 0.001435279846191397
+          },
+          "paired_deltas": [
+            {
+              "dataset": "Movies",
+              "seed": 42,
+              "candidate": 0.32605786621570587,
+              "baseline": 0.32605786621570587,
+              "delta": 0.0
+            },
+            {
+              "dataset": "Movies",
+              "seed": 43,
+              "candidate": 0.3279402405023575,
+              "baseline": 0.3277545422315597,
+              "delta": 0.000185698270797785
+            },
+            {
+              "dataset": "Movies",
+              "seed": 44,
+              "candidate": 0.3236060738563537,
+              "baseline": 0.3236060738563537,
+              "delta": 0.0
+            },
+            {
+              "dataset": "Reddit-S",
+              "seed": 42,
+              "candidate": 0.054730309173464706,
+              "baseline": 0.0546265766024589,
+              "delta": 0.00010373257100580735
+            },
+            {
+              "dataset": "Reddit-S",
+              "seed": 43,
+              "candidate": 0.04935244098305695,
+              "baseline": 0.047311380505561745,
+              "delta": 0.0020410604774952074
+            },
+            {
+              "dataset": "Reddit-S",
+              "seed": 44,
+              "candidate": 0.0655679833143949,
+              "baseline": 0.0655679833143949,
+              "delta": 0.0
+            },
+            {
+              "dataset": "ele-fashion",
+              "seed": 42,
+              "candidate": 0.1065843030810356,
+              "baseline": 0.10632716491818425,
+              "delta": 0.0002571381628513475
+            },
+            {
+              "dataset": "ele-fashion",
+              "seed": 43,
+              "candidate": 0.11171777173876755,
+              "baseline": 0.11163563281297681,
+              "delta": 8.213892579074511e-05
+            },
+            {
+              "dataset": "ele-fashion",
+              "seed": 44,
+              "candidate": 0.11241611838340755,
+              "baseline": 0.10844955593347545,
+              "delta": 0.003966562449932098
+            }
+          ]
+        },
+        "joint_execution": {
+          "accuracy_mean_delta": -0.00042049090067545575,
+          "macro_f1_mean_delta": -0.0013850939677494277,
+          "nonworse": false,
+          "accuracy_paired_nonworse": 8,
+          "macro_f1_paired_nonworse": 8
+        }
+      }
+    },
+    "H2_DECISION_RESPONSE_ADDS_INFORMATION": {
+      "gate": "H2_DECISION_RESPONSE_ADDS_INFORMATION",
+      "passed": false,
+      "status": "FAIL",
+      "definition": "At least 2/3 dataset means and 6/9 paired contexts have lower marginal selection regret than capacity control; aggregate joint Accuracy and Macro-F1 are both nonworse.",
+      "evidence": {
+        "regret": {
+          "candidate": "R1_decision_ranker",
+          "baseline": "R1_capacity_control",
+          "metric": "selection_regret_mean",
+          "mean_candidate": 0.1997273518807358,
+          "mean_baseline": 0.1656800986578067,
+          "mean_delta_candidate_minus_baseline": 0.03404725322292912,
+          "improved_seed_count": 1,
+          "paired_seed_count": 9,
+          "datasets_improved": 0,
+          "dataset_mean_deltas": {
+            "Movies": 0.09759536385536195,
+            "Reddit-S": 0.0021506082266569185,
+            "ele-fashion": 0.0023957875867684684
+          },
+          "paired_deltas": [
+            {
+              "dataset": "Movies",
+              "seed": 42,
+              "candidate": 0.34555128216743464,
+              "baseline": 0.3265356719493866,
+              "delta": 0.01901561021804804
+            },
+            {
+              "dataset": "Movies",
+              "seed": 43,
+              "candidate": 0.4805503785610199,
+              "baseline": 0.3277545422315597,
+              "delta": 0.1527958363294602
+            },
+            {
+              "dataset": "Movies",
+              "seed": 44,
+              "candidate": 0.44458071887493134,
+              "baseline": 0.3236060738563537,
+              "delta": 0.12097464501857763
+            },
+            {
+              "dataset": "Reddit-S",
+              "seed": 42,
+              "candidate": 0.0546265766024589,
+              "baseline": 0.0546265766024589,
+              "delta": 0.0
+            },
+            {
+              "dataset": "Reddit-S",
+              "seed": 43,
+              "candidate": 0.047311380505561745,
+              "baseline": 0.047311380505561745,
+              "delta": 0.0
+            },
+            {
+              "dataset": "Reddit-S",
+              "seed": 44,
+              "candidate": 0.07201980799436565,
+              "baseline": 0.0655679833143949,
+              "delta": 0.006451824679970755
+            },
+            {
+              "dataset": "ele-fashion",
+              "seed": 42,
+              "candidate": 0.12585097178816795,
+              "baseline": 0.12697213888168335,
+              "delta": -0.0011211670935153961
+            },
+            {
+              "dataset": "ele-fashion",
+              "seed": 43,
+              "candidate": 0.11839799210429186,
+              "baseline": 0.1106042452156543,
+              "delta": 0.007793746888637557
+            },
+            {
+              "dataset": "ele-fashion",
+              "seed": 44,
+              "candidate": 0.1086570583283901,
+              "baseline": 0.10814227536320685,
+              "delta": 0.0005147829651832442
+            }
+          ]
+        },
+        "joint_execution": {
+          "accuracy_mean_delta": 0.0014887452125549316,
+          "macro_f1_mean_delta": 0.001504873061431205,
+          "nonworse": true,
+          "accuracy_paired_nonworse": 8,
+          "macro_f1_paired_nonworse": 8
+        }
+      }
+    },
+    "H3_COUNTERFACTUAL_RANKER_BEATS_DIRECT_CE": {
+      "gate": "H3_COUNTERFACTUAL_RANKER_BEATS_DIRECT_CE",
+      "passed": false,
+      "status": "FAIL",
+      "definition": "Best ranker must improve joint deployment regret on at least 2/3 datasets and 6/9 paired contexts over E6 D0, with aggregate Accuracy and Macro-F1 nonworse.",
+      "evidence": {
+        "best_ranker_by_validation_accuracy_then_macro_f1_then_regret": "R1_decision_ranker",
+        "per_ranker": {
+          "R0_trajectory_ranker": {
+            "regret": {
+              "candidate": "R0_trajectory_ranker",
+              "baseline": "E6_D0",
+              "metric": "mean_joint_deployment_regret",
+              "mean_candidate": 0.28739527612924576,
+              "mean_baseline": 0.2768902654449145,
+              "mean_delta_candidate_minus_baseline": 0.010505010684331247,
+              "improved_seed_count": 3,
+              "paired_seed_count": 9,
+              "datasets_improved": 1,
+              "dataset_mean_deltas": {
+                "Movies": -0.0034036636352539062,
+                "Reddit-S": 0.018590802947680136,
+                "ele-fashion": 0.016327892740567507
+              },
+              "paired_deltas": [
+                {
+                  "dataset": "Movies",
+                  "seed": 42,
+                  "candidate": 0.587090253829956,
+                  "baseline": 0.5873511433601379,
+                  "delta": -0.00026088953018188477
+                },
+                {
+                  "dataset": "Movies",
+                  "seed": 43,
+                  "candidate": 0.5892698168754578,
+                  "baseline": 0.5902287364006042,
+                  "delta": -0.0009589195251464844
+                },
+                {
+                  "dataset": "Movies",
+                  "seed": 44,
+                  "candidate": 0.5804347991943359,
+                  "baseline": 0.5894259810447693,
+                  "delta": -0.00899118185043335
+                },
+                {
+                  "dataset": "Reddit-S",
+                  "seed": 42,
+                  "candidate": 0.0838708654046058,
+                  "baseline": 0.067072220146656,
+                  "delta": 0.0167986452579498
+                },
+                {
+                  "dataset": "Reddit-S",
+                  "seed": 43,
+                  "candidate": 0.0776659771800041,
+                  "baseline": 0.0594549998641014,
+                  "delta": 0.018210977315902703
+                },
+                {
+                  "dataset": "Reddit-S",
+                  "seed": 44,
+                  "candidate": 0.0988990291953086,
+                  "baseline": 0.0781362429261207,
+                  "delta": 0.0207627862691879
+                },
+                {
+                  "dataset": "ele-fashion",
+                  "seed": 42,
+                  "candidate": 0.1833859831094741,
+                  "baseline": 0.1719434261322021,
+                  "delta": 0.011442556977272006
+                },
+                {
+                  "dataset": "ele-fashion",
+                  "seed": 43,
+                  "candidate": 0.1920113265514373,
+                  "baseline": 0.1753222942352295,
+                  "delta": 0.016689032316207802
+                },
+                {
+                  "dataset": "ele-fashion",
+                  "seed": 44,
+                  "candidate": 0.1939294338226318,
+                  "baseline": 0.1730773448944091,
+                  "delta": 0.020852088928222712
+                }
+              ]
+            },
+            "joint": {
+              "accuracy_mean_delta": -0.002133316463894314,
+              "macro_f1_mean_delta": -0.004755488889432237,
+              "nonworse": false,
+              "accuracy_paired_nonworse": 1,
+              "macro_f1_paired_nonworse": 2
+            },
+            "passed": false
+          },
+          "R1_capacity_control": {
+            "regret": {
+              "candidate": "R1_capacity_control",
+              "baseline": "E6_D0",
+              "metric": "mean_joint_deployment_regret",
+              "mean_candidate": 0.29031700392564136,
+              "mean_baseline": 0.2768902654449145,
+              "mean_delta_candidate_minus_baseline": 0.013426738480726867,
+              "improved_seed_count": 2,
+              "paired_seed_count": 9,
+              "datasets_improved": 1,
+              "dataset_mean_deltas": {
+                "Movies": -0.003208935260772705,
+                "Reddit-S": 0.017160939673582697,
+                "ele-fashion": 0.026328211029370607
+              },
+              "paired_deltas": [
+                {
+                  "dataset": "Movies",
+                  "seed": 42,
+                  "candidate": 0.5880458354949951,
+                  "baseline": 0.5873511433601379,
+                  "delta": 0.0006946921348571777
+                },
+                {
+                  "dataset": "Movies",
+                  "seed": 43,
+                  "candidate": 0.5888984203338623,
+                  "baseline": 0.5902287364006042,
+                  "delta": -0.0013303160667419434
+                },
+                {
+                  "dataset": "Movies",
+                  "seed": 44,
+                  "candidate": 0.5804347991943359,
+                  "baseline": 0.5894259810447693,
+                  "delta": -0.00899118185043335
+                },
+                {
+                  "dataset": "Reddit-S",
+                  "seed": 42,
+                  "candidate": 0.0836634039878845,
+                  "baseline": 0.067072220146656,
+                  "delta": 0.0165911838412285
+                },
+                {
+                  "dataset": "Reddit-S",
+                  "seed": 43,
+                  "candidate": 0.0735838487744331,
+                  "baseline": 0.0594549998641014,
+                  "delta": 0.014128848910331691
+                },
+                {
+                  "dataset": "Reddit-S",
+                  "seed": 44,
+                  "candidate": 0.0988990291953086,
+                  "baseline": 0.0781362429261207,
+                  "delta": 0.0207627862691879
+                },
+                {
+                  "dataset": "ele-fashion",
+                  "seed": 42,
+                  "candidate": 0.2241616547107696,
+                  "baseline": 0.1719434261322021,
+                  "delta": 0.052218228578567505
+                },
+                {
+                  "dataset": "ele-fashion",
+                  "seed": 43,
+                  "candidate": 0.1897842735052108,
+                  "baseline": 0.1753222942352295,
+                  "delta": 0.014461979269981301
+                },
+                {
+                  "dataset": "ele-fashion",
+                  "seed": 44,
+                  "candidate": 0.1853817701339721,
+                  "baseline": 0.1730773448944091,
+                  "delta": 0.012304425239563016
+                }
+              ]
+            },
+            "joint": {
+              "accuracy_mean_delta": -0.0030099153518676758,
+              "macro_f1_mean_delta": -0.004910418185702993,
+              "nonworse": false,
+              "accuracy_paired_nonworse": 1,
+              "macro_f1_paired_nonworse": 1
+            },
+            "passed": false
+          },
+          "R1_decision_ranker": {
+            "regret": {
+              "candidate": "R1_decision_ranker",
+              "baseline": "E6_D0",
+              "metric": "mean_joint_deployment_regret",
+              "mean_candidate": 0.35858556462658775,
+              "mean_baseline": 0.2768902654449145,
+              "mean_delta_candidate_minus_baseline": 0.08169529918167326,
+              "improved_seed_count": 0,
+              "paired_seed_count": 9,
+              "datasets_improved": 0,
+              "dataset_mean_deltas": {
+                "Movies": 0.19198187192281088,
+                "Reddit-S": 0.0214621548851331,
+                "ele-fashion": 0.031641870737075806
+              },
+              "paired_deltas": [
+                {
+                  "dataset": "Movies",
+                  "seed": 42,
+                  "candidate": 0.6260771751403809,
+                  "baseline": 0.5873511433601379,
+                  "delta": 0.03872603178024292
+                },
+                {
+                  "dataset": "Movies",
+                  "seed": 43,
+                  "candidate": 0.894490122795105,
+                  "baseline": 0.5902287364006042,
+                  "delta": 0.30426138639450073
+                },
+                {
+                  "dataset": "Movies",
+                  "seed": 44,
+                  "candidate": 0.8223841786384583,
+                  "baseline": 0.5894259810447693,
+                  "delta": 0.23295819759368896
+                },
+                {
+                  "dataset": "Reddit-S",
+                  "seed": 42,
+                  "candidate": 0.0836634039878845,
+                  "baseline": 0.067072220146656,
+                  "delta": 0.0165911838412285
+                },
+                {
+                  "dataset": "Reddit-S",
+                  "seed": 43,
+                  "candidate": 0.0735838487744331,
+                  "baseline": 0.0594549998641014,
+                  "delta": 0.014128848910331691
+                },
+                {
+                  "dataset": "Reddit-S",
+                  "seed": 44,
+                  "candidate": 0.1118026748299598,
+                  "baseline": 0.0781362429261207,
+                  "delta": 0.0336664319038391
+                },
+                {
+                  "dataset": "ele-fashion",
+                  "seed": 42,
+                  "candidate": 0.2234856188297271,
+                  "baseline": 0.1719434261322021,
+                  "delta": 0.051542192697525
+                },
+                {
+                  "dataset": "ele-fashion",
+                  "seed": 43,
+                  "candidate": 0.2053717672824859,
+                  "baseline": 0.1753222942352295,
+                  "delta": 0.030049473047256414
+                },
+                {
+                  "dataset": "ele-fashion",
+                  "seed": 44,
+                  "candidate": 0.1864112913608551,
+                  "baseline": 0.1730773448944091,
+                  "delta": 0.013333946466446006
+                }
+              ]
+            },
+            "joint": {
+              "accuracy_mean_delta": -0.0015211701393127441,
+              "macro_f1_mean_delta": -0.003405545124271788,
+              "nonworse": false,
+              "accuracy_paired_nonworse": 2,
+              "macro_f1_paired_nonworse": 1
+            },
+            "passed": false
+          }
+        }
+      }
+    },
+    "H4_CONFIDENCE_IS_MEANINGFUL": {
+      "gate": "H4_CONFIDENCE_IS_MEANINGFUL",
+      "passed": false,
+      "status": "FAIL",
+      "definition": "At least 2/3 datasets have positive mean Spearman(confidence, -regret) and lower Q4 than Q1 confidence regret.",
+      "evidence": {
+        "Movies": {
+          "positive_spearman": false,
+          "high_confidence_lower_regret": false,
+          "mean_spearman": -0.002091847426802349,
+          "q4_regret": 0.4829810559749603,
+          "q1_regret": 0.40796662370363873
+        },
+        "Reddit-S": {
+          "positive_spearman": false,
+          "high_confidence_lower_regret": false,
+          "mean_spearman": -0.05927428308934233,
+          "q4_regret": 0.08168447328110533,
+          "q1_regret": 0.06503073809047534
+        },
+        "ele-fashion": {
+          "positive_spearman": true,
+          "high_confidence_lower_regret": false,
+          "mean_spearman": 0.028552018979314975,
+          "q4_regret": 0.16060461662709707,
+          "q1_regret": 0.12892240782578782
+        }
+      }
+    },
+    "H5_SELECTIVE_ROUTING_PROMISING": {
+      "gate": "H5_SELECTIVE_ROUTING_PROMISING",
+      "passed": false,
+      "status": "FAIL",
+      "definition": "At 50% train-threshold coverage, worst-dataset negative Accuracy transfer improves over full R1 and aggregate Accuracy/Macro-F1 are both at least Uniform.",
+      "evidence": {
+        "worst_dataset_negative_transfer_reduced": false,
+        "aggregate_accuracy_and_macro_f1_not_below_uniform": true,
+        "worst_dataset_delta_accuracy_full_r1": 0.0,
+        "worst_dataset_delta_accuracy_selective_50": 0.0,
+        "worst_dataset_delta_macro_f1_full_r1": -0.0007509607146310993,
+        "worst_dataset_delta_macro_f1_selective_50": 0.0,
+        "worst_dataset_negative_transfer_reduced_macro_f1": true,
+        "aggregate_selective_accuracy": 0.8042171465026008,
+        "aggregate_uniform_accuracy": 0.8042171465026008,
+        "aggregate_selective_macro_f1": 0.7231186324952588,
+        "aggregate_uniform_macro_f1": 0.7231186324952588
+      }
+    }
+  },
+  "candidate_eligibility": {
+    "C0_Uniform": {
+      "eligible": true,
+      "reason": "frozen Uniform fallback baseline"
+    },
+    "E6_D0": {
+      "eligible": true,
+      "reason": "reused frozen E6 comparator"
+    },
+    "R0_trajectory_ranker": {
+      "eligible": false,
+      "reason": "requires candidate-specific H1-style global-prior comparison and H3",
+      "counterfactual_observability_gate": false,
+      "candidate_specific_H3": false,
+      "paired_nonworse_accuracy_contexts_vs_E6_D0": 1,
+      "paired_consistency_requirement": "at least 5/9 validation contexts nonworse in Accuracy vs E6 D0",
+      "metrics": {
+        "mean_accuracy": 0.8037966556019254,
+        "mean_macro_f1": 0.7217335385275093,
+        "mean_joint_regret": 0.28739527612924576,
+        "mean_selection_regret": 0.16421923413872713
+      }
+    },
+    "R1_capacity_control": {
+      "eligible": false,
+      "reason": "requires candidate-specific H1-style global-prior comparison and H3",
+      "counterfactual_observability_gate": false,
+      "candidate_specific_H3": false,
+      "paired_nonworse_accuracy_contexts_vs_E6_D0": 1,
+      "paired_consistency_requirement": "at least 5/9 validation contexts nonworse in Accuracy vs E6 D0",
+      "metrics": {
+        "mean_accuracy": 0.802920056713952,
+        "mean_macro_f1": 0.7215786092312385,
+        "mean_joint_regret": 0.29031700392564136,
+        "mean_selection_regret": 0.16568009865780667
+      }
+    },
+    "R1_decision_ranker": {
+      "eligible": false,
+      "reason": "requires H2 and candidate-specific H3",
+      "counterfactual_observability_gate": false,
+      "candidate_specific_H3": false,
+      "paired_nonworse_accuracy_contexts_vs_E6_D0": 2,
+      "paired_consistency_requirement": "at least 5/9 validation contexts nonworse in Accuracy vs E6 D0",
+      "metrics": {
+        "mean_accuracy": 0.8044088019265069,
+        "mean_macro_f1": 0.7230834822926697,
+        "mean_joint_regret": 0.35858556462658775,
+        "mean_selection_regret": 0.1997273518807358
+      }
+    }
+  },
+  "selection_rule": "Eligible candidates ranked by validation joint-execution Accuracy, then Macro-F1, then lower joint regret; paired Accuracy consistency is a qualification check for learned candidates.",
+  "confirmation_fit_policy": "If winner is R1, run R1 and capacity control; if R0, run R0; frozen baseline winner gets no confirmation ranker fit."
+}

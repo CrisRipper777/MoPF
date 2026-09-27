@@ -1,0 +1,16 @@
+{
+  "source": "results/routing_identifiability_v1/phase_c_optimizer_audit.csv",
+  "grouping": [
+    "dataset",
+    "seed",
+    "split",
+    "level",
+    "chunk_start"
+  ],
+  "chunk_count": 234,
+  "range_mean": 0.002369667073059032,
+  "range_median": 0.0006659775972366472,
+  "range_p90": 0.009400367736816581,
+  "range_max": 0.017789781093597357,
+  "historical_file_modified": false
+}

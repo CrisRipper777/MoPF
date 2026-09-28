@@ -1,0 +1,3 @@
+question,decision,n_contexts,contexts_mean_delta_ce_and_margin_positive,descriptive_rule,test_evaluated,n_modality_contexts,single_sufficient_contexts,ce_close_tolerance_nats_per_node,accuracy_macro_f1_tolerance_absolute
+D1_A_global_transformation_necessity,GLOBAL_TRANSFORMATION_NOT_CONSISTENTLY_NECESSARY,45,22,ZERO has mean ΔCE>0 and mean margin utility>0 in a majority of modality scopes; ΔCE=CE(intervention)-CE(normal).,False,,,,
+D1_B_multiple_global_operators,SINGLE_SHARED_OPERATOR_SUFFICIENT,,,"A modality-context passes when diagnostic best single, TOP1, and UNIFORM each have mean ΔCE≤0.01 and best-single Validation Accuracy/Macro-F1 are within 0.01 of NORMAL. This is a descriptive discovery rule; expert IDs are modality-specific.",False,30,22,0.01,0.01

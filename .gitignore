@@ -14,3 +14,5 @@ __pycache__/
 *.ckpt
 *.bin
 *.safetensors
+# P0-D raw node-level diagnostics stay local because full gzip tables are large.
+results/relation_operator_diagnostics_v1/*.csv.gz

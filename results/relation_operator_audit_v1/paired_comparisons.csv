@@ -1,9 +1,9 @@
 comparison,candidate,baseline,metric,aggregate_mean_delta,population_sd,positive_seed_pairs,complete_seed_pairs,expected_seed_pairs,positive_dataset_means,nonnegative_dataset_means,expected_datasets,mean_delta_Movies,mean_delta_Toys,mean_delta_Grocery,mean_delta_ele-fashion,mean_delta_Reddit-S
-relation_expert_minus_global_expert,relation_expert,global_expert,val_acc,,,0,0,15,0,0,5,,,,,
-relation_expert_minus_global_expert,relation_expert,global_expert,val_macro_f1,,,0,0,15,0,0,5,,,,,
-relation_expert_minus_scalar_weight,relation_expert,scalar_weight,val_acc,,,0,0,15,0,0,5,,,,,
-relation_expert_minus_scalar_weight,relation_expert,scalar_weight,val_macro_f1,,,0,0,15,0,0,5,,,,,
-relation_expert_minus_plain,relation_expert,plain,val_acc,,,0,0,15,0,0,5,,,,,
-relation_expert_minus_plain,relation_expert,plain,val_macro_f1,,,0,0,15,0,0,5,,,,,
-global_expert_minus_plain,global_expert,plain,val_acc,,,0,0,15,0,0,5,,,,,
-global_expert_minus_plain,global_expert,plain,val_macro_f1,,,0,0,15,0,0,5,,,,,
+relation_expert_minus_global_expert,relation_expert,global_expert,val_acc,-0.004066165288289388,0.005047396862269398,3,15,15,1,1,5,-0.010098000367482504,-0.001852273941040039,-0.00819911559422811,-0.0011250972747802734,0.0009436607360839844
+relation_expert_minus_global_expert,relation_expert,global_expert,val_macro_f1,-0.009964675234218881,0.014930021278311563,4,15,15,2,2,5,-0.020372926862534262,-0.005100974147396187,-0.02833629373548674,0.001963225625355706,0.0020235929489670714
+relation_expert_minus_scalar_weight,relation_expert,scalar_weight,val_acc,-0.0033840537071228027,0.0035373446787381477,3,15,15,1,1,5,-0.005898833274841309,-0.0025770862897237143,-0.007027824719746907,-0.0020456314086914062,0.0006291071573893229
+relation_expert_minus_scalar_weight,relation_expert,scalar_weight,val_macro_f1,-0.012148513276784656,0.015336925083411718,4,15,15,0,0,5,-0.024679631232742232,-0.004900858514476229,-0.02434550063986814,-0.005999323708215616,-0.000817252288621062
+relation_expert_minus_plain,relation_expert,plain,val_acc,-0.0014925877253214519,0.003932905894157412,7,15,15,2,2,5,-0.005598902702331543,-0.0039462049802144366,-0.002147376537322998,0.002761582533518473,0.0014679630597432454
+relation_expert_minus_plain,relation_expert,plain,val_macro_f1,-0.0029936037294946167,0.01573758362532763,8,15,15,2,2,5,-0.012587995609050754,-0.005173606512535474,-0.010651948389284072,0.010709963089826932,0.002735568773570285
+global_expert_minus_plain,global_expert,plain,val_acc,0.0025735775629679362,0.003305344973729561,11,15,15,4,4,5,0.00449909766515096,-0.002093931039174398,0.00605173905690511,0.0038866798082987466,0.0005243023236592611
+global_expert_minus_plain,global_expert,plain,val_macro_f1,0.0069710715047242655,0.012210254237933075,10,15,15,4,4,5,0.007784931253483507,-7.263236513928757e-05,0.017684345346202668,0.008746737464471225,0.0007119758246032134

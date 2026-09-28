@@ -440,10 +440,9 @@ def _format_report(rows: list[dict], summary: list[dict], paired: list[dict],
             f"and negative on {negative} datasets. This is descriptive, not evidence of statistical significance."
         )
         lines.append(
-            "A formal w/o-relation-condition ablation is "
-            + ("worth considering next because Full-v2 shows a consistent positive dataset-level direction."
-               if positive == len(runner.DATASETS) else
-               "useful only if the team wants to isolate RSE conditioning after reviewing the mixed dataset pattern.")
+            "A formal w/o-relation-condition ablation is worth running as a targeted attribution follow-up: "
+            "it directly tests whether RSE input explains the mixed dataset pattern. This recommendation is "
+            "for mechanism isolation, not an assumption of improved mean performance; no ablation is started here."
         )
     else:
         lines.append("The paired comparison is unavailable; no research interpretation is made from incomplete or unverified pairs.")

@@ -1,0 +1,9 @@
+{
+  "status": "valid",
+  "manifest_rows": 15,
+  "unique_contexts": 15,
+  "source_commits": [
+    "fe2daa7cd299c23fd9c49dc8bc0eae9efef59a94"
+  ],
+  "issues": []
+}

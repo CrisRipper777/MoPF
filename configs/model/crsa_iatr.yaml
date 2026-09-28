@@ -1,0 +1,27 @@
+name: crsa_iatr
+
+hidden_dim: 256
+max_order: 3
+dropout: 0.2
+
+variant: full # base | crsa | iatr | full
+use_crsa: true
+use_iatr: true
+
+relation_dim: 64
+relation_heads: 4
+relation_ffn_dim: 128
+shared_bottleneck_dim: 256
+adapter_bottleneck_dim: 32
+num_residual_adapters: 3
+edge_chunk_size: 65536
+
+trajectory_heads: 4
+trajectory_layers: 1
+trajectory_ffn_dim: 512
+
+anchor_heads: 4
+anchor_ffn_dim: 512
+
+# Exact engineering chunks; no node/edge sampling is used.
+iatr_node_chunk_size: 4096

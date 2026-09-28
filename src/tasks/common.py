@@ -123,19 +123,26 @@ def update_aux_info_stats(
 ) -> None:
     if not isinstance(aux_info, dict):
         return
-    for key in AUX_INFO_KEYS:
-        if key not in aux_info:
-            continue
+    keys = [key for key in AUX_INFO_KEYS if key in aux_info]
+    keys.extend(key for key in aux_info if key.startswith("rr_") and key not in keys)
+    tensor_keys, tensor_values = [], []
+    scalar_values = {}
+    for key in keys:
         value = aux_info[key]
         if torch.is_tensor(value):
             if value.numel() != 1:
                 continue
-            scalar = float(value.detach().cpu().item())
+            tensor_keys.append(key)
+            tensor_values.append(value.detach().reshape(()).float())
         else:
             try:
-                scalar = float(value)
+                scalar_values[key] = float(value)
             except (TypeError, ValueError):
                 continue
+    # Transfer mechanism summaries in one synchronization rather than one per statistic.
+    if tensor_values:
+        scalar_values.update(zip(tensor_keys, torch.stack(tensor_values).cpu().tolist()))
+    for key, scalar in scalar_values.items():
         sums[key] = sums.get(key, 0.0) + scalar * weight
         counts[key] = counts.get(key, 0.0) + weight
 
@@ -143,10 +150,9 @@ def update_aux_info_stats(
 def summarize_aux_info_stats(sums: dict[str, float], counts: dict[str, float]) -> dict[str, float]:
     return {
         key: sums[key] / max(counts.get(key, 0.0), 1e-12)
-        for key in AUX_INFO_KEYS
-        if key in sums
+        for key in sums
     }
 
 
 def format_aux_info_stats(stats: dict[str, float]) -> str:
-    return " | ".join(f"{key} {stats[key]:.4f}" for key in AUX_INFO_KEYS if key in stats)
+    return " | ".join(f"{key} {stats[key]:.4f}" for key in stats)

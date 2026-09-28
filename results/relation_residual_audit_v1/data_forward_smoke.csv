@@ -1,0 +1,6 @@
+dataset,seed,variant,num_nodes,num_edges_input,num_nonself_physical_edges,out_dim,route_shape,finite_output,runtime_seconds,peak_gpu_memory_mib,test_evaluated
+Movies,42,context_residual,16672,160802,160802,256,"[160802, 4]",True,1.2875755170825869,1122.939453125,False
+Toys,42,context_residual,20695,113402,113402,256,"[113402, 4]",True,0.3795955020468682,1094.78759765625,False
+Grocery,42,context_residual,17074,142262,142262,256,"[142262, 4]",True,0.4060014421120286,1127.92578125,False
+ele-fashion,42,context_residual,97766,399172,399172,256,"[399172, 4]",True,1.1000637249089777,2233.14111328125,False
+Reddit-S,42,context_residual,15894,283080,283080,256,"[283080, 4]",True,0.5372367550153285,1128.669921875,False

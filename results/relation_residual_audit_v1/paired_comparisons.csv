@@ -1,0 +1,11 @@
+comparison,comparison_scope,dataset,seed,left_variant,right_variant,delta_val_acc,delta_val_macro_f1,delta_mean_val_ce,test_evaluated
+R0G-R0,within_p0r,Movies,42,global_residual,shared_prior,0.0,0.0,-0.036641597747802734,False
+R1-R0G,within_p0r,Movies,42,attribute_residual,global_residual,0.0,0.0,-2.384185791015625e-07,False
+R2-R1,within_p0r,Movies,42,context_residual,attribute_residual,0.0,0.0,-1.1920928955078125e-06,False
+R2-R0,within_p0r,Movies,42,context_residual,shared_prior,0.0,0.0,-0.036643028259277344,False
+R0-old_plain,cross-experiment paired descriptive comparison,Movies,42,shared_prior,old_plain,-0.24415120482444763,-0.4569905457689059,,False
+R0-old_global_expert,cross-experiment paired descriptive comparison,Movies,42,shared_prior,old_global_expert,-0.2474505603313446,-0.46801784505191146,,False
+R2-old_relation_expert,cross-experiment paired descriptive comparison,Movies,42,context_residual,old_relation_expert,-0.2375524938106537,-0.4433607625896823,,False
+R2-old_global_expert,cross-experiment paired descriptive comparison,Movies,42,context_residual,old_global_expert,-0.2474505603313446,-0.46801784505191146,,False
+R2-old_relation_expert,cross-experiment paired descriptive comparison,Reddit-S,42,context_residual,old_relation_expert,-0.7678515017032623,-0.8402505733576885,,False
+R2-old_global_expert,cross-experiment paired descriptive comparison,Reddit-S,42,context_residual,old_global_expert,-0.7681660950183868,-0.8418471496840276,,False

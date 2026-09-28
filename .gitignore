@@ -16,3 +16,6 @@ __pycache__/
 *.safetensors
 # P0-D raw node-level diagnostics stay local because full gzip tables are large.
 results/relation_operator_diagnostics_v1/*.csv.gz
+
+# P0-R raw node-level intervention tables stay local because they are large.
+results/relation_residual_audit_v1/intervention_node_utility.csv.gz

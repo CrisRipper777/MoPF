@@ -1,0 +1,17 @@
+name: relation_residual_audit
+
+hidden_dim: 256
+max_order: 3
+dropout: 0.2
+
+residual_variant: shared_prior # shared_prior | global_residual | attribute_residual | context_residual
+
+relation_dim: 64
+relation_heads: 4
+relation_ffn_dim: 128
+
+shared_bottleneck_dim: 256
+adapter_bottleneck_dim: 32
+num_residual_adapters: 3
+
+edge_chunk_size: 65536

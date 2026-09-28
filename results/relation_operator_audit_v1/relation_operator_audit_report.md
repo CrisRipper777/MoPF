@@ -31,7 +31,7 @@ H2's phrase “catastrophic negative transfer” has no numeric cutoff in the fr
 
 ## Mechanism and expert diagnostics
 
-Validation-only frozen interventions recorded: 75 rows. Targeted similarity-quartile edge interventions: not run (optional flag not supplied).
+Validation-only frozen interventions recorded: 315 rows. Targeted similarity-quartile edge interventions: included.
 `relation_diagnostics.csv` uses cosine similarity in projected H0 space. For each dataset/seed/modality, quartiles and edge assignments are frozen from the plain A0 best checkpoint; Q25/Q50/Q75 use physical Train–Train non-self edges, and A1/A3 are measured on the identical A0-defined physical Validation-incident edge groups. `similarity_reference=plain_A0_H0`. Test labels are not used.
 A3 residual dominance is summarized by fractions with |Δm|/(|h|+ε)>1, >2, and cos(h,h+Δm)<0 for each quartile and hop.
 expert_specialization.csv contains mean load, routing entropy, top-1 fractions, and pairwise output cosine on Train-node inputs at hop 1 (H0), hop 2 (C1), and hop 3 (C2). Collapse diagnostic: EXPERT_COLLAPSE_OBSERVED. No balancing/diversity regularizer is added.

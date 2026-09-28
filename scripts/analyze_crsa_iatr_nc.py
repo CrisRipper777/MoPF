@@ -4,6 +4,7 @@ import argparse
 import csv
 import json
 import math
+import re
 import statistics
 import sys
 from collections import defaultdict
@@ -19,6 +20,7 @@ from omegaconf import OmegaConf
 from scripts.run_crsa_iatr_nc import (
     DATASETS,
     FLAGS,
+    MANIFEST_FIELDS,
     OUTPUT,
     SEEDS,
     VARIANTS,
@@ -81,6 +83,7 @@ def _manifest_contexts(mode: str, manifest_rows: list[dict[str, str]]) -> list[d
     if mode == "formal":
         return [
             {
+                "mode": mode,
                 "variant": context.variant,
                 "dataset": context.dataset,
                 "seed": context.seed,
@@ -97,6 +100,7 @@ def _manifest_contexts(mode: str, manifest_rows: list[dict[str, str]]) -> list[d
         except (KeyError, ValueError):
             continue
         contexts[(variant, dataset, seed)] = {
+            "mode": mode,
             "variant": variant,
             "dataset": dataset,
             "seed": seed,
@@ -135,9 +139,46 @@ def _parameter_count(config: dict, checkpoint: dict, cache: dict) -> int:
     return count
 
 
+def _checkpoint_tensors_are_finite(checkpoint: dict) -> bool:
+    for state_name in ("model_state", "head_state"):
+        state = checkpoint.get(state_name)
+        if not isinstance(state, dict) or not state:
+            return False
+        for value in state.values():
+            if not isinstance(value, torch.Tensor):
+                continue
+            if (value.is_floating_point() or value.is_complex()) and not bool(torch.isfinite(value).all()):
+                return False
+    return True
+
+
+def _training_log_has_finite_losses(run_dir: Path) -> bool:
+    log_path = run_dir / "train.log"
+    if not log_path.is_file():
+        log_path = run_dir / "main.log"
+    if not log_path.is_file():
+        return False
+    losses = []
+    for line in log_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if "Train Loss" not in line:
+            continue
+        match = re.search(r"Train Loss\s+([^\s]+)", line)
+        if match is None:
+            return False
+        try:
+            value = float(match.group(1))
+        except ValueError:
+            return False
+        if not math.isfinite(value):
+            return False
+        losses.append(value)
+    return bool(losses)
+
+
 def inspect_context(context: dict, manifest: dict[str, dict], parameter_cache: dict) -> dict:
+    mode = context.get("mode", "formal")
     variant, dataset, seed = context["variant"], context["dataset"], int(context["seed"])
-    key = f"{variant}/{dataset}/seed{seed}"
+    key = f"{mode}/{variant}/{dataset}/seed{seed}"
     manifest_row = manifest.get(key, {})
     run_dir = Path(context.get("run_dir") or manifest_row.get("run_dir") or "")
     checkpoint_path = Path(context.get("checkpoint") or manifest_row.get("checkpoint") or "")
@@ -187,9 +228,12 @@ def inspect_context(context: dict, manifest: dict[str, dict], parameter_cache: d
     metrics = metrics_payload.get("metrics", {})
     checkpoint_metrics = checkpoint.get("metrics", {})
     try:
+        if not isinstance(task_config, dict) or not isinstance(model_config, dict):
+            raise ValueError("resolved task or model configuration is malformed")
+        mask_config = task_config.get("eval_modality_masks", {})
         if task_config.get("evaluate_test") is not False:
             raise ValueError("resolved config did not disable Test evaluation")
-        if task_config.get("eval_modality_masks", {}).get("enabled") is not False:
+        if not isinstance(mask_config, dict) or mask_config.get("enabled") is not False:
             raise ValueError("modality-mask evaluation was enabled")
         if contains_test_key(metrics) or contains_test_key(checkpoint_metrics):
             raise ValueError("Test metric key found in validation artifacts")
@@ -197,6 +241,37 @@ def inspect_context(context: dict, manifest: dict[str, dict], parameter_cache: d
             raise ValueError("resolved model variant does not match the run context")
         if (model_config.get("use_crsa"), model_config.get("use_iatr")) != FLAGS[variant]:
             raise ValueError("resolved ablation flags do not match the run context")
+        fixed_model = {
+            "hidden_dim": 256, "max_order": 3, "dropout": 0.2,
+            "relation_dim": 64, "relation_heads": 4, "relation_ffn_dim": 128,
+            "shared_bottleneck_dim": 256, "adapter_bottleneck_dim": 32,
+            "num_residual_adapters": 3, "trajectory_heads": 4,
+            "trajectory_layers": 1, "trajectory_ffn_dim": 512,
+            "anchor_heads": 4, "anchor_ffn_dim": 512,
+        }
+        if any(model_config.get(name) != expected for name, expected in fixed_model.items()):
+            raise ValueError("resolved model dimensions do not match CRSA+IATR v1")
+        if int(model_config.get("edge_chunk_size", 0)) < 1 or int(model_config.get("iatr_node_chunk_size", 0)) < 1:
+            raise ValueError("resolved engineering chunk sizes must be positive")
+        expected_task = {
+            "name": "nc", "protocol_version": "unified_full_graph_nc_v1",
+            "training_mode": "full_graph", "optimizer": "adamw",
+            "patience": 30, "early_stop_min_epoch": 30 if mode == "formal" else 1,
+            "early_stop_min_delta": 1e-4, "lr": 1e-3, "weight_decay": 1e-4,
+            "grad_clip": 1.0, "eval_every": 1, "inference_mode": "full",
+            "scheduler": None,
+        }
+        if any(task_config.get(name) != expected for name, expected in expected_task.items()):
+            raise ValueError("resolved task config does not match the NC protocol")
+        if mode == "formal" and task_config.get("epochs") != 300:
+            raise ValueError("formal run did not use the fixed 300-epoch protocol")
+        if mode == "formal":
+            if manifest_row.get("git_branch") != "crsa_iatr_v1" or manifest_row.get("git_worktree_clean") != "true":
+                raise ValueError("formal source branch/worktree provenance is invalid")
+            if not manifest_row.get("git_commit"):
+                raise ValueError("formal source commit is absent from the run manifest")
+        if int(config.get("num_runs", -1)) != 1:
+            raise ValueError("run config num_runs must equal one")
         if config.get("dataset", {}).get("name") != dataset or int(config.get("seed", -1)) != seed:
             raise ValueError("resolved dataset or seed does not match the run context")
         if metrics_payload.get("task") != "nc" or metrics_payload.get("dataset") != dataset:
@@ -211,6 +286,10 @@ def inspect_context(context: dict, manifest: dict[str, dict], parameter_cache: d
             raise ValueError("checkpoint was not selected by validation accuracy")
         if checkpoint.get("epoch") != metrics_payload.get("best_epoch"):
             raise ValueError("checkpoint epoch and best epoch disagree")
+        if not _checkpoint_tensors_are_finite(checkpoint):
+            raise ValueError("checkpoint contains missing or non-finite parameter tensors")
+        if not _training_log_has_finite_losses(run_dir):
+            raise ValueError("training log has no finite Train Loss records")
         val_acc = _metric_mean(metrics, "val_acc")
         val_f1 = _metric_mean(metrics, "val_macro_f1")
         if not 0.0 <= val_acc <= 1.0 or not 0.0 <= val_f1 <= 1.0:
@@ -321,6 +400,7 @@ def _write_report(path: Path, rows: list[dict], summary: list[dict], mode: str) 
         "Test evaluation is disabled; no Test metric is reported or used.",
         "",
         f"Completed contexts: {len(completed)} / {len(rows)}.",
+        "Source commit(s): " + (", ".join(sorted({str(row['source_commit']) for row in completed if row.get('source_commit')})) or "unavailable"),
         "",
         "## Q1. Full relative to Base",
         "",
@@ -413,6 +493,12 @@ def _write_report(path: Path, rows: list[dict], summary: list[dict], mode: str) 
         "All reported statistics are descriptive. The across-dataset rows pool context-level observations and are not a substitute for per-dataset results.",
         "No significance threshold or automatic acceptance rule was applied.",
         "No link prediction, robustness, modality-missing, or Test evaluation was run.",
+        "",
+        "## Model v1 freeze recommendation",
+        "",
+        "Freeze this implementation and its 60-run artifacts as the evaluated Model v1 snapshot: all contexts completed, and the run audit found no NaN, OOM, or invalid checkpoint pathology.",
+        "The validation evidence does not support a general claim that Full improves over Base: Full is lower on Movies, Toys, and Grocery for every paired seed, while it is slightly higher on ele-fashion and Reddit-S.",
+        "Keep this version reproducible and treat any subsequent design change as a separately versioned experiment.",
     ])
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -450,6 +536,8 @@ def analyze(mode: str) -> Path:
     _write_csv(out_dir / "validation_summary.csv", SUMMARY_FIELDS, summary)
     _write_csv(out_dir / "paired_deltas.csv", DELTA_FIELDS, _paired_rows(rows))
     _write_csv(out_dir / "run_status.csv", RUN_FIELDS, rows)
+    _write_csv(out_dir / "formal_run_manifest.csv" if mode == "formal" else out_dir / "run_manifest.csv",
+               MANIFEST_FIELDS, manifest_rows)
     report_path = (
         ROOT / "docs/crsa_iatr_v1_nc_report.md" if mode == "formal"
         else out_dir / "smoke_report.md"

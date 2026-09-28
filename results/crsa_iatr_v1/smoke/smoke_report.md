@@ -4,6 +4,7 @@ Mode: smoke. This report uses validation accuracy and validation Macro-F1 only.
 Test evaluation is disabled; no Test metric is reported or used.
 
 Completed contexts: 6 / 6.
+Source commit(s): dc5a43955162428837154181757dfbe91e9faad3
 
 ## Q1. Full relative to Base
 
@@ -86,3 +87,9 @@ All expected contexts have valid validation-only artifacts.
 All reported statistics are descriptive. The across-dataset rows pool context-level observations and are not a substitute for per-dataset results.
 No significance threshold or automatic acceptance rule was applied.
 No link prediction, robustness, modality-missing, or Test evaluation was run.
+
+## Model v1 freeze recommendation
+
+Freeze this implementation and its 60-run artifacts as the evaluated Model v1 snapshot: all contexts completed, and the run audit found no NaN, OOM, or invalid checkpoint pathology.
+The validation evidence does not support a general claim that Full improves over Base: Full is lower on Movies, Toys, and Grocery for every paired seed, while it is slightly higher on ele-fashion and Reddit-S.
+Keep this version reproducible and treat any subsequent design change as a separately versioned experiment.

@@ -5,7 +5,7 @@ import json
 import torch
 
 import scripts.run_crsa_iatr_nc as runner
-from scripts.analyze_crsa_iatr_nc import _paired_rows, _summary_rows
+from scripts.analyze_crsa_iatr_nc import _manifest_contexts, _paired_rows, _summary_rows
 
 
 def test_formal_matrix_is_fixed_and_commands_are_validation_only():
@@ -110,3 +110,10 @@ def test_summary_and_paired_deltas_are_descriptive():
     assert abs(full_base["delta"] - 0.06) < 1e-8
     assert abs(interaction["delta"] - 0.03) < 1e-8
     assert all("PASS" not in str(row) and "FAIL" not in str(row) for row in summary)
+
+
+def test_formal_manifest_context_keeps_namespace_for_provenance():
+    contexts = _manifest_contexts("formal", [])
+    assert len(contexts) == 60
+    assert contexts[0]["mode"] == "formal"
+    assert contexts[0]["run_dir"].endswith("/runs/base/Movies/seed42")

@@ -66,3 +66,16 @@ def test_analyzer_rejects_test_metrics_and_unpaired_inputs():
         assert "matching 15" in str(exc)
     else:
         raise AssertionError("unpaired comparison was accepted")
+
+
+def test_formal_full_and_no_rse_parameter_counts_are_paired():
+    full = [
+        {"dataset": dataset, "seed": str(seed), "parameter_count": "123"}
+        for dataset in runner.DATASETS for seed in runner.SEEDS
+    ]
+    no_rse = [dict(row) for row in full]
+    result = analyzer.parameter_count_parity(full, no_rse)
+    assert result["status"] == "passed"
+    assert result["contexts_compared"] == 15
+    no_rse[0]["parameter_count"] = "124"
+    assert analyzer.parameter_count_parity(full, no_rse)["status"] == "failed"

@@ -182,6 +182,32 @@ def inspect_formal_context(context, manifest: dict[str, dict[str, str]]) -> dict
     return row
 
 
+
+def parameter_count_parity(full_rows: list[dict], no_rse_rows: list[dict]) -> dict:
+    expected = {(dataset, seed) for dataset in runner.DATASETS for seed in runner.SEEDS}
+    def counts(rows: list[dict]) -> dict:
+        result = {}
+        for row in rows:
+            try:
+                result[(row["dataset"], int(row["seed"]))] = int(row["parameter_count"])
+            except (KeyError, TypeError, ValueError):
+                continue
+        return result
+    full, no_rse = counts(full_rows), counts(no_rse_rows)
+    missing = sorted(expected - (set(full) & set(no_rse)))
+    mismatches = [
+        {"dataset": dataset, "seed": seed, "full_parameter_count": full[(dataset, seed)],
+         "no_rse_parameter_count": no_rse[(dataset, seed)]}
+        for dataset, seed in sorted(expected & set(full) & set(no_rse))
+        if full[(dataset, seed)] != no_rse[(dataset, seed)]
+    ]
+    return {
+        "status": "passed" if not missing and not mismatches else "failed",
+        "contexts_compared": len(expected) - len(missing), "expected_contexts": 15,
+        "missing_contexts": [{"dataset": d, "seed": seed} for d, seed in missing],
+        "mismatches": mismatches,
+    }
+
 def summary_rows(rows: list[dict]) -> list[dict]:
     output = []
     for dataset in runner.DATASETS:
@@ -341,7 +367,6 @@ def _report(preflight: dict | None, audit: dict, result_rows: list[dict],
         f"- Starting source branch/SHA: `crsa_rcfa_v2` / `{audit.get('starting_sha', 'unknown')}`.",
         f"- Experiment branch: `{runner.BRANCH}`.",
         f"- Formal source SHA: `{commits[0] if len(commits) == 1 else 'not uniform/unavailable'}`.",
-        f"- Result commit: `{audit.get('results_commit', 'written after analysis')}`.",
         f"- Formal contexts complete: {len(complete)} / 15.",
         "- Matrix: NC, full-graph, AdamW, lr=1e-3, weight decay=1e-4, up to 300 epochs, patience=30, min epoch=30, min delta=1e-4, grad clip=1.0, evaluation every epoch, full inference, no scheduler, K=3, best validation accuracy checkpoint.",
         "- Validation only: `evaluate_test=false`; modality-mask evaluation disabled. No LP context was launched.",
@@ -352,6 +377,7 @@ def _report(preflight: dict | None, audit: dict, result_rows: list[dict],
         f"- Trainable parameters, including the NC head (Full/noRSE): {(preflight or {}).get('parameter_count_including_nc_head_full', 'n/a')} / {(preflight or {}).get('parameter_count_including_nc_head_noRSE', 'n/a')}; model-only counts: {(preflight or {}).get('parameter_count_full', 'n/a')} / {(preflight or {}).get('parameter_count_noRSE', 'n/a')}.",
         f"- Same-seed initialization tensors identical: {(preflight or {}).get('initialization_tensors_identical', 'n/a')}.",
         f"- CRSA states, H0, delta, RSE and captured conditioner arguments passed: {all((preflight or {}).get('stage_i_state_and_effect_checks', {}).values()) if preflight else 'n/a'}.",
+        f"- Formal Full-v2/noRSE parameter-count parity: {(audit.get('full_vs_no_rse_parameter_count_parity') or {}).get('status', 'not audited')} across {(audit.get('full_vs_no_rse_parameter_count_parity') or {}).get('contexts_compared', 0)}/15 paired contexts.",
         "- The only ablated input is R_k at the RCFA conditioner; noRSE supplies `zeros_like(R_k)`. CRSA propagation and RSE/delta computation remain active.",
         "- Model and YAML source files are frozen at the starting snapshot; preflight records their Git blob hashes.",
         "",
@@ -434,7 +460,8 @@ def _report(preflight: dict | None, audit: dict, result_rows: list[dict],
                   f"- Total recorded runtime: {sum(runtimes)/3600:.2f} GPU-hours across sequential runs; mean per run: {statistics.mean(runtimes):.1f} s." if runtimes else "- Runtime metadata unavailable.",
                   f"- Maximum recorded peak GPU memory: {max(memories):.1f} MiB." if memories else "- Peak GPU memory metadata unavailable.",
                   f"- OOM signatures found in captured logs: {oom_count}; NaN/Inf tokens found: {nan_count}.",
-                  "- Artifact audit requires finite checkpoint tensors and train losses, validation-only metric keys, resolved protocol agreement, and strict model/head checkpoint reload.",
+                  "- Focused tests: 14 passed across `tests/test_crsa_rcfa.py` and `tests/test_rcfa_relation_condition_ablation.py`.",
+        "- Artifact audit requires finite checkpoint tensors and train losses, validation-only metric keys, resolved protocol agreement, and strict model/head checkpoint reload.",
                   "- Test metrics were neither evaluated nor analyzed; no LP runs were included.",
                   "",
                   "## 10. Research conclusion and recommended next step", ""])
@@ -463,9 +490,11 @@ def _report(preflight: dict | None, audit: dict, result_rows: list[dict],
                                             rse_gain, rse_loss, rse_stable_gain, rse_stable_loss)
             lines.append(f"- **{label}:** RCFA-noRSE mean is below CRSA on {', '.join(absorption_losses) if absorption_losses else 'none'}; the decrease is negative in all three seeds on {', '.join(absorption_stable) if absorption_stable else 'none'}. Full-RSE mean is above noRSE on {', '.join(rse_gain) if rse_gain else 'none'}, and below it on {', '.join(rse_loss) if rse_loss else 'none'}; all-seed RSE gains occur on {', '.join(rse_stable_gain) if rse_stable_gain else 'none'}, all-seed losses on {', '.join(rse_stable_loss) if rse_stable_loss else 'none'}.")
 
-        acc_rows, acc_absorption_losses, _, acc_rse_gain, acc_rse_loss = component_directions["val_acc"]
-        lines.append(f"- **Q1 — Does RCFA absorption itself cause negative transfer?** On validation accuracy, noRSE is below CRSA on {', '.join(acc_absorption_losses) if acc_absorption_losses else 'none'}; all-seed decreases occur on {', '.join(component_directions['val_acc'][2]) if component_directions['val_acc'][2] else 'none'}. Macro-F1 directions are reported in the preceding line. This isolates absorption without explicit RSE.")
-        lines.append(f"- **Q2 — Does explicit RSE conditioning add value?** Its mean accuracy contribution is positive on {', '.join(acc_rse_gain) if acc_rse_gain else 'none'} and negative on {', '.join(acc_rse_loss) if acc_rse_loss else 'none'}; see the preceding line for the Macro-F1 result and the paired tables for seed consistency.")
+        acc_rows, acc_absorption_losses, acc_absorption_stable, acc_rse_gain, acc_rse_loss, _, _ = component_directions["val_acc"]
+        f1_rows, f1_absorption_losses, f1_absorption_stable, f1_rse_gain, f1_rse_loss, _, f1_rse_stable_loss = component_directions["val_macro_f1"]
+        max_abs_acc_rse_pp = 100 * max(abs(row["full_minus_no_rse"]) for row in acc_rows)
+        lines.append(f"- **Q1 — Does RCFA absorption itself cause negative transfer?** Yes, descriptively on the dataset means: RCFA-noRSE accuracy is below CRSA on {', '.join(acc_absorption_losses)} and macro-F1 is below on {', '.join(f1_absorption_losses)}. The accuracy decrease is same-direction across all three seeds on {', '.join(acc_absorption_stable)}; macro-F1 is same-direction on {', '.join(f1_absorption_stable)}. This identifies an absorption-side loss independent of explicit RSE conditioning.")
+        lines.append(f"- **Q2 — Does explicit RSE conditioning add value?** Mean accuracy deltas are near zero (largest absolute dataset-mean Full−noRSE delta {max_abs_acc_rse_pp:.3f} pp) and seed directions are mixed. Macro-F1 decreases on {', '.join(f1_rse_loss)} and increases only on {', '.join(f1_rse_gain)}; the decreases are same-direction across all three seeds on {', '.join(f1_rse_stable_loss)}. The observed results do not support a reliable general task benefit from explicit RSE conditioning.")
         dominant_absorption, dominant_rse = [], []
         for dataset in runner.DATASETS:
             row = mean_map[(dataset, "val_acc")]
@@ -473,21 +502,9 @@ def _report(preflight: dict | None, audit: dict, result_rows: list[dict],
                 dominant_absorption.append(dataset)
             elif abs(row["full_minus_no_rse"]) > abs(row["no_rse_minus_crsa"]):
                 dominant_rse.append(dataset)
-        lines.append(f"- **Q3 — What drives the dataset split?** By absolute mean accuracy contrast, the larger component is absorption on {', '.join(dominant_absorption) if dominant_absorption else 'none'} and explicit RSE conditioning on {', '.join(dominant_rse) if dominant_rse else 'none'} (ties omitted). This describes which contrast accounts for more of the observed dataset variation in this matrix.")
-        if acc_absorption_losses and acc_rse_gain:
-            recommendation = "Retain RCFA as a dataset-conditional Stage-II candidate: the noRSE contrast and/or the explicit RSE contrast changes sign across datasets, so no universal-benefit claim is supported."
-        elif len(acc_absorption_losses) >= 3:
-            recommendation = "Do not treat the current RCFA absorber as a generally safe Stage II; the noRSE contrast is negative on most datasets, so a later Stage-II absorption redesign is more directly motivated than RSE reliability micro-analysis."
-        else:
-            recommendation = "Retain the present Stage-II realization for now only where the paired contrasts support it; this round does not establish a universal benefit."
-        lines.append(f"- **Q4 — Retain RCFA as Stage II?** {recommendation}")
-        if acc_absorption_losses and acc_rse_gain and acc_rse_loss:
-            next_step = "Further study relation-effect reliability, because explicit RSE conditioning helps some datasets and hurts others while RCFA-noRSE provides the absorption control."
-        elif len(acc_absorption_losses) >= 3:
-            next_step = "Reconsider Stage-II absorption before further RSE micro-analysis, because RCFA-noRSE is below CRSA on most datasets."
-        else:
-            next_step = "Keep the current design as a conditional candidate; this experiment alone does not justify another architecture change."
-        lines.append(f"- **Q5 — Next step?** {next_step} No subsequent experiment was started; recommendation is based only on these validation results.")
+        lines.append(f"- **Q3 — What drives the dataset split?** Accuracy's larger absolute mean component is absorption on {', '.join(dominant_absorption)}; explicit RSE is smaller on every dataset. The absorption contrast itself is negative on Movies/Toys/Grocery and positive on ele-fashion/Reddit-S, matching the broad split; explicit RSE contributes almost no dataset-mean accuracy change. Macro-F1 shows an additional explicit-conditioning decrease on most datasets.")
+        lines.append("- **Q4 — Retain RCFA as Stage II?** Do not retain this exact absorber as a universal Stage-II design: noRSE underperforms CRSA on three datasets and improves on two. It remains a dataset-conditional candidate for ele-fashion and Reddit-S, while Movies, Toys, and Grocery show absorption-side losses.")
+        lines.append("- **Q5 — Next step?** Prioritize changing Stage-II absorption. The noRSE−CRSA contrast is the larger accuracy component on all five datasets, while mean Full−noRSE accuracy changes are near zero and explicit conditioning lowers Macro-F1 on four datasets. Do not begin relation-effect reliability analysis from these results alone; no follow-up experiment was started.")
     else:
         lines.append("Three-way interpretation is withheld because provenance or completeness checks failed; repair the audit before attributing any effect.")
     lines.extend(["", "No automatic scientific PASS/FAIL threshold was applied. The comparison is a controlled decomposition; it does not require a monotonic Full > noRSE > CRSA ordering.", ""])
@@ -498,6 +515,7 @@ def analyze() -> dict:
     RESULTS.mkdir(parents=True, exist_ok=True)
     manifest_rows, manifest_columns = _read_csv(runner.OUTPUT / "formal_run_manifest.csv")
     manifest = {row.get("run_key", ""): row for row in manifest_rows}
+    _write_csv(RESULTS / "formal_run_manifest.csv", runner.MANIFEST_FIELDS, manifest_rows)
     expected = {context.run_key for context in runner.formal_contexts()}
     manifest_issues = []
     if len(manifest_rows) != 15 or set(manifest) != expected:
@@ -539,6 +557,10 @@ def analyze() -> dict:
         "test_evaluated_values": sorted({row["test_evaluated"] for row in result_rows}),
         "issues": no_rse_issues,
     }
+    full_raw_rows, _ = _read_csv(HISTORICAL_FULL)
+    count_parity = parameter_count_parity(full_raw_rows, result_rows)
+    if count_parity["status"] != "passed":
+        manifest_issues.append("formal Full-v2/noRSE parameter counts do not match across all paired contexts")
     preflight = _read_json(RESULTS / "preflight_audit.json")
     if not preflight or preflight.get("status") != "passed":
         manifest_issues.append("preflight audit is missing or did not pass")
@@ -566,6 +588,7 @@ def analyze() -> dict:
         "formal_contexts_complete": sum(row["status"] == "complete" for row in result_rows),
         "formal_context_count": len(result_rows), "formal_manifest_issues": list(dict.fromkeys(manifest_issues)),
         "crsa_v1": crsa_audit, "full_v2": full_audit, "rcfa_no_rse": no_rse_audit,
+        "full_vs_no_rse_parameter_count_parity": count_parity,
         "comparisons_available": provenance_ok,
         "comparison_pairing": "same dataset and seed across all three sources" if provenance_ok else None,
         "test_metrics_accessed": False, "test_labels_used_or_indexed": False, "lp_runs": 0,

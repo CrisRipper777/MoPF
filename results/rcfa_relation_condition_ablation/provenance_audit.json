@@ -1,0 +1,142 @@
+{
+  "status": "valid",
+  "starting_branch": "crsa_rcfa_v2",
+  "starting_sha": "ed2a4174d806d1695c753e8926b386075f77fee2",
+  "experiment_branch": "exp/rcfa_relation_condition_ablation",
+  "formal_source_commits": [
+    "d80869c9d8450ff0ece25fa3773c7349d82d50c0"
+  ],
+  "formal_source_commit_uniform": true,
+  "formal_contexts_complete": 15,
+  "formal_context_count": 15,
+  "formal_manifest_issues": [],
+  "crsa_v1": {
+    "path": "results/crsa_iatr_v1/validation_results.csv",
+    "expected_source_commit": "a529f896a85cc25c17a9a6729f3d691a663abab5",
+    "rows_selected": 15,
+    "source_commits": [
+      "a529f896a85cc25c17a9a6729f3d691a663abab5"
+    ],
+    "test_evaluated_values": [
+      "false"
+    ],
+    "test_metric_columns": [],
+    "issues": []
+  },
+  "full_v2": {
+    "path": "results/crsa_rcfa_v2/validation_results.csv",
+    "expected_source_commit": "fe2daa7cd299c23fd9c49dc8bc0eae9efef59a94",
+    "rows_selected": 15,
+    "source_commits": [
+      "fe2daa7cd299c23fd9c49dc8bc0eae9efef59a94"
+    ],
+    "test_evaluated_values": [
+      "false"
+    ],
+    "test_metric_columns": [],
+    "issues": []
+  },
+  "rcfa_no_rse": {
+    "path": "results/rcfa_relation_condition_ablation/validation_results.csv",
+    "expected_source_commit": "d80869c9d8450ff0ece25fa3773c7349d82d50c0",
+    "rows_selected": 15,
+    "source_commits": [
+      "d80869c9d8450ff0ece25fa3773c7349d82d50c0"
+    ],
+    "test_evaluated_values": [
+      "false"
+    ],
+    "issues": []
+  },
+  "full_vs_no_rse_parameter_count_parity": {
+    "status": "passed",
+    "contexts_compared": 15,
+    "expected_contexts": 15,
+    "missing_contexts": [],
+    "mismatches": []
+  },
+  "comparisons_available": true,
+  "comparison_pairing": "same dataset and seed across all three sources",
+  "test_metrics_accessed": false,
+  "test_labels_used_or_indexed": false,
+  "lp_runs": 0,
+  "e0d_exploratory": {
+    "available": true,
+    "source_csv": "outputs/e0_empirical_motivation/relation_utilization_bridge/relation_utilization_association.csv",
+    "n_datasets": 5,
+    "exploratory_only": true,
+    "not_statistical_evidence": true,
+    "not_a_paper_claim": true,
+    "aggregation": "mean rho_partial_degree across available seed x modality rows within dataset",
+    "datasets": [
+      {
+        "dataset": "Movies",
+        "mean_degree_controlled_partial_rho": 0.2649815854067848,
+        "full_minus_no_rse_accuracy": -9.99768575032552e-05,
+        "full_minus_no_rse_macro_f1": 0.00019448048486040795
+      },
+      {
+        "dataset": "Toys",
+        "mean_degree_controlled_partial_rho": 0.34165364782666985,
+        "full_minus_no_rse_accuracy": -0.0001610716183980306,
+        "full_minus_no_rse_macro_f1": -0.0013289054038844543
+      },
+      {
+        "dataset": "Grocery",
+        "mean_degree_controlled_partial_rho": 0.31142489999666545,
+        "full_minus_no_rse_accuracy": -9.759267171223958e-05,
+        "full_minus_no_rse_macro_f1": -0.00571856928098217
+      },
+      {
+        "dataset": "ele-fashion",
+        "mean_degree_controlled_partial_rho": 0.39898370151997803,
+        "full_minus_no_rse_accuracy": 6.818771362304688e-05,
+        "full_minus_no_rse_macro_f1": -0.010233691704537065
+      },
+      {
+        "dataset": "Reddit-S",
+        "mean_degree_controlled_partial_rho": 0.8791030059014912,
+        "full_minus_no_rse_accuracy": 0.00010484457015991211,
+        "full_minus_no_rse_macro_f1": -0.0017190283408899572
+      }
+    ],
+    "correlations": {
+      "val_acc": {
+        "pearson_descriptive": 0.7623120531719754,
+        "spearman_descriptive": 0.7,
+        "higher_to_lower_rho_order": [
+          "Reddit-S",
+          "ele-fashion",
+          "Toys",
+          "Grocery",
+          "Movies"
+        ],
+        "higher_to_lower_delta_order": [
+          "Reddit-S",
+          "ele-fashion",
+          "Grocery",
+          "Movies",
+          "Toys"
+        ]
+      },
+      "val_macro_f1": {
+        "pearson_descriptive": 0.11381875702925534,
+        "spearman_descriptive": -0.5,
+        "higher_to_lower_rho_order": [
+          "Reddit-S",
+          "ele-fashion",
+          "Toys",
+          "Grocery",
+          "Movies"
+        ],
+        "higher_to_lower_delta_order": [
+          "Movies",
+          "Toys",
+          "Reddit-S",
+          "Grocery",
+          "ele-fashion"
+        ]
+      }
+    }
+  }
+}

@@ -1,0 +1,14 @@
+name: crsa_icsr
+hidden_dim: 256
+max_order: 3
+dropout: 0.2
+relation_dim: 64
+relation_heads: 4
+relation_ffn_dim: 128
+shared_bottleneck_dim: 256
+adapter_bottleneck_dim: 32
+num_residual_adapters: 3
+edge_chunk_size: 65536
+use_icsr: true
+icsr_bottleneck_dim: 32
+icsr_node_chunk_size: 4096

@@ -1,0 +1,19 @@
+{
+  "legacy_crsa_parameter_initialization_max_abs_error": 0.0,
+  "legacy_crsa_head_rng_max_abs_error": 0.0,
+  "legacy_crsa_parity_max_abs_error": 0.0,
+  "identity_init_max_abs_error": 0.0,
+  "interaction_zero_init_max_abs": 0.0,
+  "agreement_formula_max_abs_error": 0.0,
+  "deviation_formula_max_abs_error": 0.0,
+  "modality_isolation_max_abs_error": 0.0,
+  "parameter_delta_vs_crsa": 49728,
+  "forward_finite": true,
+  "backward_finite": true,
+  "icsr_up_gradient_nonzero": true,
+  "checkpoint_reload_equal": true,
+  "same_modality_shared_adapter_count": 2,
+  "rse_used_inside_icsr": false,
+  "other_modality_used_inside_icsr": false,
+  "utility_gate_present": false
+}

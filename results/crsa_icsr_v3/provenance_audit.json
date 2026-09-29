@@ -1,0 +1,207 @@
+{
+  "historical_sources": {
+    "crsa": {
+      "path": "/hdd1/DataInHere/YHF/MoPF/results/crsa_iatr_v1/validation_results.csv",
+      "expected_source_commit": "a529f896a85cc25c17a9a6729f3d691a663abab5",
+      "selected_rows": 15,
+      "source_commits": [
+        "a529f896a85cc25c17a9a6729f3d691a663abab5"
+      ],
+      "test_evaluated_false": true,
+      "status": "valid",
+      "problems": []
+    },
+    "rcfa_full": {
+      "path": "/hdd1/DataInHere/YHF/MoPF/results/crsa_rcfa_v2/validation_results.csv",
+      "expected_source_commit": "fe2daa7cd299c23fd9c49dc8bc0eae9efef59a94",
+      "selected_rows": 15,
+      "source_commits": [
+        "fe2daa7cd299c23fd9c49dc8bc0eae9efef59a94"
+      ],
+      "test_evaluated_false": true,
+      "status": "valid",
+      "problems": []
+    },
+    "rcfa_no_rse": {
+      "path": "/hdd1/DataInHere/YHF/MoPF/results/rcfa_relation_condition_ablation/validation_results.csv",
+      "expected_source_commit": "d80869c9d8450ff0ece25fa3773c7349d82d50c0",
+      "selected_rows": 15,
+      "source_commits": [
+        "d80869c9d8450ff0ece25fa3773c7349d82d50c0"
+      ],
+      "test_evaluated_false": true,
+      "status": "valid",
+      "problems": []
+    }
+  },
+  "formal": {
+    "formal_source_commits": [
+      "61eb33ea01c84a469c7a77cd1d78827507fb7c47"
+    ],
+    "formal_source_commit_uniform": true,
+    "formal_context_count": 15,
+    "formal_unique_context_count": 15,
+    "formal_manifest_problem": "",
+    "complete_validation_rows": 15,
+    "all_formal_worktrees_clean": true,
+    "test_evaluated_false": true,
+    "lp_run": false,
+    "formal_no_oom_nan_inf_log_hits": [],
+    "formal_runs": [
+      {
+        "run_key": "formal/full/Grocery/seed42",
+        "dataset": "Grocery",
+        "seed": "42",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      },
+      {
+        "run_key": "formal/full/Grocery/seed43",
+        "dataset": "Grocery",
+        "seed": "43",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      },
+      {
+        "run_key": "formal/full/Grocery/seed44",
+        "dataset": "Grocery",
+        "seed": "44",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      },
+      {
+        "run_key": "formal/full/Movies/seed42",
+        "dataset": "Movies",
+        "seed": "42",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      },
+      {
+        "run_key": "formal/full/Movies/seed43",
+        "dataset": "Movies",
+        "seed": "43",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      },
+      {
+        "run_key": "formal/full/Movies/seed44",
+        "dataset": "Movies",
+        "seed": "44",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      },
+      {
+        "run_key": "formal/full/Reddit-S/seed42",
+        "dataset": "Reddit-S",
+        "seed": "42",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      },
+      {
+        "run_key": "formal/full/Reddit-S/seed43",
+        "dataset": "Reddit-S",
+        "seed": "43",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      },
+      {
+        "run_key": "formal/full/Reddit-S/seed44",
+        "dataset": "Reddit-S",
+        "seed": "44",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      },
+      {
+        "run_key": "formal/full/Toys/seed42",
+        "dataset": "Toys",
+        "seed": "42",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      },
+      {
+        "run_key": "formal/full/Toys/seed43",
+        "dataset": "Toys",
+        "seed": "43",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      },
+      {
+        "run_key": "formal/full/Toys/seed44",
+        "dataset": "Toys",
+        "seed": "44",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      },
+      {
+        "run_key": "formal/full/ele-fashion/seed42",
+        "dataset": "ele-fashion",
+        "seed": "42",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      },
+      {
+        "run_key": "formal/full/ele-fashion/seed43",
+        "dataset": "ele-fashion",
+        "seed": "43",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      },
+      {
+        "run_key": "formal/full/ele-fashion/seed44",
+        "dataset": "ele-fashion",
+        "seed": "44",
+        "source_commit": "61eb33ea01c84a469c7a77cd1d78827507fb7c47",
+        "branch": "crsa_icsr_v3",
+        "worktree_clean": "true",
+        "status": "complete",
+        "test_evaluated": "false"
+      }
+    ]
+  },
+  "historical_provenance_valid": true,
+  "test_metrics_accessed": false,
+  "test_labels_used": false,
+  "lp_run": false
+}

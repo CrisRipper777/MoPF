@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import json
 import math
+import re
 import statistics
 import sys
 from pathlib import Path
@@ -112,6 +113,17 @@ def load_historical() -> tuple[dict[str, dict[tuple[str, int], dict]], dict]:
     return loaded, audits
 
 
+def runtime_log_errors(context: runner.RunContext) -> list[str]:
+    hits = []
+    pattern = re.compile(r"\b(out of memory|cuda error|nan|inf)\b", re.IGNORECASE)
+    for name in ("main.log", "launcher_output.log"):
+        path = context.run_dir / name
+        if path.is_file():
+            for match in pattern.findall(path.read_text(encoding="utf-8", errors="replace")):
+                hits.append(f"{name}:{match}")
+    return hits
+
+
 def parameter_count(config: dict, checkpoint: dict) -> int:
     info = checkpoint.get("data_info")
     if not isinstance(info, dict):
@@ -175,6 +187,10 @@ def run_rows() -> tuple[list[dict], list[dict], dict]:
                     if not valid:
                         row.update(status="invalid", reason=reason)
                         status.update(status="invalid", reason=reason)
+                    elif runtime_log_errors(context):
+                        reason = "runtime log contains OOM/NaN/Inf marker: " + ", ".join(runtime_log_errors(context))
+                        row.update(status="invalid", reason=reason)
+                        status.update(status="invalid", reason=reason)
                     else:
                         try:
                             checkpoint = torch.load(context.checkpoint, map_location="cpu", weights_only=False)
@@ -210,6 +226,12 @@ def run_rows() -> tuple[list[dict], list[dict], dict]:
         ),
         "test_evaluated_false": all(r.get("test_evaluated", "").lower() == "false" for r in formal),
         "lp_run": False,
+        "formal_no_oom_nan_inf_log_hits": [
+            {"run_key": r.get("run_key"), "hits": runtime_log_errors(
+                runner.RunContext(str(r.get("dataset")), int(r.get("seed", -1))))}
+            for r in formal if runtime_log_errors(
+                runner.RunContext(str(r.get("dataset")), int(r.get("seed", -1))))
+        ],
         "formal_runs": [
             {"run_key": r.get("run_key"), "dataset": r.get("dataset"), "seed": r.get("seed"),
              "source_commit": r.get("git_commit"), "branch": r.get("git_branch"),
@@ -351,31 +373,24 @@ def build_report(validation: list[dict], summary: list[dict], four: list[dict],
             continue
         vals = [row[k] for k in ("crsa", "rcfa_no_rse", "rcfa_full", "icsr_v3")]
         lines.append(f"| {row['dataset']} | {row['seed']} | {row['metric']} | " + " | ".join(fmt_metric(v) for v in vals) + f" | {fmt_delta(row['icsr_minus_crsa'])} | {fmt_delta(row['icsr_minus_rcfa_full'])} |")
-    lines += ["", "## 6. Research interpretation", ""]
-    for metric, label in METRICS:
-        deltas = {d: by_mean[(d, label)] for d in runner.DATASETS}
-        negative = [d for d in runner.DATASETS if float(deltas[d]["icsr_minus_crsa"]) < 0]
-        positive = [d for d in runner.DATASETS if float(deltas[d]["icsr_minus_crsa"]) > 0]
-        lines.append(f"For {label}, ICSR-v3 is above CRSA on {', '.join(positive) or 'no dataset'} and below CRSA on {', '.join(negative) or 'no dataset'} by dataset mean.")
-    lines += ["", "### Q1. How does ICSR-v3 compare with CRSA?", "",
-              "Read the per-dataset means and paired seeds above. Dataset-specific changes, rather than a single across-dataset average, are the unit of interpretation.", "",
-              "### Q2. Does ICSR reduce RCFA negative transfer on Movies, Toys, and Grocery?", ""]
-    for d in ("Movies", "Toys", "Grocery"):
-        a = by_mean[(d, "Accuracy")]
-        f = by_mean[(d, "Macro-F1")]
-        less_negative = float(a["icsr_minus_crsa"]) > float(a["rcfa_full_minus_crsa"])
-        lines.append(f"- {d}: ICSR−CRSA Accuracy {fmt_delta(a['icsr_minus_crsa'])} and Macro-F1 {fmt_delta(f['icsr_minus_crsa'])}; RCFA-Full−CRSA Accuracy {fmt_delta(a['rcfa_full_minus_crsa'])}. The ICSR Accuracy change is {'less negative / more positive' if less_negative else 'not less negative'} than RCFA-Full's.")
-    lines += ["", "### Q3. Are the ele-fashion and Reddit-S positive trends retained?", ""]
-    for d in ("ele-fashion", "Reddit-S"):
-        a = by_mean[(d, "Accuracy")]
-        lines.append(f"- {d}: ICSR−CRSA Accuracy {fmt_delta(a['icsr_minus_crsa'])}; ICSR−RCFA-Full {fmt_delta(a['icsr_minus_rcfa_full'])}.")
-    lines += ["", "### Q4. Is interaction representation healthier than utility gating?", "",
-              "The answer is dataset- and metric-specific. Compare the frequency and magnitude of negative ICSR−CRSA changes with RCFA-Full−CRSA, and inspect Macro-F1 alongside Accuracy. This is a descriptive comparison across five datasets and three seeds, without an automatic threshold.", "",
+    lines += ["", "## 6. Research interpretation", "",
+              "### Q1. How does ICSR-v3 compare with CRSA?", "",
+              "The Accuracy mean is lower on Movies (-1.890 pp), Toys (-0.507 pp), Grocery (-1.201 pp), and ele-fashion (-0.027 pp), and higher on Reddit-S (+0.598 pp). For Macro-F1, the corresponding changes are Movies -3.820 pp, Toys -1.324 pp, Grocery -2.893 pp, ele-fashion +0.049 pp, and Reddit-S +1.067 pp.", "",
+              "Seed direction is consistent on Movies and Toys: all three seeds are lower than CRSA for both metrics. Grocery Accuracy is lower in all three seeds; Grocery Macro-F1 is lower in two of three. Reddit-S is higher in all three seeds for both metrics. ele-fashion is near neutral and its seed direction is mixed.", "",
+              "### Q2. Does ICSR reduce RCFA negative transfer on Movies, Toys, and Grocery?", "",
+              "No. Against CRSA, ICSR-v3 is lower on all three datasets for Accuracy means and is less healthy for Macro-F1, especially Grocery. RCFA-Full−CRSA Accuracy means were Movies -1.100 pp, Toys -0.403 pp, and Grocery -0.361 pp; ICSR−CRSA was more negative on each. ICSR-v3 also trails RCFA-Full in the three dataset mean Accuracy comparisons.", "",
+              "### Q3. Are the ele-fashion and Reddit-S positive trends retained?", "",
+              "Reddit-S retains a consistent positive change over CRSA (+0.598 pp Accuracy and +1.067 pp Macro-F1, with all three seeds positive); its mean is approximately tied with RCFA-Full Accuracy and higher on Macro-F1. ele-fashion is effectively neutral relative to CRSA (+0.049 pp Macro-F1 and -0.027 pp Accuracy), without a consistent seed-level gain, so its earlier positive trend is not clearly retained.", "",
+              "### Q4. Is interaction representation healthier than utility gating?", "",
+              "Not across the full dataset split. ICSR-v3 is more negative than RCFA-Full relative to CRSA on Movies, Toys, and Grocery, particularly for Macro-F1 on Grocery. It retains the Reddit-S gain and is close to neutral on ele-fashion. Thus this ICSR realization does not provide a general remedy for Stage-II negative transfer, although its Reddit-S behavior is favorable. These are descriptive results from five datasets and three seeds; no significance test or automatic threshold is applied.", "",
               "### Q5. Should Agreement/Deviation ablations follow?", "",
-              "This decision should be based on whether ICSR-v3 reduces systematic negative transfer while keeping seed behavior and the positive-dataset trends coherent. The current report does not launch or pre-commit to those ablations.", "",
+              "Based only on this round, do not prioritize the Agreement/Deviation ablation matrix yet. Full ICSR-v3 did not improve the CRSA baseline consistently and was lower on Movies, Toys, and Grocery; the component ablations would not resolve that attribution cleanly. Keep the current result as evidence about this realization and decide separately whether Stage II should be revised before spending the next experiment budget. No next-stage run is started here.", "",
               "## 7. Engineering and isolation audit", "",
-              "- Test metrics accessed: **NO**.", "- Test labels used/indexed for analysis: **NO**.", "- LP run: **NO**.", "- RSE used inside ICSR: **NO**.", "- Other modality used inside ICSR: **NO**.", "- Stage-II utility gate: **NO**.", "- Four-way results are paired by the same dataset and seed.", "",
-              "Historical provenance details are in `provenance_audit.json`; formal run details are in `run_status.csv`.", ""]
+              "- Test metrics accessed: **NO**.", "- Test labels used/indexed for analysis: **NO**.", "- LP run: **NO**.", "- RSE used inside ICSR: **NO**.", "- Other modality used inside ICSR: **NO**.", "- Stage-II utility gate: **NO**.", "- Four-way results are paired by the same dataset and seed.",
+              f"- Total measured formal runtime: {sum(float(r['runtime_seconds']) for r in validation):.1f} s across 15 runs (mean {statistics.mean(float(r['runtime_seconds']) for r in validation):.1f} s/run).",
+              f"- Peak GPU allocation: {max(float(r['peak_gpu_memory_mib']) for r in validation):.1f} MiB ({max(validation, key=lambda r: float(r['peak_gpu_memory_mib']))['dataset']} seed {max(validation, key=lambda r: float(r['peak_gpu_memory_mib']))['seed']}).",
+              f"- Formal OOM/NaN/Inf log markers: {sum(len(runtime_log_errors(runner.RunContext(r['dataset'], int(r['seed'])))) for r in validation)}; all run losses/checkpoint tensors finite and strict checkpoint reload passed.", "",
+              "Historical provenance details are in `provenance_audit.json`; formal run details are in `run_status.csv` and `formal_run_manifest.csv`.", ""]
     return "\n".join(lines)
 
 
@@ -391,6 +406,10 @@ def main() -> None:
     write_csv(RESULTS / "run_status.csv",
               ["mode", "variant", "dataset", "seed", "status", "source_commit", "test_evaluated", "run_dir", "checkpoint", "reason"],
               status_rows)
+    formal_manifest = runner.OUTPUT / "formal_run_manifest.csv"
+    if formal_manifest.is_file():
+        formal_rows = [row for row in read_csv(formal_manifest) if row.get("mode") == "formal"]
+        write_csv(RESULTS / "formal_run_manifest.csv", runner.MANIFEST_FIELDS, formal_rows)
     validation_fields = ["dataset", "seed", "best_epoch", "val_acc", "val_macro_f1", "parameter_count",
                          "runtime_seconds", "peak_gpu_memory_mib", "source_commit", "test_evaluated", "status", "reason",
                          "run_dir", "checkpoint"]

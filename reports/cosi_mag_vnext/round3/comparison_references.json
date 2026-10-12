@@ -1,0 +1,701 @@
+{
+  "test_labels_used_for_this_round": false,
+  "variant_results": {
+    "Movies": {
+      "cosi_mag_vnext_u": {
+        "runs": 3,
+        "val_acc_pct_mean": 55.06898562113444,
+        "val_acc_pct_population_std": 0.2591769934873733,
+        "val_macro_f1_pct_mean": 46.57901506433197,
+        "val_macro_f1_pct_population_std": 0.9109425197653459,
+        "best_epoch_mean": 57.666666666666664,
+        "runtime_seconds_mean": 19.22549792099744,
+        "peak_gpu_memory_mib_mean": 3138.3995768229165,
+        "parameter_count": 1282347
+      },
+      "cosi_mag_vnext_uq": {
+        "runs": 3,
+        "val_acc_pct_mean": 54.299139976501465,
+        "val_acc_pct_population_std": 0.5389655883023675,
+        "val_macro_f1_pct_mean": 46.26274396162902,
+        "val_macro_f1_pct_population_std": 0.9105208975145727,
+        "best_epoch_mean": 61.0,
+        "runtime_seconds_mean": 18.523485557176173,
+        "peak_gpu_memory_mib_mean": 1605.66064453125,
+        "parameter_count": 1258913
+      },
+      "cosi_mag_vnext_ua": {
+        "runs": 3,
+        "val_acc_pct_mean": 55.59888084729513,
+        "val_acc_pct_population_std": 0.12567164830663968,
+        "val_macro_f1_pct_mean": 47.80593644943634,
+        "val_macro_f1_pct_population_std": 1.5214289773350342,
+        "best_epoch_mean": 62.666666666666664,
+        "runtime_seconds_mean": 26.01045838246743,
+        "peak_gpu_memory_mib_mean": 3138.75537109375,
+        "parameter_count": 1282347
+      }
+    },
+    "Grocery": {
+      "cosi_mag_vnext_u": {
+        "runs": 3,
+        "val_acc_pct_mean": 83.55295459429423,
+        "val_acc_pct_population_std": 0.23466803292885652,
+        "val_macro_f1_pct_mean": 76.7424782993328,
+        "val_macro_f1_pct_population_std": 0.39846624708024264,
+        "best_epoch_mean": 105.66666666666667,
+        "runtime_seconds_mean": 38.066074039787054,
+        "peak_gpu_memory_mib_mean": 3006.5771484375,
+        "parameter_count": 1282347
+      },
+      "cosi_mag_vnext_uq": {
+        "runs": 3,
+        "val_acc_pct_mean": 83.25036565462749,
+        "val_acc_pct_population_std": 0.28988441846703505,
+        "val_macro_f1_pct_mean": 76.2340109642303,
+        "val_macro_f1_pct_population_std": 0.5268642518442204,
+        "best_epoch_mean": 74.66666666666667,
+        "runtime_seconds_mean": 23.028906949485343,
+        "peak_gpu_memory_mib_mean": 1634.7353515625,
+        "parameter_count": 1258913
+      },
+      "cosi_mag_vnext_ua": {
+        "runs": 3,
+        "val_acc_pct_mean": 83.7579329808553,
+        "val_acc_pct_population_std": 0.1932555430787578,
+        "val_macro_f1_pct_mean": 77.84099252288671,
+        "val_macro_f1_pct_population_std": 0.2994186542964445,
+        "best_epoch_mean": 89.66666666666667,
+        "runtime_seconds_mean": 41.50251616972188,
+        "peak_gpu_memory_mib_mean": 3006.5771484375,
+        "parameter_count": 1282347
+      }
+    },
+    "Reddit-S": {
+      "cosi_mag_vnext_u": {
+        "runs": 3,
+        "val_acc_pct_mean": 96.21474146842957,
+        "val_acc_pct_population_std": 0.08256302388626564,
+        "val_macro_f1_pct_mean": 92.33299546303624,
+        "val_macro_f1_pct_population_std": 0.13204708966321946,
+        "best_epoch_mean": 61.0,
+        "runtime_seconds_mean": 34.45869785935307,
+        "peak_gpu_memory_mib_mean": 4107.18505859375,
+        "parameter_count": 1282347
+      },
+      "cosi_mag_vnext_uq": {
+        "runs": 3,
+        "val_acc_pct_mean": 96.0994025071462,
+        "val_acc_pct_population_std": 0.07705200981907255,
+        "val_macro_f1_pct_mean": 92.17525539601334,
+        "val_macro_f1_pct_population_std": 0.4061101878556231,
+        "best_epoch_mean": 109.0,
+        "runtime_seconds_mean": 32.8138878668348,
+        "peak_gpu_memory_mib_mean": 1539.85400390625,
+        "parameter_count": 1258913
+      },
+      "cosi_mag_vnext_ua": {
+        "runs": 3,
+        "val_acc_pct_mean": 96.21474146842957,
+        "val_acc_pct_population_std": 0.08256302388626564,
+        "val_macro_f1_pct_mean": 92.44394444482344,
+        "val_macro_f1_pct_population_std": 0.09253017066009361,
+        "best_epoch_mean": 89.33333333333333,
+        "runtime_seconds_mean": 45.89915960421786,
+        "peak_gpu_memory_mib_mean": 4107.18505859375,
+        "parameter_count": 1282347
+      }
+    }
+  },
+  "variant_per_seed": [
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_u",
+      "seed": "42",
+      "val_acc_pct": "54.70905900001526",
+      "val_macro_f1_pct": "47.354484941526906",
+      "best_epoch": "62"
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_u",
+      "seed": "43",
+      "val_acc_pct": "55.18895983695984",
+      "val_macro_f1_pct": "45.3003765037601",
+      "best_epoch": "36"
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_u",
+      "seed": "44",
+      "val_acc_pct": "55.30893802642822",
+      "val_macro_f1_pct": "47.0821837477089",
+      "best_epoch": "75"
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_uq",
+      "seed": "42",
+      "val_acc_pct": "53.62927317619324",
+      "val_macro_f1_pct": "45.19500047673498",
+      "best_epoch": "42"
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_uq",
+      "seed": "43",
+      "val_acc_pct": "54.31913733482361",
+      "val_macro_f1_pct": "46.173305712927274",
+      "best_epoch": "81"
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_uq",
+      "seed": "44",
+      "val_acc_pct": "54.94900941848755",
+      "val_macro_f1_pct": "47.4199256952248",
+      "best_epoch": "60"
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_ua",
+      "seed": "42",
+      "val_acc_pct": "55.428916215896606",
+      "val_macro_f1_pct": "49.77646600731175",
+      "best_epoch": "76"
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_ua",
+      "seed": "43",
+      "val_acc_pct": "55.72885274887085",
+      "val_macro_f1_pct": "46.07242094663223",
+      "best_epoch": "42"
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_ua",
+      "seed": "44",
+      "val_acc_pct": "55.63887357711792",
+      "val_macro_f1_pct": "47.56892239436503",
+      "best_epoch": "70"
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_u",
+      "seed": "42",
+      "val_acc_pct": "83.71888995170593",
+      "val_macro_f1_pct": "76.78671067318696",
+      "best_epoch": "114"
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_u",
+      "seed": "43",
+      "val_acc_pct": "83.22108387947083",
+      "val_macro_f1_pct": "76.23384834289787",
+      "best_epoch": "109"
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_u",
+      "seed": "44",
+      "val_acc_pct": "83.71888995170593",
+      "val_macro_f1_pct": "77.20687588191358",
+      "best_epoch": "94"
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_uq",
+      "seed": "42",
+      "val_acc_pct": "82.86969065666199",
+      "val_macro_f1_pct": "75.51237038464208",
+      "best_epoch": "78"
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_uq",
+      "seed": "43",
+      "val_acc_pct": "83.3089292049408",
+      "val_macro_f1_pct": "76.75547080465172",
+      "best_epoch": "82"
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_uq",
+      "seed": "44",
+      "val_acc_pct": "83.57247710227966",
+      "val_macro_f1_pct": "76.43419170339708",
+      "best_epoch": "64"
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_ua",
+      "seed": "42",
+      "val_acc_pct": "83.54319334030151",
+      "val_macro_f1_pct": "77.69920432514716",
+      "best_epoch": "77"
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_ua",
+      "seed": "43",
+      "val_acc_pct": "83.71888995170593",
+      "val_macro_f1_pct": "77.56634447375225",
+      "best_epoch": "107"
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_ua",
+      "seed": "44",
+      "val_acc_pct": "84.01171565055847",
+      "val_macro_f1_pct": "78.2574287697607",
+      "best_epoch": "85"
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_u",
+      "seed": "42",
+      "val_acc_pct": "96.28813862800598",
+      "val_macro_f1_pct": "92.21491410608876",
+      "best_epoch": "75"
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_u",
+      "seed": "43",
+      "val_acc_pct": "96.25668525695801",
+      "val_macro_f1_pct": "92.51732479099137",
+      "best_epoch": "36"
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_u",
+      "seed": "44",
+      "val_acc_pct": "96.0994005203247",
+      "val_macro_f1_pct": "92.26674749202859",
+      "best_epoch": "72"
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_uq",
+      "seed": "42",
+      "val_acc_pct": "96.0994005203247",
+      "val_macro_f1_pct": "92.25276750818917",
+      "best_epoch": "149"
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_uq",
+      "seed": "43",
+      "val_acc_pct": "96.19377255439758",
+      "val_macro_f1_pct": "92.62933007290556",
+      "best_epoch": "91"
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_uq",
+      "seed": "44",
+      "val_acc_pct": "96.00503444671631",
+      "val_macro_f1_pct": "91.64366860694531",
+      "best_epoch": "87"
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_ua",
+      "seed": "42",
+      "val_acc_pct": "96.28813862800598",
+      "val_macro_f1_pct": "92.5028819641392",
+      "best_epoch": "117"
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_ua",
+      "seed": "43",
+      "val_acc_pct": "96.0994005203247",
+      "val_macro_f1_pct": "92.51565634209294",
+      "best_epoch": "34"
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_ua",
+      "seed": "44",
+      "val_acc_pct": "96.25668525695801",
+      "val_macro_f1_pct": "92.31329502823817",
+      "best_epoch": "117"
+    }
+  ],
+  "paired_deltas_vs_fixed_vnext": [
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_u",
+      "seed": 42,
+      "delta_val_acc_pp_vs_fixed_vnext": -0.35992860794067383,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": -1.3272831534675191
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_u",
+      "seed": 43,
+      "delta_val_acc_pp_vs_fixed_vnext": 0.11997222900390625,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 0.17354086100544208
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_u",
+      "seed": 44,
+      "delta_val_acc_pp_vs_fixed_vnext": 0.17996430397033691,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 1.2312460916750823
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_uq",
+      "seed": 42,
+      "delta_val_acc_pp_vs_fixed_vnext": -1.4397144317626953,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": -3.4867676182594423
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_uq",
+      "seed": 43,
+      "delta_val_acc_pp_vs_fixed_vnext": -0.7498502731323242,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 1.0464700701726173
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_uq",
+      "seed": 44,
+      "delta_val_acc_pp_vs_fixed_vnext": -0.17996430397033691,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 1.5689880391909767
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_ua",
+      "seed": 42,
+      "delta_val_acc_pp_vs_fixed_vnext": 0.35992860794067383,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 1.0946979123173222
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_ua",
+      "seed": 43,
+      "delta_val_acc_pp_vs_fixed_vnext": 0.659865140914917,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 0.9455853038775714
+    },
+    {
+      "dataset": "Movies",
+      "model": "cosi_mag_vnext_ua",
+      "seed": 44,
+      "delta_val_acc_pp_vs_fixed_vnext": 0.5098998546600342,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 1.7179847383312108
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_u",
+      "seed": 42,
+      "delta_val_acc_pp_vs_fixed_vnext": 0.20498037338256836,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 0.23518782339237987
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_u",
+      "seed": 43,
+      "delta_val_acc_pp_vs_fixed_vnext": 0.38067102432250977,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 0.7623470514003969
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_u",
+      "seed": 44,
+      "delta_val_acc_pp_vs_fixed_vnext": 0.029283761978149414,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 0.07916099021967682
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_uq",
+      "seed": 42,
+      "delta_val_acc_pp_vs_fixed_vnext": -0.644218921661377,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": -1.0391524651524975
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_uq",
+      "seed": 43,
+      "delta_val_acc_pp_vs_fixed_vnext": 0.46851634979248047,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 1.283969513154247
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_uq",
+      "seed": 44,
+      "delta_val_acc_pp_vs_fixed_vnext": -0.11712908744812012,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": -0.6935231882968225
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_ua",
+      "seed": 42,
+      "delta_val_acc_pp_vs_fixed_vnext": 0.029283761978149414,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 1.1476814753525844
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_ua",
+      "seed": 43,
+      "delta_val_acc_pp_vs_fixed_vnext": 0.8784770965576172,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 2.0948431822547775
+    },
+    {
+      "dataset": "Grocery",
+      "model": "cosi_mag_vnext_ua",
+      "seed": 44,
+      "delta_val_acc_pp_vs_fixed_vnext": 0.3221094608306885,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 1.129713878066795
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_u",
+      "seed": 42,
+      "delta_val_acc_pp_vs_fixed_vnext": -0.03145933151245117,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 0.04107396286373444
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_u",
+      "seed": 43,
+      "delta_val_acc_pp_vs_fixed_vnext": 0.03145933151245117,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 0.0863818367624134
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_u",
+      "seed": 44,
+      "delta_val_acc_pp_vs_fixed_vnext": -0.03145933151245117,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 0.18141938796669876
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_uq",
+      "seed": 42,
+      "delta_val_acc_pp_vs_fixed_vnext": -0.22019743919372559,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 0.07892736496414443
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_uq",
+      "seed": 43,
+      "delta_val_acc_pp_vs_fixed_vnext": -0.03145337104797363,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 0.19838711867660663
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_uq",
+      "seed": 44,
+      "delta_val_acc_pp_vs_fixed_vnext": -0.1258254051208496,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": -0.44165949711657504
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_ua",
+      "seed": 42,
+      "delta_val_acc_pp_vs_fixed_vnext": -0.03145933151245117,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 0.32904182091418477
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_ua",
+      "seed": 43,
+      "delta_val_acc_pp_vs_fixed_vnext": -0.1258254051208496,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 0.08471338786398519
+    },
+    {
+      "dataset": "Reddit-S",
+      "model": "cosi_mag_vnext_ua",
+      "seed": 44,
+      "delta_val_acc_pp_vs_fixed_vnext": 0.1258254051208496,
+      "delta_val_macro_f1_pp_vs_fixed_vnext": 0.22796692417628606
+    }
+  ],
+  "paired_delta_mean_vs_fixed_vnext": {
+    "Movies": {
+      "cosi_mag_vnext_u": {
+        "delta_val_acc_pp_vs_fixed_vnext": -0.019997358322143555,
+        "delta_val_macro_f1_pp_vs_fixed_vnext": 0.025834599737668402
+      },
+      "cosi_mag_vnext_uq": {
+        "delta_val_acc_pp_vs_fixed_vnext": -0.7898430029551188,
+        "delta_val_macro_f1_pp_vs_fixed_vnext": -0.29043650296528273
+      },
+      "cosi_mag_vnext_ua": {
+        "delta_val_acc_pp_vs_fixed_vnext": 0.5098978678385416,
+        "delta_val_macro_f1_pp_vs_fixed_vnext": 1.2527559848420349
+      }
+    },
+    "Grocery": {
+      "cosi_mag_vnext_u": {
+        "delta_val_acc_pp_vs_fixed_vnext": 0.20497838656107584,
+        "delta_val_macro_f1_pp_vs_fixed_vnext": 0.3588986216708179
+      },
+      "cosi_mag_vnext_uq": {
+        "delta_val_acc_pp_vs_fixed_vnext": -0.0976105531056722,
+        "delta_val_macro_f1_pp_vs_fixed_vnext": -0.14956871343169098
+      },
+      "cosi_mag_vnext_ua": {
+        "delta_val_acc_pp_vs_fixed_vnext": 0.4099567731221517,
+        "delta_val_macro_f1_pp_vs_fixed_vnext": 1.457412845224719
+      }
+    },
+    "Reddit-S": {
+      "cosi_mag_vnext_u": {
+        "delta_val_acc_pp_vs_fixed_vnext": -0.010486443837483725,
+        "delta_val_macro_f1_pp_vs_fixed_vnext": 0.1029583958642822
+      },
+      "cosi_mag_vnext_uq": {
+        "delta_val_acc_pp_vs_fixed_vnext": -0.1258254051208496,
+        "delta_val_macro_f1_pp_vs_fixed_vnext": -0.05478167115860799
+      },
+      "cosi_mag_vnext_ua": {
+        "delta_val_acc_pp_vs_fixed_vnext": -0.010486443837483725,
+        "delta_val_macro_f1_pp_vs_fixed_vnext": 0.21390737765148535
+      }
+    }
+  },
+  "vnext_fixed_checkpoint_validation_from_round2": [
+    {
+      "dataset": "Movies",
+      "seed": 42,
+      "val_acc_pct": 55.06898760795593,
+      "val_macro_f1_pct": 48.681768094994425,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Movies_seed42.pt"
+    },
+    {
+      "dataset": "Movies",
+      "seed": 43,
+      "val_acc_pct": 55.06898760795593,
+      "val_macro_f1_pct": 45.126835642754656,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Movies_seed43.pt"
+    },
+    {
+      "dataset": "Movies",
+      "seed": 44,
+      "val_acc_pct": 55.128973722457886,
+      "val_macro_f1_pct": 45.85093765603382,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Movies_seed44.pt"
+    },
+    {
+      "dataset": "Grocery",
+      "seed": 42,
+      "val_acc_pct": 83.51390957832336,
+      "val_macro_f1_pct": 76.55152284979458,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Grocery_seed42.pt"
+    },
+    {
+      "dataset": "Grocery",
+      "seed": 43,
+      "val_acc_pct": 82.84041285514832,
+      "val_macro_f1_pct": 75.47150129149747,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Grocery_seed43.pt"
+    },
+    {
+      "dataset": "Grocery",
+      "seed": 44,
+      "val_acc_pct": 83.68960618972778,
+      "val_macro_f1_pct": 77.1277148916939,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Grocery_seed44.pt"
+    },
+    {
+      "dataset": "Reddit-S",
+      "seed": 42,
+      "val_acc_pct": 96.31959795951843,
+      "val_macro_f1_pct": 92.17384014322502,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Reddit-S_seed42.pt"
+    },
+    {
+      "dataset": "Reddit-S",
+      "seed": 43,
+      "val_acc_pct": 96.22522592544556,
+      "val_macro_f1_pct": 92.43094295422895,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Reddit-S_seed43.pt"
+    },
+    {
+      "dataset": "Reddit-S",
+      "seed": 44,
+      "val_acc_pct": 96.13085985183716,
+      "val_macro_f1_pct": 92.08532810406189,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Reddit-S_seed44.pt"
+    }
+  ],
+  "vnext_run_manifest_source": "/hdd1/DataInHere/YHF/MoPF_IAMOC/reports/cosi_mag_vnext/run_manifest.json",
+  "round2_baselines": {
+    "Movies": {
+      "gcn": {
+        "runs": 3,
+        "val_acc_pct_mean": 52.70945827166239,
+        "val_acc_pct_population_std": 0.16306268011482788,
+        "val_macro_f1_pct_mean": 43.86125987483205,
+        "val_macro_f1_pct_population_std": 1.1375638502922878
+      },
+      "sage": {
+        "runs": 3,
+        "val_acc_pct_mean": 52.6494691769282,
+        "val_acc_pct_population_std": 2.23414338070603,
+        "val_macro_f1_pct_mean": 40.3160426408276,
+        "val_macro_f1_pct_population_std": 11.633636785682688
+      }
+    },
+    "Grocery": {
+      "gcn": {
+        "runs": 3,
+        "val_acc_pct_mean": 80.65397540728252,
+        "val_acc_pct_population_std": 0.13168165589479286,
+        "val_macro_f1_pct_mean": 72.52616934603074,
+        "val_macro_f1_pct_population_std": 1.0044697116376973
+      },
+      "sage": {
+        "runs": 3,
+        "val_acc_pct_mean": 83.27964941660564,
+        "val_acc_pct_population_std": 0.16564835380741644,
+        "val_macro_f1_pct_mean": 76.66672544577902,
+        "val_macro_f1_pct_population_std": 0.35663720427772366
+      }
+    },
+    "Reddit-S": {
+      "gcn": {
+        "runs": 3,
+        "val_acc_pct_mean": 94.25395925839742,
+        "val_acc_pct_population_std": 0.1548159548284746,
+        "val_macro_f1_pct_mean": 90.6036401629036,
+        "val_macro_f1_pct_population_std": 0.06800430393182152
+      },
+      "sage": {
+        "runs": 3,
+        "val_acc_pct_mean": 95.32347718874614,
+        "val_acc_pct_population_std": 0.08256479016655502,
+        "val_macro_f1_pct_mean": 91.74495034991415,
+        "val_macro_f1_pct_population_std": 0.1394470302403387
+      }
+    }
+  },
+  "historical_cosi_mag_final_validation_reference": {
+    "Movies": {
+      "acc_mean": 57.51,
+      "acc_std": 0.26,
+      "macro_f1_mean": 49.96,
+      "macro_f1_std": 0.87
+    },
+    "Grocery": {
+      "acc_mean": 83.91,
+      "acc_std": 0.16,
+      "macro_f1_mean": 78.47,
+      "macro_f1_std": 0.71
+    },
+    "Reddit-S": {
+      "acc_mean": 96.37,
+      "acc_std": 0.05,
+      "macro_f1_mean": 93.24,
+      "macro_f1_std": 0.13
+    }
+  },
+  "historical_comparability_note": "same dataset, seed-42 split SHA, NC protocol, and task config hash; GCN/SAGE use configs/model/{gcn,sage}.yaml, VNext uses configs/model/cosi_mag_vnext.yaml, and historical CoSI Final uses configs/model/cosi_mag_final.yaml. These are different model configurations, not controlled architectural ablations.",
+  "interpretation_limit": "VNext variants are fresh controlled retrains on the shared seed-42 split. Historical CoSI Final and round-two VNext/GNN references have different model configurations and are context, not a controlled ablation. Macro-F1 is computed over train/validation-observed classes for new runs."
+}

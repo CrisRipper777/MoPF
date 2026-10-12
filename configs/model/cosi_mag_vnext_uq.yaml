@@ -1,0 +1,18 @@
+name: cosi_mag_vnext_uq
+version: cosi_mag_vnext_r3_uq
+hidden_dim: 256
+dropout: 0.2
+norm: layernorm
+relation_hidden_dim: 32
+relation_context_dim: 32
+relation_weight_scale: 0.3
+eps: 1.0e-8
+max_order: 3
+num_layers: ${model.max_order}
+diffusion_add_self_loops: true
+attention_dim: 64
+attention_dropout: 0.0
+attention_gate_init: 0.1
+eta_initial: [0.2, 0.0, 0.0]
+semantic_gate_init: 0.1
+fusion: concat_residual_mlp

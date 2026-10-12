@@ -1,0 +1,2038 @@
+{
+  "units": "relative operator differences, RMS ratios, eta/q/gate statistics are dimensionless; response RMS uses projected feature units",
+  "definitions": {
+    "operator_relative_frobenius_text_visual_denominator": "Frobenius norm of the mean of learned P_text and P_visual",
+    "operator_relative_frobenius_vs_uniform_denominator": "Frobenius norm of the uniform normalized operator",
+    "chebyshev_correlation": "Pearson correlation of flattened node-by-feature responses for each order pair",
+    "attention_increment_ratio": "RMS of omega*attention_output on orders 1..K divided by RMS of raw B_k-B_0; also reports the differential increment after subtracting order-0 attention update",
+    "residual_ratio_distribution": "per-node RMS(g*U) divided by per-node RMS(H0), with empirical quantiles",
+    "eta_node_std": "population standard deviation across nodes separately for each order and modality"
+  },
+  "runs": [
+    {
+      "dataset": "Movies",
+      "seed": 42,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Movies_seed42.pt",
+      "operator_differences": {
+        "relative_frobenius_text_vs_uniform": 0.0009223993109415618,
+        "relative_frobenius_visual_vs_uniform": 0.0030349428062039635,
+        "relative_frobenius_text_vs_visual": 0.003946910138197718,
+        "frobenius_norm_uniform": 53.30400466918945,
+        "frobenius_norm_learned_text": 53.31706237792969,
+        "frobenius_norm_learned_visual": 53.264549255371094,
+        "uniform_nnz": 177474,
+        "learned_text_nnz": 177474,
+        "learned_visual_nnz": 177474
+      },
+      "q_node_variation": {
+        "mean_node_norm": 5.777039527893066,
+        "node_centered_rms": 0.27796420454978943,
+        "mean_per_dimension_node_std": 0.2500120997428894,
+        "mean_per_node_feature_std": 1.0212392807006836
+      },
+      "modalities": {
+        "text": {
+          "chebyshev_order_rms": {
+            "0": 0.7445299029350281,
+            "1": 0.6170704960823059,
+            "2": 0.6720590591430664,
+            "3": 0.644708514213562
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.8121324777603149,
+              0.24377042055130005,
+              0.39467713236808777
+            ],
+            [
+              0.8121324777603149,
+              1.0,
+              0.7338692545890808,
+              0.5958727598190308
+            ],
+            [
+              0.24377042055130005,
+              0.7338692545890808,
+              1.0,
+              0.7642887234687805
+            ],
+            [
+              0.39467713236808777,
+              0.5958727598190308,
+              0.7642887234687805,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.0639108419418335,
+          "attention_increment_to_raw_structural_difference_rms": 0.1017388952000708,
+          "differential_attention_increment_rms": 0.013023666106164455,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.020747221722929872,
+          "raw_structural_difference_rms": 0.6277306079864502,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.3650299310684204,
+              "node_std": 0.02064564824104309
+            },
+            "2": {
+              "mean": 0.2402259260416031,
+              "node_std": 0.0665503442287445
+            },
+            "3": {
+              "mean": 0.22003066539764404,
+              "node_std": 0.06119167432188988
+            }
+          },
+          "semantic_gate_mean": 0.15407882630825043,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.21339786052703857,
+            "std": 0.10637903213500977,
+            "fraction_above_one": 0.00047984643606469035,
+            "quantiles": {
+              "0.0": 4.313626078555899e-08,
+              "0.25": 0.1427025943994522,
+              "0.5": 0.19649022817611694,
+              "0.75": 0.26428890228271484,
+              "0.9": 0.3428298830986023,
+              "0.95": 0.40110570192337036,
+              "0.99": 0.5402423143386841,
+              "1.0": 2.3801755905151367
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 0.5770916938781738,
+            "std": 0.23373623192310333,
+            "fraction_above_one": 0.050263915210962296,
+            "quantiles": {
+              "0.0": 9.979232373780178e-08,
+              "0.25": 0.42390114068984985,
+              "0.5": 0.5491867065429688,
+              "0.75": 0.693044126033783,
+              "0.9": 0.8560522198677063,
+              "0.95": 1.0007247924804688,
+              "0.99": 1.2911142110824585,
+              "1.0": 4.621572971343994
+            }
+          }
+        },
+        "visual": {
+          "chebyshev_order_rms": {
+            "0": 0.7045726776123047,
+            "1": 0.534528374671936,
+            "2": 0.6091278195381165,
+            "3": 0.5649202466011047
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.716404914855957,
+              -0.14822755753993988,
+              0.04410329833626747
+            ],
+            [
+              0.716404914855957,
+              1.0,
+              0.5392262935638428,
+              0.2618577182292938
+            ],
+            [
+              -0.14822755753993988,
+              0.5392262935638428,
+              1.0,
+              0.6128425598144531
+            ],
+            [
+              0.04410329833626747,
+              0.2618577182292938,
+              0.6128425598144531,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.07413458079099655,
+          "attention_increment_to_raw_structural_difference_rms": 0.10648210865352466,
+          "differential_attention_increment_rms": 0.04338575527071953,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.06288708174544412,
+          "raw_structural_difference_rms": 0.6898993253707886,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.4207976758480072,
+              "node_std": 0.02595589868724346
+            },
+            "2": {
+              "mean": 0.3678569495677948,
+              "node_std": 0.07627083361148834
+            },
+            "3": {
+              "mean": 0.3446922302246094,
+              "node_std": 0.0828632116317749
+            }
+          },
+          "semantic_gate_mean": 0.3290799558162689,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.39899271726608276,
+            "std": 0.13232071697711945,
+            "fraction_above_one": 0.00047984643606469035,
+            "quantiles": {
+              "0.0": 4.216107996057872e-08,
+              "0.25": 0.29825276136398315,
+              "0.5": 0.39187806844711304,
+              "0.75": 0.49731162190437317,
+              "0.9": 0.5774795413017273,
+              "0.95": 0.6158157587051392,
+              "0.99": 0.6782804131507874,
+              "1.0": 1.2206947803497314
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 1.0058034658432007,
+            "std": 0.3254008889198303,
+            "fraction_above_one": 0.48566457629203796,
+            "quantiles": {
+              "0.0": 1.2363724977149104e-07,
+              "0.25": 0.757655918598175,
+              "0.5": 0.9854129552841187,
+              "0.75": 1.2503447532653809,
+              "0.9": 1.4570488929748535,
+              "0.95": 1.548873782157898,
+              "0.99": 1.6819183826446533,
+              "1.0": 2.8594536781311035
+            }
+          }
+        }
+      },
+      "chebyshev_same_order_text_visual_pearson": {
+        "0": 0.0038154053036123514,
+        "1": 0.07111502438783646,
+        "2": 0.15252327919006348,
+        "3": 0.1633909046649933
+      },
+      "checkpoint_selection_metric": "validation_accuracy",
+      "saved_checkpoint_val_macro_f1": 0.48681768094994426,
+      "train_val_label_universe": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "reconstruction_max_abs_error": 0.0,
+      "repeated_forward_max_abs_error": 2.384185791015625e-06,
+      "q_shuffle_seed": 20261012
+    },
+    {
+      "dataset": "Movies",
+      "seed": 43,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Movies_seed43.pt",
+      "operator_differences": {
+        "relative_frobenius_text_vs_uniform": 0.00374054364521329,
+        "relative_frobenius_visual_vs_uniform": 0.0059902243426314065,
+        "relative_frobenius_text_vs_visual": 0.009686730855673098,
+        "frobenius_norm_uniform": 53.30400466918945,
+        "frobenius_norm_learned_text": 53.35709762573242,
+        "frobenius_norm_learned_visual": 53.217933654785156,
+        "uniform_nnz": 177474,
+        "learned_text_nnz": 177474,
+        "learned_visual_nnz": 177474
+      },
+      "q_node_variation": {
+        "mean_node_norm": 5.860569953918457,
+        "node_centered_rms": 0.3099568486213684,
+        "mean_per_dimension_node_std": 0.26420140266418457,
+        "mean_per_node_feature_std": 1.0359746217727661
+      },
+      "modalities": {
+        "text": {
+          "chebyshev_order_rms": {
+            "0": 0.7435088157653809,
+            "1": 0.6473941802978516,
+            "2": 0.6844519972801208,
+            "3": 0.6680260896682739
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.8601176738739014,
+              0.4479757249355316,
+              0.555444061756134
+            ],
+            [
+              0.8601176738739014,
+              1.0,
+              0.8173450827598572,
+              0.7114066481590271
+            ],
+            [
+              0.4479757249355316,
+              0.8173450827598572,
+              1.0,
+              0.8265115022659302
+            ],
+            [
+              0.555444061756134,
+              0.7114066481590271,
+              0.8265115022659302,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.06026994064450264,
+          "attention_increment_to_raw_structural_difference_rms": 0.1097790468544738,
+          "differential_attention_increment_rms": 0.016013022512197495,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.029047280202403544,
+          "raw_structural_difference_rms": 0.5512744188308716,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.14246304333209991,
+              "node_std": 0.07344140857458115
+            },
+            "2": {
+              "mean": -0.1252898871898651,
+              "node_std": 0.10635872185230255
+            },
+            "3": {
+              "mean": -0.12947142124176025,
+              "node_std": 0.09897118806838989
+            }
+          },
+          "semantic_gate_mean": 0.17614474892616272,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.03373439982533455,
+            "std": 0.040652547031641006,
+            "fraction_above_one": 0.0,
+            "quantiles": {
+              "0.0": 4.01369243396843e-10,
+              "0.25": 0.007758225314319134,
+              "0.5": 0.017629273235797882,
+              "0.75": 0.0441863015294075,
+              "0.9": 0.08711159229278564,
+              "0.95": 0.11706346273422241,
+              "0.99": 0.18062590062618256,
+              "1.0": 0.4518265724182129
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 0.20716053247451782,
+            "std": 0.27294430136680603,
+            "fraction_above_one": 0.01703454926609993,
+            "quantiles": {
+              "0.0": 1.2100359603195443e-09,
+              "0.25": 0.04338740557432175,
+              "0.5": 0.10243014991283417,
+              "0.75": 0.26507648825645447,
+              "0.9": 0.5375432372093201,
+              "0.95": 0.7318158149719238,
+              "0.99": 1.1985620260238647,
+              "1.0": 4.116703033447266
+            }
+          }
+        },
+        "visual": {
+          "chebyshev_order_rms": {
+            "0": 0.7031570076942444,
+            "1": 0.5478634238243103,
+            "2": 0.610736608505249,
+            "3": 0.5702096819877625
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.743527889251709,
+              -0.04547921195626259,
+              0.12178530544042587
+            ],
+            [
+              0.743527889251709,
+              1.0,
+              0.5932840704917908,
+              0.34182727336883545
+            ],
+            [
+              -0.04547921195626259,
+              0.5932840704917908,
+              1.0,
+              0.6482802033424377
+            ],
+            [
+              0.12178530544042587,
+              0.34182727336883545,
+              0.6482802033424377,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.060227956622838974,
+          "attention_increment_to_raw_structural_difference_rms": 0.08933420150193754,
+          "differential_attention_increment_rms": 0.03779725730419159,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.05711231334082303,
+          "raw_structural_difference_rms": 0.6618057489395142,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.40539315342903137,
+              "node_std": 0.026691218838095665
+            },
+            "2": {
+              "mean": 0.3284939229488373,
+              "node_std": 0.07011426985263824
+            },
+            "3": {
+              "mean": 0.32792040705680847,
+              "node_std": 0.06449628621339798
+            }
+          },
+          "semantic_gate_mean": 0.33272117376327515,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.3535941541194916,
+            "std": 0.12092848122119904,
+            "fraction_above_one": 0.0009596928721293807,
+            "quantiles": {
+              "0.0": 4.937065156696008e-08,
+              "0.25": 0.2692548632621765,
+              "0.5": 0.3438360095024109,
+              "0.75": 0.4253883361816406,
+              "0.9": 0.5067720413208008,
+              "0.95": 0.5616992712020874,
+              "0.99": 0.6809481978416443,
+              "1.0": 1.378269076347351
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 0.8822797536849976,
+            "std": 0.28923627734184265,
+            "fraction_above_one": 0.30002397298812866,
+            "quantiles": {
+              "0.0": 1.1246091702332706e-07,
+              "0.25": 0.6842825412750244,
+              "0.5": 0.8574938774108887,
+              "0.75": 1.04368257522583,
+              "0.9": 1.2524088621139526,
+              "0.95": 1.3884142637252808,
+              "0.99": 1.6874175071716309,
+              "1.0": 3.4043681621551514
+            }
+          }
+        }
+      },
+      "chebyshev_same_order_text_visual_pearson": {
+        "0": -0.00908670388162136,
+        "1": 0.04252300038933754,
+        "2": 0.12946060299873352,
+        "3": 0.13225768506526947
+      },
+      "checkpoint_selection_metric": "validation_accuracy",
+      "saved_checkpoint_val_macro_f1": 0.45126835642754654,
+      "train_val_label_universe": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "reconstruction_max_abs_error": 0.0,
+      "repeated_forward_max_abs_error": 2.0265579223632812e-06,
+      "q_shuffle_seed": 20261012
+    },
+    {
+      "dataset": "Movies",
+      "seed": 44,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Movies_seed44.pt",
+      "operator_differences": {
+        "relative_frobenius_text_vs_uniform": 0.002900799380247722,
+        "relative_frobenius_visual_vs_uniform": 0.003018068299331047,
+        "relative_frobenius_text_vs_visual": 0.005907948630396775,
+        "frobenius_norm_uniform": 53.30400466918945,
+        "frobenius_norm_learned_text": 53.344032287597656,
+        "frobenius_norm_learned_visual": 53.26490783691406,
+        "uniform_nnz": 177474,
+        "learned_text_nnz": 177474,
+        "learned_visual_nnz": 177474
+      },
+      "q_node_variation": {
+        "mean_node_norm": 5.873815059661865,
+        "node_centered_rms": 0.20904944837093353,
+        "mean_per_dimension_node_std": 0.17629894614219666,
+        "mean_per_node_feature_std": 1.0383518934249878
+      },
+      "modalities": {
+        "text": {
+          "chebyshev_order_rms": {
+            "0": 0.741125762462616,
+            "1": 0.6109124422073364,
+            "2": 0.6677201390266418,
+            "3": 0.639437198638916
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.8052681684494019,
+              0.21694588661193848,
+              0.3731081485748291
+            ],
+            [
+              0.8052681684494019,
+              1.0,
+              0.722547709941864,
+              0.5793181657791138
+            ],
+            [
+              0.21694588661193848,
+              0.722547709941864,
+              1.0,
+              0.756199300289154
+            ],
+            [
+              0.3731081485748291,
+              0.5793181657791138,
+              0.756199300289154,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.06895310431718826,
+          "attention_increment_to_raw_structural_difference_rms": 0.10871543198465207,
+          "differential_attention_increment_rms": 0.014816501177847385,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.02343362387923474,
+          "raw_structural_difference_rms": 0.6322752833366394,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.2564094662666321,
+              "node_std": 0.0673125758767128
+            },
+            "2": {
+              "mean": -0.0029810979031026363,
+              "node_std": 0.1883619874715805
+            },
+            "3": {
+              "mean": -0.011732802726328373,
+              "node_std": 0.18610066175460815
+            }
+          },
+          "semantic_gate_mean": 0.22040408849716187,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.12450993061065674,
+            "std": 0.09647957235574722,
+            "fraction_above_one": 0.0002999040298163891,
+            "quantiles": {
+              "0.0": 1.7245749717176295e-08,
+              "0.25": 0.05821215733885765,
+              "0.5": 0.10089930891990662,
+              "0.75": 0.15906782448291779,
+              "0.9": 0.25744518637657166,
+              "0.95": 0.3144562542438507,
+              "0.99": 0.43306148052215576,
+              "1.0": 1.4512652158737183
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 0.3596170246601105,
+            "std": 0.28113681077957153,
+            "fraction_above_one": 0.04318618029356003,
+            "quantiles": {
+              "0.0": 5.764647426076408e-08,
+              "0.25": 0.16630683839321136,
+              "0.5": 0.28447937965393066,
+              "0.75": 0.4544280767440796,
+              "0.9": 0.7605710625648499,
+              "0.95": 0.9635754227638245,
+              "0.99": 1.258679747581482,
+              "1.0": 3.784008502960205
+            }
+          }
+        },
+        "visual": {
+          "chebyshev_order_rms": {
+            "0": 0.7044055461883545,
+            "1": 0.5357175469398499,
+            "2": 0.6085767149925232,
+            "3": 0.564304530620575
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.7194514274597168,
+              -0.13891594111919403,
+              0.04891807213425636
+            ],
+            [
+              0.7194514274597168,
+              1.0,
+              0.5437353253364563,
+              0.2661764919757843
+            ],
+            [
+              -0.13891594111919403,
+              0.5437353253364563,
+              1.0,
+              0.614524781703949
+            ],
+            [
+              0.04891807213425636,
+              0.2661764919757843,
+              0.614524781703949,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.07443773746490479,
+          "attention_increment_to_raw_structural_difference_rms": 0.10928513388376189,
+          "differential_attention_increment_rms": 0.05178189277648926,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.07535426451449724,
+          "raw_structural_difference_rms": 0.6871793270111084,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.420437753200531,
+              "node_std": 0.02371576614677906
+            },
+            "2": {
+              "mean": 0.34784653782844543,
+              "node_std": 0.07858292758464813
+            },
+            "3": {
+              "mean": 0.3309583067893982,
+              "node_std": 0.07943307608366013
+            }
+          },
+          "semantic_gate_mean": 0.34079709649086,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.3959944248199463,
+            "std": 0.12875787913799286,
+            "fraction_above_one": 5.9980804508086294e-05,
+            "quantiles": {
+              "0.0": 5.246214129783766e-08,
+              "0.25": 0.29832082986831665,
+              "0.5": 0.39079442620277405,
+              "0.75": 0.49024510383605957,
+              "0.9": 0.5712656378746033,
+              "0.95": 0.6110744476318359,
+              "0.99": 0.6779647469520569,
+              "1.0": 1.0149606466293335
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 0.9601319432258606,
+            "std": 0.3050476610660553,
+            "fraction_above_one": 0.4376199543476105,
+            "quantiles": {
+              "0.0": 1.3846575086517987e-07,
+              "0.25": 0.7279784679412842,
+              "0.5": 0.9455939531326294,
+              "0.75": 1.1844165325164795,
+              "0.9": 1.3823381662368774,
+              "0.95": 1.4738895893096924,
+              "0.99": 1.6115010976791382,
+              "1.0": 2.2854607105255127
+            }
+          }
+        }
+      },
+      "chebyshev_same_order_text_visual_pearson": {
+        "0": 0.003346296027302742,
+        "1": 0.07081004977226257,
+        "2": 0.15383069217205048,
+        "3": 0.16408918797969818
+      },
+      "checkpoint_selection_metric": "validation_accuracy",
+      "saved_checkpoint_val_macro_f1": 0.4585093765603382,
+      "train_val_label_universe": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "reconstruction_max_abs_error": 0.0,
+      "repeated_forward_max_abs_error": 2.384185791015625e-06,
+      "q_shuffle_seed": 20261012
+    },
+    {
+      "dataset": "Grocery",
+      "seed": 42,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Grocery_seed42.pt",
+      "operator_differences": {
+        "relative_frobenius_text_vs_uniform": 0.0008788056203849549,
+        "relative_frobenius_visual_vs_uniform": 0.003356756747405783,
+        "relative_frobenius_text_vs_visual": 0.003149658091978829,
+        "frobenius_norm_uniform": 54.85226821899414,
+        "frobenius_norm_learned_text": 54.87133026123047,
+        "frobenius_norm_learned_visual": 54.8970947265625,
+        "uniform_nnz": 159336,
+        "learned_text_nnz": 159336,
+        "learned_visual_nnz": 159336
+      },
+      "q_node_variation": {
+        "mean_node_norm": 5.8829169273376465,
+        "node_centered_rms": 0.22282253205776215,
+        "mean_per_dimension_node_std": 0.19246582686901093,
+        "mean_per_node_feature_std": 1.0399622917175293
+      },
+      "modalities": {
+        "text": {
+          "chebyshev_order_rms": {
+            "0": 0.6979546546936035,
+            "1": 0.532235324382782,
+            "2": 0.5813995599746704,
+            "3": 0.5641646385192871
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.7302637696266174,
+              -0.10859484225511551,
+              -0.041602153331041336
+            ],
+            [
+              0.7302637696266174,
+              1.0,
+              0.5378522276878357,
+              0.16543367505073547
+            ],
+            [
+              -0.10859484225511551,
+              0.5378522276878357,
+              1.0,
+              0.6282261610031128
+            ],
+            [
+              -0.041602153331041336,
+              0.16543367505073547,
+              0.6282261610031128,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.053282931447029114,
+          "attention_increment_to_raw_structural_difference_rms": 0.07962932958882409,
+          "differential_attention_increment_rms": 0.03668510168790817,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.053462179179649495,
+          "raw_structural_difference_rms": 0.6861879229545593,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.4056868851184845,
+              "node_std": 0.05953033268451691
+            },
+            "2": {
+              "mean": 0.3006051480770111,
+              "node_std": 0.1376458704471588
+            },
+            "3": {
+              "mean": 0.26638472080230713,
+              "node_std": 0.1343696415424347
+            }
+          },
+          "semantic_gate_mean": 0.303629606962204,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.34781262278556824,
+            "std": 0.15193721652030945,
+            "fraction_above_one": 0.0007028230465948582,
+            "quantiles": {
+              "0.0": 0.0028586203698068857,
+              "0.25": 0.23509523272514343,
+              "0.5": 0.34560883045196533,
+              "0.75": 0.45652320981025696,
+              "0.9": 0.5446568131446838,
+              "0.95": 0.5907905101776123,
+              "0.99": 0.669864296913147,
+              "1.0": 2.2421648502349854
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 0.8398063778877258,
+            "std": 0.3629101812839508,
+            "fraction_above_one": 0.34660887718200684,
+            "quantiles": {
+              "0.0": 0.007946710102260113,
+              "0.25": 0.5689046382904053,
+              "0.5": 0.8371267318725586,
+              "0.75": 1.1109578609466553,
+              "0.9": 1.3175312280654907,
+              "0.95": 1.4103922843933105,
+              "0.99": 1.5390781164169312,
+              "1.0": 5.526224136352539
+            }
+          }
+        },
+        "visual": {
+          "chebyshev_order_rms": {
+            "0": 0.7038342952728271,
+            "1": 0.5155314803123474,
+            "2": 0.5800780057907104,
+            "3": 0.5570730566978455
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.6997659802436829,
+              -0.2525174915790558,
+              -0.16414570808410645
+            ],
+            [
+              0.6997659802436829,
+              1.0,
+              0.4496864378452301,
+              0.03045579604804516
+            ],
+            [
+              -0.2525174915790558,
+              0.4496864378452301,
+              1.0,
+              0.5812941789627075
+            ],
+            [
+              -0.16414570808410645,
+              0.03045579604804516,
+              0.5812941789627075,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.060918863862752914,
+          "attention_increment_to_raw_structural_difference_rms": 0.0855582281032588,
+          "differential_attention_increment_rms": 0.05615086853504181,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.07706748187609208,
+          "raw_structural_difference_rms": 0.7285935282707214,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.45652511715888977,
+              "node_std": 0.019189756363630295
+            },
+            "2": {
+              "mean": 0.40497174859046936,
+              "node_std": 0.0671500414609909
+            },
+            "3": {
+              "mean": 0.3969566524028778,
+              "node_std": 0.06658123433589935
+            }
+          },
+          "semantic_gate_mean": 0.44451215863227844,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.5480935573577881,
+            "std": 0.14995789527893066,
+            "fraction_above_one": 0.0015227831900119781,
+            "quantiles": {
+              "0.0": 5.3653201881331825e-09,
+              "0.25": 0.445672869682312,
+              "0.5": 0.5525122880935669,
+              "0.75": 0.6551189422607422,
+              "0.9": 0.7363877296447754,
+              "0.95": 0.7782616019248962,
+              "0.99": 0.8567444682121277,
+              "1.0": 2.0141029357910156
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 1.1602370738983154,
+            "std": 0.3159150183200836,
+            "fraction_above_one": 0.6907578706741333,
+            "quantiles": {
+              "0.0": 1.2979120000977673e-08,
+              "0.25": 0.9396706819534302,
+              "0.5": 1.1726062297821045,
+              "0.75": 1.394974946975708,
+              "0.9": 1.562004804611206,
+              "0.95": 1.6390761137008667,
+              "0.99": 1.7757667303085327,
+              "1.0": 4.363203525543213
+            }
+          }
+        }
+      },
+      "chebyshev_same_order_text_visual_pearson": {
+        "0": -0.0025215118657797575,
+        "1": 0.13286368548870087,
+        "2": 0.22332873940467834,
+        "3": 0.21317747235298157
+      },
+      "checkpoint_selection_metric": "validation_accuracy",
+      "saved_checkpoint_val_macro_f1": 0.7655152284979457,
+      "train_val_label_universe": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "reconstruction_max_abs_error": 0.0,
+      "repeated_forward_max_abs_error": 2.384185791015625e-06,
+      "q_shuffle_seed": 20261012
+    },
+    {
+      "dataset": "Grocery",
+      "seed": 43,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Grocery_seed43.pt",
+      "operator_differences": {
+        "relative_frobenius_text_vs_uniform": 0.0016633320831617603,
+        "relative_frobenius_visual_vs_uniform": 0.0010626834394278943,
+        "relative_frobenius_text_vs_visual": 0.002119937497258324,
+        "frobenius_norm_uniform": 54.85226821899414,
+        "frobenius_norm_learned_text": 54.88515090942383,
+        "frobenius_norm_learned_visual": 54.85954284667969,
+        "uniform_nnz": 159336,
+        "learned_text_nnz": 159336,
+        "learned_visual_nnz": 159336
+      },
+      "q_node_variation": {
+        "mean_node_norm": 5.86529016494751,
+        "node_centered_rms": 0.19651661813259125,
+        "mean_per_dimension_node_std": 0.17446684837341309,
+        "mean_per_node_feature_std": 1.0368455648422241
+      },
+      "modalities": {
+        "text": {
+          "chebyshev_order_rms": {
+            "0": 0.6944146752357483,
+            "1": 0.530886173248291,
+            "2": 0.5776693224906921,
+            "3": 0.5597745180130005
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.7324280738830566,
+              -0.0990542322397232,
+              -0.03683365508913994
+            ],
+            [
+              0.7324280738830566,
+              1.0,
+              0.5426005721092224,
+              0.16792911291122437
+            ],
+            [
+              -0.0990542322397232,
+              0.5426005721092224,
+              1.0,
+              0.6283370852470398
+            ],
+            [
+              -0.03683365508913994,
+              0.16792911291122437,
+              0.6283370852470398,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.05314566195011139,
+          "attention_increment_to_raw_structural_difference_rms": 0.07857658530293346,
+          "differential_attention_increment_rms": 0.019461551681160927,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.02863047888590824,
+          "raw_structural_difference_rms": 0.6797494292259216,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.3380323052406311,
+              "node_std": 0.03357555344700813
+            },
+            "2": {
+              "mean": 0.20516057312488556,
+              "node_std": 0.08099552989006042
+            },
+            "3": {
+              "mean": 0.17525514960289001,
+              "node_std": 0.07999768853187561
+            }
+          },
+          "semantic_gate_mean": 0.3190777003765106,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.2586049735546112,
+            "std": 0.11305675655603409,
+            "fraction_above_one": 0.0003514115232974291,
+            "quantiles": {
+              "0.0": 0.005533798132091761,
+              "0.25": 0.17415961623191833,
+              "0.5": 0.24732908606529236,
+              "0.75": 0.33134812116622925,
+              "0.9": 0.4110368490219116,
+              "0.95": 0.45379146933555603,
+              "0.99": 0.5378780364990234,
+              "1.0": 2.1876766681671143
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 0.5885829329490662,
+            "std": 0.24235576391220093,
+            "fraction_above_one": 0.049314748495817184,
+            "quantiles": {
+              "0.0": 0.012817216105759144,
+              "0.25": 0.4089374244213104,
+              "0.5": 0.5725256204605103,
+              "0.75": 0.7533939480781555,
+              "0.9": 0.9115005731582642,
+              "0.95": 0.9983123540878296,
+              "0.99": 1.1314666271209717,
+              "1.0": 5.243875980377197
+            }
+          }
+        },
+        "visual": {
+          "chebyshev_order_rms": {
+            "0": 0.7058322429656982,
+            "1": 0.5223349928855896,
+            "2": 0.582963764667511,
+            "3": 0.5604803562164307
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.7092893719673157,
+              -0.2116842418909073,
+              -0.12931884825229645
+            ],
+            [
+              0.7092893719673157,
+              1.0,
+              0.47486597299575806,
+              0.07010806351900101
+            ],
+            [
+              -0.2116842418909073,
+              0.47486597299575806,
+              1.0,
+              0.5942220687866211
+            ],
+            [
+              -0.12931884825229645,
+              0.07010806351900101,
+              0.5942220687866211,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.05871981009840965,
+          "attention_increment_to_raw_structural_difference_rms": 0.08276514924642565,
+          "differential_attention_increment_rms": 0.047775160521268845,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.066217075139337,
+          "raw_structural_difference_rms": 0.7214930653572083,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.4405558109283447,
+              "node_std": 0.02024499699473381
+            },
+            "2": {
+              "mean": 0.3786683678627014,
+              "node_std": 0.06631691753864288
+            },
+            "3": {
+              "mean": 0.37138789892196655,
+              "node_std": 0.06388963013887405
+            }
+          },
+          "semantic_gate_mean": 0.4245277941226959,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.5037500858306885,
+            "std": 0.14659449458122253,
+            "fraction_above_one": 0.0007613915950059891,
+            "quantiles": {
+              "0.0": 3.367753187433209e-09,
+              "0.25": 0.40055549144744873,
+              "0.5": 0.5026217699050903,
+              "0.75": 0.6041569709777832,
+              "0.9": 0.6964191198348999,
+              "0.95": 0.7454716563224792,
+              "0.99": 0.8324005007743835,
+              "1.0": 1.5435881614685059
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 1.0755376815795898,
+            "std": 0.3051377534866333,
+            "fraction_above_one": 0.5866814851760864,
+            "quantiles": {
+              "0.0": 7.842002602842513e-09,
+              "0.25": 0.8615083694458008,
+              "0.5": 1.0755314826965332,
+              "0.75": 1.2904069423675537,
+              "0.9": 1.4735910892486572,
+              "0.95": 1.5702497959136963,
+              "0.99": 1.7335366010665894,
+              "1.0": 3.3831334114074707
+            }
+          }
+        }
+      },
+      "chebyshev_same_order_text_visual_pearson": {
+        "0": -0.002632993506267667,
+        "1": 0.12779614329338074,
+        "2": 0.2194145917892456,
+        "3": 0.2073463648557663
+      },
+      "checkpoint_selection_metric": "validation_accuracy",
+      "saved_checkpoint_val_macro_f1": 0.7547150129149748,
+      "train_val_label_universe": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "reconstruction_max_abs_error": 0.0,
+      "repeated_forward_max_abs_error": 2.384185791015625e-06,
+      "q_shuffle_seed": 20261012
+    },
+    {
+      "dataset": "Grocery",
+      "seed": 44,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Grocery_seed44.pt",
+      "operator_differences": {
+        "relative_frobenius_text_vs_uniform": 0.004582875734924763,
+        "relative_frobenius_visual_vs_uniform": 0.003070088190971496,
+        "relative_frobenius_text_vs_visual": 0.007529408205079865,
+        "frobenius_norm_uniform": 54.85226821899414,
+        "frobenius_norm_learned_text": 54.94095993041992,
+        "frobenius_norm_learned_visual": 54.80999755859375,
+        "uniform_nnz": 159336,
+        "learned_text_nnz": 159336,
+        "learned_visual_nnz": 159336
+      },
+      "q_node_variation": {
+        "mean_node_norm": 5.887261867523193,
+        "node_centered_rms": 0.1804080307483673,
+        "mean_per_dimension_node_std": 0.16009698808193207,
+        "mean_per_node_feature_std": 1.0407239198684692
+      },
+      "modalities": {
+        "text": {
+          "chebyshev_order_rms": {
+            "0": 0.6992003321647644,
+            "1": 0.5305463671684265,
+            "2": 0.580300509929657,
+            "3": 0.5628591775894165
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.7282556295394897,
+              -0.1261390596628189,
+              -0.06277108192443848
+            ],
+            [
+              0.7282556295394897,
+              1.0,
+              0.5254558324813843,
+              0.1429292857646942
+            ],
+            [
+              -0.1261390596628189,
+              0.5254558324813843,
+              1.0,
+              0.6216917037963867
+            ],
+            [
+              -0.06277108192443848,
+              0.1429292857646942,
+              0.6216917037963867,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.07356692105531693,
+          "attention_increment_to_raw_structural_difference_rms": 0.10472999266313421,
+          "differential_attention_increment_rms": 0.03142848610877991,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.045395458099539966,
+          "raw_structural_difference_rms": 0.6923266649246216,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.42267414927482605,
+              "node_std": 0.037296172231435776
+            },
+            "2": {
+              "mean": 0.30878564715385437,
+              "node_std": 0.11225418001413345
+            },
+            "3": {
+              "mean": 0.27398741245269775,
+              "node_std": 0.11597626656293869
+            }
+          },
+          "semantic_gate_mean": 0.33979204297065735,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.3799957036972046,
+            "std": 0.1487310379743576,
+            "fraction_above_one": 0.00017570576164871454,
+            "quantiles": {
+              "0.0": 0.00881412997841835,
+              "0.25": 0.27169135212898254,
+              "0.5": 0.3696233034133911,
+              "0.75": 0.48258498311042786,
+              "0.9": 0.582805871963501,
+              "0.95": 0.6392323970794678,
+              "0.99": 0.7273429036140442,
+              "1.0": 1.3412559032440186
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 0.8436905741691589,
+            "std": 0.31350603699684143,
+            "fraction_above_one": 0.3142790198326111,
+            "quantiles": {
+              "0.0": 0.022883009165525436,
+              "0.25": 0.619025707244873,
+              "0.5": 0.8324593305587769,
+              "0.75": 1.0701699256896973,
+              "0.9": 1.2728599309921265,
+              "0.95": 1.3706022500991821,
+              "0.99": 1.5128259658813477,
+              "1.0": 2.9587316513061523
+            }
+          }
+        },
+        "visual": {
+          "chebyshev_order_rms": {
+            "0": 0.7056063413619995,
+            "1": 0.5157778859138489,
+            "2": 0.5822515487670898,
+            "3": 0.559426486492157
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.6969666481018066,
+              -0.25821006298065186,
+              -0.16379131376743317
+            ],
+            [
+              0.6969666481018066,
+              1.0,
+              0.44749292731285095,
+              0.030483303591609
+            ],
+            [
+              -0.25821006298065186,
+              0.44749292731285095,
+              1.0,
+              0.580730676651001
+            ],
+            [
+              -0.16379131376743317,
+              0.030483303591609,
+              0.580730676651001,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.0790482610464096,
+          "attention_increment_to_raw_structural_difference_rms": 0.10683739700751012,
+          "differential_attention_increment_rms": 0.051884397864341736,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.07085051061810552,
+          "raw_structural_difference_rms": 0.732308030128479,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.46728160977363586,
+              "node_std": 0.018619479611516
+            },
+            "2": {
+              "mean": 0.42542481422424316,
+              "node_std": 0.06484778225421906
+            },
+            "3": {
+              "mean": 0.4163990020751953,
+              "node_std": 0.0645730197429657
+            }
+          },
+          "semantic_gate_mean": 0.42758360505104065,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.5532047748565674,
+            "std": 0.14732156693935394,
+            "fraction_above_one": 0.0011128031183034182,
+            "quantiles": {
+              "0.0": 1.016853001800655e-08,
+              "0.25": 0.4518648087978363,
+              "0.5": 0.5624346733093262,
+              "0.75": 0.6613606214523315,
+              "0.9": 0.735999345779419,
+              "0.95": 0.7757803201675415,
+              "0.99": 0.8453419804573059,
+              "1.0": 1.6869412660598755
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 1.2106322050094604,
+            "std": 0.31998541951179504,
+            "fraction_above_one": 0.7376713156700134,
+            "quantiles": {
+              "0.0": 2.2372766750322626e-08,
+              "0.25": 0.9863362908363342,
+              "0.5": 1.2321581840515137,
+              "0.75": 1.4566041231155396,
+              "0.9": 1.6111901998519897,
+              "0.95": 1.6813230514526367,
+              "0.99": 1.8014229536056519,
+              "1.0": 3.5596065521240234
+            }
+          }
+        }
+      },
+      "chebyshev_same_order_text_visual_pearson": {
+        "0": -0.002001638989895582,
+        "1": 0.13323724269866943,
+        "2": 0.22130464017391205,
+        "3": 0.21021607518196106
+      },
+      "checkpoint_selection_metric": "validation_accuracy",
+      "saved_checkpoint_val_macro_f1": 0.771277148916939,
+      "train_val_label_universe": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "reconstruction_max_abs_error": 0.0,
+      "repeated_forward_max_abs_error": 2.384185791015625e-06,
+      "q_shuffle_seed": 20261012
+    },
+    {
+      "dataset": "Reddit-S",
+      "seed": 42,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Reddit-S_seed42.pt",
+      "operator_differences": {
+        "relative_frobenius_text_vs_uniform": 0.005609632131347065,
+        "relative_frobenius_visual_vs_uniform": 0.014513057694121785,
+        "relative_frobenius_text_vs_visual": 0.008905682363551257,
+        "frobenius_norm_uniform": 64.45928192138672,
+        "frobenius_norm_learned_text": 64.4603042602539,
+        "frobenius_norm_learned_visual": 64.46607971191406,
+        "uniform_nnz": 298974,
+        "learned_text_nnz": 298974,
+        "learned_visual_nnz": 298974
+      },
+      "q_node_variation": {
+        "mean_node_norm": 5.794915199279785,
+        "node_centered_rms": 0.1773137003183365,
+        "mean_per_dimension_node_std": 0.14911645650863647,
+        "mean_per_node_feature_std": 1.024403691291809
+      },
+      "modalities": {
+        "text": {
+          "chebyshev_order_rms": {
+            "0": 0.7083353996276855,
+            "1": 0.6052341461181641,
+            "2": 0.7083308696746826,
+            "3": 0.6052444577217102
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.7778171896934509,
+              0.21419581770896912,
+              0.7831582427024841
+            ],
+            [
+              0.7778171896934509,
+              1.0,
+              0.7805066108703613,
+              0.9999397397041321
+            ],
+            [
+              0.21419581770896912,
+              0.7805066108703613,
+              1.0,
+              0.7751187086105347
+            ],
+            [
+              0.7831582427024841,
+              0.9999397397041321,
+              0.7751187086105347,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.04726535081863403,
+          "attention_increment_to_raw_structural_difference_rms": 0.09156397958943892,
+          "differential_attention_increment_rms": 0.019475335255265236,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.037453586635128835,
+          "raw_structural_difference_rms": 0.5199858546257019,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.419569194316864,
+              "node_std": 0.019196907058358192
+            },
+            "2": {
+              "mean": 0.3278821110725403,
+              "node_std": 0.06675717979669571
+            },
+            "3": {
+              "mean": 0.3313547670841217,
+              "node_std": 0.03567339852452278
+            }
+          },
+          "semantic_gate_mean": 0.4375075399875641,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.3704446852207184,
+            "std": 0.1097676008939743,
+            "fraction_above_one": 6.291682075243443e-05,
+            "quantiles": {
+              "0.0": 3.835091355597342e-09,
+              "0.25": 0.2956449091434479,
+              "0.5": 0.36382684111595154,
+              "0.75": 0.4370148181915283,
+              "0.9": 0.513065755367279,
+              "0.95": 0.560734212398529,
+              "0.99": 0.6558614373207092,
+              "1.0": 1.0159385204315186
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 0.7092407941818237,
+            "std": 0.20863640308380127,
+            "fraction_above_one": 0.08688812702894211,
+            "quantiles": {
+              "0.0": 6.5284875283566635e-09,
+              "0.25": 0.5696254968643188,
+              "0.5": 0.696745753288269,
+              "0.75": 0.8368375301361084,
+              "0.9": 0.9800533056259155,
+              "0.95": 1.072084903717041,
+              "0.99": 1.2557870149612427,
+              "1.0": 1.765278935432434
+            }
+          }
+        },
+        "visual": {
+          "chebyshev_order_rms": {
+            "0": 0.7457786798477173,
+            "1": 0.6830008029937744,
+            "2": 0.7457569241523743,
+            "3": 0.6830481886863708
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.8798131942749023,
+              0.5549328327178955,
+              0.8873130679130554
+            ],
+            [
+              0.8798131942749023,
+              1.0,
+              0.8836445808410645,
+              0.9997930526733398
+            ],
+            [
+              0.5549328327178955,
+              0.8836445808410645,
+              1.0,
+              0.8759646415710449
+            ],
+            [
+              0.8873130679130554,
+              0.9997930526733398,
+              0.8759646415710449,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.06342333555221558,
+          "attention_increment_to_raw_structural_difference_rms": 0.15024177796562432,
+          "differential_attention_increment_rms": 0.02064497210085392,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.048862772612115475,
+          "raw_structural_difference_rms": 0.42250922322273254,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.37958812713623047,
+              "node_std": 0.02589975669980049
+            },
+            "2": {
+              "mean": 0.26054203510284424,
+              "node_std": 0.07420314848423004
+            },
+            "3": {
+              "mean": 0.25875216722488403,
+              "node_std": 0.043471746146678925
+            }
+          },
+          "semantic_gate_mean": 0.4674690365791321,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.22387774288654327,
+            "std": 0.12204856425523758,
+            "fraction_above_one": 0.0018245878163725138,
+            "quantiles": {
+              "0.0": 2.8127400408806125e-09,
+              "0.25": 0.14984376728534698,
+              "0.5": 0.20200635492801666,
+              "0.75": 0.2737656235694885,
+              "0.9": 0.3613809049129486,
+              "0.95": 0.43325889110565186,
+              "0.99": 0.6375795602798462,
+              "1.0": 1.2648138999938965
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 0.43048909306526184,
+            "std": 0.22424162924289703,
+            "fraction_above_one": 0.02390839159488678,
+            "quantiles": {
+              "0.0": 5.2069659695064274e-09,
+              "0.25": 0.291396826505661,
+              "0.5": 0.3924238979816437,
+              "0.75": 0.5298463106155396,
+              "0.9": 0.6981281042098999,
+              "0.95": 0.8344815373420715,
+              "0.99": 1.1659867763519287,
+              "1.0": 2.101522207260132
+            }
+          }
+        }
+      },
+      "chebyshev_same_order_text_visual_pearson": {
+        "0": -0.0053106797859072685,
+        "1": -0.007897764444351196,
+        "2": -0.005311940796673298,
+        "3": -0.007896533235907555
+      },
+      "checkpoint_selection_metric": "validation_accuracy",
+      "saved_checkpoint_val_macro_f1": 0.9217384014322502,
+      "train_val_label_universe": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "reconstruction_max_abs_error": 0.0,
+      "repeated_forward_max_abs_error": 1.6689300537109375e-06,
+      "q_shuffle_seed": 20261012
+    },
+    {
+      "dataset": "Reddit-S",
+      "seed": 43,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Reddit-S_seed43.pt",
+      "operator_differences": {
+        "relative_frobenius_text_vs_uniform": 0.001215956043224505,
+        "relative_frobenius_visual_vs_uniform": 0.011210953178064075,
+        "relative_frobenius_text_vs_visual": 0.009995736463055679,
+        "frobenius_norm_uniform": 64.45928192138672,
+        "frobenius_norm_learned_text": 64.45933532714844,
+        "frobenius_norm_learned_visual": 64.46333312988281,
+        "uniform_nnz": 298974,
+        "learned_text_nnz": 298974,
+        "learned_visual_nnz": 298974
+      },
+      "q_node_variation": {
+        "mean_node_norm": 5.8072333335876465,
+        "node_centered_rms": 0.23020876944065094,
+        "mean_per_dimension_node_std": 0.2050028145313263,
+        "mean_per_node_feature_std": 1.0265792608261108
+      },
+      "modalities": {
+        "text": {
+          "chebyshev_order_rms": {
+            "0": 0.6827671527862549,
+            "1": 0.5818296074867249,
+            "2": 0.6827669143676758,
+            "3": 0.581829845905304
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.7685931324958801,
+              0.18238142132759094,
+              0.7697755694389343
+            ],
+            [
+              0.7685931324958801,
+              1.0,
+              0.7691851258277893,
+              0.9999971985816956
+            ],
+            [
+              0.18238142132759094,
+              0.7691851258277893,
+              1.0,
+              0.7680004835128784
+            ],
+            [
+              0.7697755694389343,
+              0.9999971985816956,
+              0.7680004835128784,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.03827254846692085,
+          "attention_increment_to_raw_structural_difference_rms": 0.07555987891690914,
+          "differential_attention_increment_rms": 0.0047645787708461285,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.009431644687108017,
+          "raw_structural_difference_rms": 0.5051694512367249,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.40303143858909607,
+              "node_std": 0.017384273931384087
+            },
+            "2": {
+              "mean": 0.3072480261325836,
+              "node_std": 0.05142972245812416
+            },
+            "3": {
+              "mean": 0.30031901597976685,
+              "node_std": 0.031263478100299835
+            }
+          },
+          "semantic_gate_mean": 0.4009363055229187,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.32158130407333374,
+            "std": 0.09924639016389847,
+            "fraction_above_one": 0.0,
+            "quantiles": {
+              "0.0": 3.11999270863339e-09,
+              "0.25": 0.25424569845199585,
+              "0.5": 0.3168320059776306,
+              "0.75": 0.3822730779647827,
+              "0.9": 0.4477819502353668,
+              "0.95": 0.4930671155452728,
+              "0.99": 0.5825421214103699,
+              "1.0": 0.8662886023521423
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 0.6674380898475647,
+            "std": 0.1947069764137268,
+            "fraction_above_one": 0.05134012550115585,
+            "quantiles": {
+              "0.0": 6.896970994318963e-09,
+              "0.25": 0.5379481315612793,
+              "0.5": 0.6571861505508423,
+              "0.75": 0.785544753074646,
+              "0.9": 0.9149429798126221,
+              "0.95": 1.0026251077651978,
+              "0.99": 1.1915500164031982,
+              "1.0": 1.7121520042419434
+            }
+          }
+        },
+        "visual": {
+          "chebyshev_order_rms": {
+            "0": 0.7413827776908875,
+            "1": 0.6825727820396423,
+            "2": 0.7413715124130249,
+            "3": 0.6825969815254211
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.8862584233283997,
+              0.5756762623786926,
+              0.8915250301361084
+            ],
+            [
+              0.8862584233283997,
+              1.0,
+              0.888934314250946,
+              0.9998928308486938
+            ],
+            [
+              0.5756762623786926,
+              0.888934314250946,
+              1.0,
+              0.8835734128952026
+            ],
+            [
+              0.8915250301361084,
+              0.9998928308486938,
+              0.8835734128952026,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.05862224102020264,
+          "attention_increment_to_raw_structural_difference_rms": 0.14356991705646308,
+          "differential_attention_increment_rms": 0.016788996756076813,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.041098623959631014,
+          "raw_structural_difference_rms": 0.40850508213043213,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.3743927776813507,
+              "node_std": 0.02677021734416485
+            },
+            "2": {
+              "mean": 0.2525171935558319,
+              "node_std": 0.06813936680555344
+            },
+            "3": {
+              "mean": 0.2499401569366455,
+              "node_std": 0.04447735846042633
+            }
+          },
+          "semantic_gate_mean": 0.43711745738983154,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.18195177614688873,
+            "std": 0.09774354845285416,
+            "fraction_above_one": 0.0003775009245146066,
+            "quantiles": {
+              "0.0": 4.208615678180649e-09,
+              "0.25": 0.12519307434558868,
+              "0.5": 0.16680586338043213,
+              "0.75": 0.22021840512752533,
+              "0.9": 0.2863459587097168,
+              "0.95": 0.34512656927108765,
+              "0.99": 0.5521919131278992,
+              "1.0": 1.0719960927963257
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 0.4054606556892395,
+            "std": 0.21245312690734863,
+            "fraction_above_one": 0.01805712841451168,
+            "quantiles": {
+              "0.0": 8.882534707765899e-09,
+              "0.25": 0.2768595516681671,
+              "0.5": 0.37299954891204834,
+              "0.75": 0.49521851539611816,
+              "0.9": 0.6425688862800598,
+              "0.95": 0.7668477296829224,
+              "0.99": 1.1591910123825073,
+              "1.0": 2.2627925872802734
+            }
+          }
+        }
+      },
+      "chebyshev_same_order_text_visual_pearson": {
+        "0": -0.0009177590836770833,
+        "1": 7.478278712369502e-05,
+        "2": -0.0009172200807370245,
+        "3": 7.470940181519836e-05
+      },
+      "checkpoint_selection_metric": "validation_accuracy",
+      "saved_checkpoint_val_macro_f1": 0.9243094295422896,
+      "train_val_label_universe": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "reconstruction_max_abs_error": 0.0,
+      "repeated_forward_max_abs_error": 2.6226043701171875e-06,
+      "q_shuffle_seed": 20261012
+    },
+    {
+      "dataset": "Reddit-S",
+      "seed": 44,
+      "checkpoint_path": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Reddit-S_seed44.pt",
+      "operator_differences": {
+        "relative_frobenius_text_vs_uniform": 0.002511779593926693,
+        "relative_frobenius_visual_vs_uniform": 0.01714255522998691,
+        "relative_frobenius_text_vs_visual": 0.014631923393839145,
+        "frobenius_norm_uniform": 64.45928192138672,
+        "frobenius_norm_learned_text": 64.45948791503906,
+        "frobenius_norm_learned_visual": 64.46875762939453,
+        "uniform_nnz": 298974,
+        "learned_text_nnz": 298974,
+        "learned_visual_nnz": 298974
+      },
+      "q_node_variation": {
+        "mean_node_norm": 5.818572044372559,
+        "node_centered_rms": 0.15354937314987183,
+        "mean_per_dimension_node_std": 0.1324724555015564,
+        "mean_per_node_feature_std": 1.0285850763320923
+      },
+      "modalities": {
+        "text": {
+          "chebyshev_order_rms": {
+            "0": 0.7006834745407104,
+            "1": 0.5945459008216858,
+            "2": 0.7006825804710388,
+            "3": 0.5945478677749634
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.7678475379943848,
+              0.18108102679252625,
+              0.7703129649162292
+            ],
+            [
+              0.7678475379943848,
+              1.0,
+              0.7690839767456055,
+              0.9999876618385315
+            ],
+            [
+              0.18108102679252625,
+              0.7690839767456055,
+              1.0,
+              0.7666091918945312
+            ],
+            [
+              0.7703129649162292,
+              0.9999876618385315,
+              0.7666091918945312,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.0444197878241539,
+          "attention_increment_to_raw_structural_difference_rms": 0.08516250717410406,
+          "differential_attention_increment_rms": 0.018006138503551483,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.03435301322605146,
+          "raw_structural_difference_rms": 0.5241501927375793,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.4185981750488281,
+              "node_std": 0.01829366199672222
+            },
+            "2": {
+              "mean": 0.3225491940975189,
+              "node_std": 0.06578116863965988
+            },
+            "3": {
+              "mean": 0.3294585943222046,
+              "node_std": 0.034132394939661026
+            }
+          },
+          "semantic_gate_mean": 0.4403809607028961,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.3853084444999695,
+            "std": 0.11921542882919312,
+            "fraction_above_one": 0.00025166728300973773,
+            "quantiles": {
+              "0.0": 2.3480457578273217e-09,
+              "0.25": 0.30166417360305786,
+              "0.5": 0.3795466423034668,
+              "0.75": 0.45979440212249756,
+              "0.9": 0.5382559299468994,
+              "0.95": 0.5903140902519226,
+              "0.99": 0.6971830725669861,
+              "1.0": 1.0462301969528198
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 0.715961754322052,
+            "std": 0.21076680719852448,
+            "fraction_above_one": 0.09179563820362091,
+            "quantiles": {
+              "0.0": 4.505932071907637e-09,
+              "0.25": 0.5751092433929443,
+              "0.5": 0.706505537033081,
+              "0.75": 0.8441737294197083,
+              "0.9": 0.9886001944541931,
+              "0.95": 1.0818458795547485,
+              "0.99": 1.2669970989227295,
+              "1.0": 1.9957290887832642
+            }
+          }
+        },
+        "visual": {
+          "chebyshev_order_rms": {
+            "0": 0.7434771656990051,
+            "1": 0.6822521686553955,
+            "2": 0.7434520721435547,
+            "3": 0.682306706905365
+          },
+          "chebyshev_order_pearson_correlation": [
+            [
+              1.0,
+              0.8816927075386047,
+              0.5619387626647949,
+              0.8895767331123352
+            ],
+            [
+              0.8816927075386047,
+              1.0,
+              0.8857296109199524,
+              0.9997604489326477
+            ],
+            [
+              0.5619387626647949,
+              0.8857296109199524,
+              1.0,
+              0.877636730670929
+            ],
+            [
+              0.8895767331123352,
+              0.9997604489326477,
+              0.877636730670929,
+              1.0
+            ]
+          ],
+          "attention_increment_rms": 0.06057869642972946,
+          "attention_increment_to_raw_structural_difference_rms": 0.14530489460599796,
+          "differential_attention_increment_rms": 0.01990474760532379,
+          "differential_attention_increment_to_raw_structural_difference_rms": 0.04776361301499053,
+          "raw_structural_difference_rms": 0.4167345464229584,
+          "eta_by_order": {
+            "1": {
+              "mean": 0.38926470279693604,
+              "node_std": 0.023724621161818504
+            },
+            "2": {
+              "mean": 0.2751622796058655,
+              "node_std": 0.06994318962097168
+            },
+            "3": {
+              "mean": 0.2756061553955078,
+              "node_std": 0.04057035967707634
+            }
+          },
+          "semantic_gate_mean": 0.4591284692287445,
+          "effective_residual_to_h0_node_ratio": {
+            "mean": 0.22377608716487885,
+            "std": 0.12048603594303131,
+            "fraction_above_one": 0.0020762551575899124,
+            "quantiles": {
+              "0.0": 1.8047381367125581e-09,
+              "0.25": 0.15457506477832794,
+              "0.5": 0.20392587780952454,
+              "0.75": 0.2687760591506958,
+              "0.9": 0.35388824343681335,
+              "0.95": 0.4256671071052551,
+              "0.99": 0.6562589406967163,
+              "1.0": 1.4045779705047607
+            }
+          },
+          "raw_residual_to_h0_node_ratio": {
+            "mean": 0.44513577222824097,
+            "std": 0.2248278707265854,
+            "fraction_above_one": 0.023467974737286568,
+            "quantiles": {
+              "0.0": 4.0956895652755065e-09,
+              "0.25": 0.30957192182540894,
+              "0.5": 0.4078015089035034,
+              "0.75": 0.5429062247276306,
+              "0.9": 0.7115864753723145,
+              "0.95": 0.8536459803581238,
+              "0.99": 1.1831262111663818,
+              "1.0": 2.2561466693878174
+            }
+          }
+        }
+      },
+      "chebyshev_same_order_text_visual_pearson": {
+        "0": 0.0001495646865805611,
+        "1": 0.0004389445239212364,
+        "2": 0.00014970068878028542,
+        "3": 0.00043883046600967646
+      },
+      "checkpoint_selection_metric": "validation_accuracy",
+      "saved_checkpoint_val_macro_f1": 0.9208532810406188,
+      "train_val_label_universe": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19
+      ],
+      "reconstruction_max_abs_error": 0.0,
+      "repeated_forward_max_abs_error": 1.6689300537109375e-06,
+      "q_shuffle_seed": 20261012
+    }
+  ]
+}

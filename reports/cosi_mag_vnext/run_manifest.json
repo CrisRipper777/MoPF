@@ -1072,5 +1072,6 @@
     "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_smoke/nc/Movies",
     "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_smoke/nc/Grocery",
     "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_smoke/lp/sports"
-  ]
+  ],
+  "implementation_commit": "c5a901634da8ddd6bed1c4ad01b37b67326a3da4"
 }

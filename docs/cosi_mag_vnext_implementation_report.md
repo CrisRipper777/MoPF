@@ -7,6 +7,7 @@ Date: 2026-10-12 (Asia/Shanghai)
 - Worktree: `/hdd1/DataInHere/YHF/MoPF_IAMOC`.
 - Branch: `exp/cosi-mag-vnext-crc-cheb-rcmi` tracking `origin/exp/cosi-mag-vnext-crc-cheb-rcmi`.
 - Starting branch commit and target remote branch base: `d5a06103be0a27952ef5890e2839a36eb83f580a`, the specified CoSI Final SHA. The remote target was fetched and confirmed at that SHA before implementation.
+- Implementation source commit used for the correctness record and pilot runs: `c5a901634da8ddd6bed1c4ad01b37b67326a3da4`. The final delivery commit adds only this commit provenance to the report and run manifest.
 - Project data path: `/hdd1/DataInHere/YHF/data`. `CLAUDE.md` mentions the historical `MAG_baseline/` path; configs and actual loaders use the data path above.
 - Runtime: `conda run -n yhf_env`; Python 3.12.13, PyTorch 2.4.0+cu121, PyG 2.7.0, `torch_sparse` 0.6.18+pt24cu121, Hydra 1.3.2, NumPy 2.4.3, scikit-learn 1.8.0, DGL 2.4.0+cu121. Pilot ran on RTX 3090 `cuda:1`.
 - The base shell has incompatible/older Python packages and is not used for project commands. `nvidia-smi` could not initialize NVML; run metrics use PyTorch's CUDA memory accounting.

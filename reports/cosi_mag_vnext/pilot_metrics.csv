@@ -1,0 +1,10 @@
+dataset,seed,best_epoch,val_acc_pct,val_macro_f1_pct,runtime_seconds,peak_gpu_memory_mib,split_sha256,output_dir
+Movies,42,58,55.068988,48.681768,22.602526,4180.337,9089d5eb1d5a3edeae46bd9296e4f85815fccf8e489452bc87a2126a88546211,/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Movies/2026-10-12/12-34-14
+Movies,43,36,55.068988,45.126836,17.236449,4180.337,9089d5eb1d5a3edeae46bd9296e4f85815fccf8e489452bc87a2126a88546211,/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Movies_seed43/2026-10-12/12-37-13
+Movies,44,57,55.128974,45.850938,22.298491,4180.337,9089d5eb1d5a3edeae46bd9296e4f85815fccf8e489452bc87a2126a88546211,/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Movies_seed44/2026-10-12/12-37-37
+Grocery,42,81,83.513910,76.551523,26.910118,3938.032,3ca4581592fcb705b42672b18412375d33bf6109c72e4714786066878a54d58e,/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Grocery/2026-10-12/12-34-44
+Grocery,43,57,82.840413,75.471501,21.147898,3938.032,3ca4581592fcb705b42672b18412375d33bf6109c72e4714786066878a54d58e,/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Grocery_seed43/2026-10-12/12-38-06
+Grocery,44,83,83.689606,77.127715,27.273584,3938.032,3ca4581592fcb705b42672b18412375d33bf6109c72e4714786066878a54d58e,/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Grocery_seed44/2026-10-12/12-38-34
+Reddit-S,42,76,96.319598,92.173840,31.684772,5854.512,2154e82ef061de9d3c018aa19674ea6e2220953f272bedebb1559396e43750a5,/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Reddit-S/2026-10-12/12-35-18
+Reddit-S,43,36,96.225226,92.430943,19.603180,5854.512,2154e82ef061de9d3c018aa19674ea6e2220953f272bedebb1559396e43750a5,/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Reddit-S_seed43/2026-10-12/12-39-09
+Reddit-S,44,82,96.130860,92.085328,32.330665,5854.512,2154e82ef061de9d3c018aa19674ea6e2220953f272bedebb1559396e43750a5,/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_pilot/nc/Reddit-S_seed44/2026-10-12/12-39-35

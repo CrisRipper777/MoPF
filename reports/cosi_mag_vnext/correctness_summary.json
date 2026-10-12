@@ -1,0 +1,61 @@
+{
+  "synthetic_tests": {
+    "command": "conda run -n yhf_env python -m pytest -q tests/test_cosi_mag_vnext.py",
+    "passed": 13,
+    "failed": 0,
+    "status": "PASS"
+  },
+  "existing_related_tests": {
+    "command": "conda run -n yhf_env python -m pytest -q tests/test_cosi_mag_ablation.py tests/test_cosi_mag_final_stability.py tests/test_lp_sampling.py tests/test_inference_equivalence.py tests/test_protocol.py",
+    "passed": 57,
+    "failed": 0,
+    "status": "PASS"
+  },
+  "combined_final_test_run": {
+    "command": "conda run -n yhf_env python -m pytest -q tests/test_cosi_mag_vnext.py tests/test_cosi_mag_ablation.py tests/test_cosi_mag_final_stability.py tests/test_lp_sampling.py tests/test_inference_equivalence.py tests/test_protocol.py",
+    "passed": 70,
+    "failed": 0,
+    "status": "PASS"
+  },
+  "nc_checkpoint_reload": {
+    "command": "conda run -n yhf_env python scripts/collect_cosi_mag_vnext_reports.py",
+    "loaded_checkpoints": 9,
+    "diagnostic_forwards": 9,
+    "status": "PASS"
+  },
+  "initial_failure_and_fix": "The first gradient run exposed sqrt(variance) at zero variance in CRC neighborhood weight standard deviation. Applying a positive variance floor with zero derivative below the floor removed NaN gradients; rerun passed.",
+  "smoke_runs": [
+    {
+      "dataset": "Movies",
+      "task": "nc",
+      "seed": 42,
+      "epochs": 2,
+      "status": "PASS",
+      "output": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_smoke/nc/Movies"
+    },
+    {
+      "dataset": "Grocery",
+      "task": "nc",
+      "seed": 42,
+      "epochs": 2,
+      "status": "PASS",
+      "output": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_smoke/nc/Grocery"
+    },
+    {
+      "dataset": "sports-copurchase",
+      "task": "lp",
+      "seed": 42,
+      "epochs": 1,
+      "max_train_batches": 2,
+      "train_pos_per_epoch": 128,
+      "positive_message_edges_removed": 72,
+      "validation_inference": "full graph",
+      "status": "PASS",
+      "output": "/hdd1/DataInHere/YHF/MoPF_IAMOC/outputs/cosi_mag_vnext_smoke/lp/sports"
+    }
+  ],
+  "scope_notes": [
+    "The entire repository test suite was not run; 57 directly related legacy tests were run.",
+    "LP leakage was checked with a synthetic global_eid batch and with the actual Sports-Copurchase smoke log, which records positive message edges removed before model forward."
+  ]
+}

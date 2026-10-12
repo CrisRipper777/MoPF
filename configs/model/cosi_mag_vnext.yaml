@@ -1,0 +1,28 @@
+name: cosi_mag_vnext
+version: cosi_mag_vnext
+
+# Independent text and visual projectors.
+hidden_dim: 256
+dropout: 0.2
+norm: layernorm
+
+# Stage I: Cross-Modal Relation Context (CRC).
+relation_hidden_dim: 32
+relation_context_dim: 32
+relation_weight_scale: 0.3
+eps: 1.0e-8
+
+# Stage II: Chebyshev bank on the symmetrically normalized adjacency P.
+max_order: 3
+num_layers: ${model.max_order}
+diffusion_add_self_loops: true
+
+# Stage III: Relation-Conditioned Multi-Order Interaction (RCMI).
+attention_dim: 64
+attention_dropout: 0.0
+attention_gate_init: 0.1
+eta_initial: [0.2, 0.0, 0.0]
+semantic_gate_init: 0.1
+
+# Late fusion remains a concat residual MLP.
+fusion: concat_residual_mlp
